@@ -1,0 +1,46 @@
+language: go
+
+go:
+  - 1.9.x
+
+services:
+  - rabbitmq
+
+before_install:
+  - go get -u github.com/golang/dep/cmd/dep
+  - go get github.com/golang/lint/golint
+  - go get github.com/gordonklaus/ineffassign
+  - go get github.com/fzipp/gocyclo
+  - go get github.com/client9/misspell/cmd/misspell
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+
+script:
+  - dep ensure
+  - "./pre-commit"
+  -  make test
+  - make build-all
+  - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+
+before_deploy:
+  - zip rabtap-${TRAVIS_TAG}-windows-amd64.zip rabtap-windows-amd64.exe README.md
+  - zip rabtap-${TRAVIS_TAG}-linux-amd64.zip rabtap-linux-amd64 README.md
+  - zip rabtap-${TRAVIS_TAG}-darwin-amd64.zip rabtap-darwin-amd64 README.md
+  - sha256sum *zip > SHASUMS256.txt
+
+deploy:
+  provider: releases
+  api_key:
+  file: 
+  - rabtap-${TRAVIS_TAG}-windows-amd64.zip 
+  - rabtap-${TRAVIS_TAG}-linux-amd64.zip 
+  - rabtap-${TRAVIS_TAG}-darwin-amd64.zip 
+  - SHASUMS256.txt
+  skip_cleanup: true
+  on:
+    repo: jandelgado/rabtap
+
+env:
+  global:
+    secure: "LN1PKejtWRBdqUHAMQfhMOcCjUurfCnMvCxqcp8I4JEu8172g+tug8eaVIQx0z4IlS/XHoLvlx8pcvuaLt9lSUPjRKHZDx9OcwRrNBeq9VJ8/+CiPeTVjzFbqa/8UCwxaRqFOoCjNlYlIylbfznMZYPsBF+S2IjEN/WdqUK0noZlp1RCWGeUmv9ugvO8+RStYMl6mu8y9bUtB4cRLCYhP4fpb5QRxvRhWjQ6lk0fgG0I4ASoK8RJrH3FbCr8+nDBFwPrGg4B8PQw66ZaJKE/wiJnhL85MUutZa85r6pI8IqSTTz3dmqFWQtxyUmpf2CGkqIE+jg63i75fTCVNaZUEoVQAvx3wrGy3GP6UvcgchniFg8TJoe+Z77MDIx9vDIRrkpIr9Rqg66tC7bjzIb1MCjm5Ug65D1/nJXaK0aEfe979deoLLmLj6pQzoK2EPeNaqi6B2xoZp4Gnqo2IU7W2kUWlva00iJBpQ+dIsxanWBkhX2jJ+FSDJtZWq/mzvktR9mCAc2I+m3oPJ0Smx23Ya33BVzcUMYfaFYDpPL6nMlETBbj1x1Y/Fw3vXdzPlZXNA4wYbxDSV4mGUk5nJuFTOj/iC474E466ivC48y0jogE8K7DtVUTsXWZGEOrnjftFxcpRweEZmxA3btkMIou52oY27Dia9HMUfcsPgxQ2zA="
+

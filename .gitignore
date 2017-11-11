@@ -1,0 +1,9 @@
+tags
+*~
+vendor/
+*exe
+rabtap-*linux*
+rabtap-*darwin*
+app/testgen/testgen
+amqp-wire-tap
+*.out

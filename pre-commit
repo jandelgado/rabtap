@@ -19,7 +19,7 @@ if [ -n "${GOCYCLO_ERRORS}" ]; then
   exit 1
 fi
 
-GOFMT_FILES=$(gofmt -l *go app/main/*go)
+GOFMT_FILES=$(gofmt -s -l *go app/main/*go)
 if [ -n "${GOFMT_FILES}" ]; then
   printf >&2 'gofmt failed for the following files:\n%s\n\nplease run "gofmt -w ." on your changes before committing.\n' "${GOFMT_FILES}"
   exit 1

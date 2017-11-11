@@ -147,10 +147,10 @@ func TestTapMode(t *testing.T) {
 	}
 
 	exchangeConfig := []rabtap.ExchangeConfiguration{
-		rabtap.ExchangeConfiguration{Exchange: "int-test-exchange",
+		{Exchange: "int-test-exchange",
 			BindingKey: "my-routing-key"}}
 	tapConfig := []rabtap.TapConfiguration{
-		rabtap.TapConfiguration{AmqpURI: testhelper.IntegrationURIFromEnv(),
+		{AmqpURI: testhelper.IntegrationURIFromEnv(),
 			Exchanges: exchangeConfig}}
 	// signalChannel receives ctrl+C/interrput signal
 	signalChannel := make(chan os.Signal, 1)

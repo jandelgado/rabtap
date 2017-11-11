@@ -38,7 +38,7 @@ deploy:
   - SHASUMS256.txt
   skip_cleanup: true
   on:
-    repo: jandelgado/rabtap
+    tags: true
 env:
   global:
       secure: "Qg/61IYkI7duTQ9r4Jz3hQjdpxH+QMGj2qcYKEhtpfz7i+uS+uj1HE40PuXi4ztagW4VI9+suSKl/EE5MLpT+AsN5RSnUGriDzIF0t4IutmSWkANuLP8oou3i9Op2+r4CKTYKsY2F5nJOrlZRbPIneehPpx65bZx7tFtfRB68gT+JD0i0Na4fFVLaW69wLwtYMPlW8cQseBkYqeQv+SSZhdloXfi+zcIXNbB4LDWrzSmmWEMHJOnxN/c3nbARF1We+GkvhA/L/WXeYUobohEn4UqTU/l7Qf8ohLv68a7K8Z7pub69IdbtQkVbwnJh+8Gx064QI8CD1acC+GIM1tqaLMtHJM3MPUgm2mw255V/qwZdd3Ue7+U5UAPV4xZpAWS/lLZgGK7hoWoXkO/eT8jS3GoArT+cX9lKkT5cBwoPXq/AohzUGpP42NQcg6UcF0oebeq9n9X0lk4boyBLckPNDy5QXvA/yKhCvrfL3IlPDVe70DBt3yyyoZUdYOqcGqtme5RXSXs7hiMn1h6K8xJxRX9IZVg5TddKRyII7wdeWq0lNTPrP+Vyf5O5Zn1ZF/SuUPYXWjl68dW5QpucXPdm4OZRvLNlRxqV8FeOhRm23RqOxx5HeUK+ugUKCBtycjg+Sv8mnPCIoCjJQ2Wx6hZUhBnEg/8cMzCV24DO2NffmE="

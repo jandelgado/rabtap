@@ -22,7 +22,7 @@ script:
 - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 
 before_deploy:
-- zip rabtap-${TRAVIS_TAG}-windows-amd64.zip rabtap-windows-amd64.exe README.md
+- zip rabtap-${TRAVIS_TAG}-windows-amd64.zip rabtap-win-amd64.exe README.md
 - zip rabtap-${TRAVIS_TAG}-linux-amd64.zip rabtap-linux-amd64 README.md
 - zip rabtap-${TRAVIS_TAG}-darwin-amd64.zip rabtap-darwin-amd64 README.md
 - sha256sum *zip > SHASUMS256.txt

@@ -92,7 +92,7 @@ func startInfoMode(rootNode string, client *rabtap.RabbitHTTPClient,
 	brokerInfo, err := NewBrokerInfo(client)
 	failOnError(err, "failed retrieving info from rabbitmq REST api", os.Exit)
 	brokerInfoPrinter := NewBrokerInfoPrinter(printBrokerInfoConfig)
-	brokerInfoPrinter.Print(brokerInfo, rootNode, os.Stdout)
+	brokerInfoPrinter.Print(brokerInfo, rootNode, NewColorableWriter(os.Stdout))
 }
 
 // piblishMessage publishes a message on the given exchange with the provided
@@ -264,7 +264,7 @@ func main() {
 		signalChannel := make(chan os.Signal, 1)
 		// messageReceiveFunc receives the tapped messages, prints
 		// and optionally saves them.
-		messageReceiveFunc := createMessageReceiveFunc(os.Stdout,
+		messageReceiveFunc := createMessageReceiveFunc(NewColorableWriter(os.Stdout),
 			args.JSONFormat, args.SaveDir, args.NoColor)
 		startTapMode(args.TapConfig, args.InsecureTLS, messageReceiveFunc, signalChannel)
 

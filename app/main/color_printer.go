@@ -5,8 +5,11 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-colorable"
 )
 
 const (
@@ -43,6 +46,12 @@ func (s ColorPrinter) GetFuncMap() map[string]interface{} {
 		"ConsumerColor": s.Consumer,
 		"MessageColor":  s.Message,
 		"KeyColor":      s.Key}
+}
+
+// NewColorableWriter returns a colorable writer for the given file (e.g
+// os.Stdout). Needed for on windows platform.
+func NewColorableWriter(file *os.File) io.Writer {
+	return colorable.NewColorable(file)
 }
 
 // NewColorPrinter returns a ColorPrinter used to color the console

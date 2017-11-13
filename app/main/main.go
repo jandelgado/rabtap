@@ -31,6 +31,10 @@ type MessageReceiveFunc func(*amqp.Delivery) error
 type SignalChannel chan os.Signal
 
 func initLogging(verbose bool) {
+	log.Formatter = &logrus.TextFormatter{
+		ForceColors: true,
+	}
+	log.Out = NewColorableWriter(os.Stderr)
 	if verbose {
 		log.SetLevel(logrus.DebugLevel)
 	} else {

@@ -255,7 +255,8 @@ Note that in JSON mode, the `Body` is base64 encoded.
 
 ## Build from source
 
-To build rabtap from source, you need [go]() and the following tools installed:
+To build rabtap from source, you need [go](https://golang.org/) and the
+following tools installed:
 
 Build dependencies:
 
@@ -265,7 +266,12 @@ Build dependencies:
 * [golint](https://github.com/golang/lint/golint)
 * [gocyclo](https://github.com/fzipp/gocyclo)
 
-TODO
+```
+$ go get github.com/jandelgado/rabtap
+$ cd $GOPATH/src/github.com/jandelgado/rabtap
+$ dep ensure
+$ make build-all
+```
 
 ## Test data generator
 

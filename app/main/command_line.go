@@ -16,14 +16,14 @@ const (
 Usage:
   rabtap tap [--uri URI] EXCHANGES [--saveto=DIR] [-jkvn]
   rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jkvn]
-  rabtap send [--uri URI] EXCHANGE [FILE] [--routingkey KEY] [-jkv]
+  rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey KEY] [-jkv]
   rabtap info [--api APIURI] [--consumers] [--stats] [--show-default] [-kvn]
   rabtap -h|--help
 
 Examples:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.topic:#,amq.fanout:
-  rabtap send --uri amqp://guest:guest@localhost/ amq.topic message.json -j
+  rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
   rabtap info --api http://guest:guest@localhost:15672/api
 
 Options:
@@ -33,13 +33,13 @@ Options:
  EXCHANGES            comma-separated list of exchanges and routing keys, 
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
- FILE                 file to send with in send mode. If omitted, stdin will 
+ FILE                 file to publish in pub mode. If omitted, stdin will 
                       be read.
  --saveto DIR         also save messages and metadata to DIR.
- -j, --json           print/save/send message metadata and body to a 
+ -j, --json           print/save/publish message metadata and body to a 
                       single JSON file. JSON body is base64 encoded. Otherwise 
                       metadata and body (as-is) are saved separately. 
- -r, --routingkey KEY routing key to use in send mode.
+ -r, --routingkey KEY routing key to use in publish mode.
  --api APIURI         connect to given API server. If APIURI is omitted, 
                       the environment variable RABTAP_APIURI will be used.
  -n, --no-color       don't colorize output.
@@ -57,8 +57,8 @@ type ProgramMode int
 const (
 	// TapMode sets mode to tapping mode
 	TapMode ProgramMode = iota
-	// SendMode sets mode to send messages
-	SendMode
+	// PubMode sets mode to publish messages
+	PubMode
 	// InfoMode shows info on exchanges and queues
 	InfoMode
 )
@@ -67,10 +67,10 @@ const (
 type CommandLineArgs struct {
 	Mode                ProgramMode
 	TapConfig           []rabtap.TapConfiguration
-	SendAmqpURI         string  // send mode: broker to use
-	SendExchange        string  // send mode: exchange to send to
-	SendRoutingKey      string  // send mode: routing key, defaults to ""
-	SendFile            *string // send mode: file to send
+	PubAmqpURI          string  // pub mode: broker to use
+	PubExchange         string  // pub mode: exchange to publish to
+	PubRoutingKey       string  // pub mode: routing key, defaults to ""
+	PubFile             *string // pub mode: file to send
 	APIURI              string
 	Verbose             bool
 	InsecureTLS         bool
@@ -121,27 +121,27 @@ func parseInfoArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
-func parseSendArgs(args map[string]interface{}) (CommandLineArgs, error) {
+func parsePublishArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 	result := CommandLineArgs{
 		Verbose:     args["--verbose"].(bool),
 		InsecureTLS: args["--insecure"].(bool),
 		JSONFormat:  args["--json"].(bool)}
 
-	result.Mode = SendMode
+	result.Mode = PubMode
 	amqpURIs := args["--uri"].([]string)
 	amqpURI := getAmqpURI(amqpURIs, 0)
 	if amqpURI == "" {
 		return CommandLineArgs{}, fmt.Errorf("--uri omitted but RABTAP_AMQPURI not set in environment")
 	}
-	result.SendAmqpURI = amqpURI
-	result.SendExchange = args["EXCHANGE"].(string)
+	result.PubAmqpURI = amqpURI
+	result.PubExchange = args["EXCHANGE"].(string)
 	if args["--routingkey"] != nil {
-		result.SendRoutingKey = args["--routingkey"].(string)
+		result.PubRoutingKey = args["--routingkey"].(string)
 	}
 	if args["FILE"] != nil {
-		sendFile := args["FILE"].(string)
-		result.SendFile = &sendFile
+		file := args["FILE"].(string)
+		result.PubFile = &file
 	}
 	return result, nil
 }
@@ -190,8 +190,8 @@ func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
 		return parseTapArgs(args)
 	} else if args["info"].(bool) {
 		return parseInfoArgs(args)
-	} else if args["send"].(bool) {
-		return parseSendArgs(args)
+	} else if args["pub"].(bool) {
+		return parsePublishArgs(args)
 	}
 	return CommandLineArgs{}, fmt.Errorf("command missing")
 }

@@ -76,6 +76,8 @@ func (s *AmqpTap) Connected() bool {
 // a channel is created and the list of provided exchanges is wire-tapped.
 // To start the first connection process,  send an amqp.ErrClosed message
 // through the errorChannel. See EstablishTap() for example.
+// TODO factor out setup code and add code to connect directly to queue
+//      (new "sub" mode)
 func (s *AmqpTap) createWorkerFunc(
 	exchangeConfigList []ExchangeConfiguration,
 	tapChannel TapChannel) AmqpWorkerFunc {
@@ -96,7 +98,6 @@ func (s *AmqpTap) createWorkerFunc(
 				tapChannel <- &TapMessage{nil, err}
 				break
 			}
-			//			multiSelect.Add(msgChan)
 			channels = append(channels, msgChan)
 			// store created exchanges and queues for later cleanup
 			s.exchanges = append(s.exchanges, exchange)
@@ -105,7 +106,6 @@ func (s *AmqpTap) createWorkerFunc(
 		fanin := NewFanin(channels)
 		defer func() { fanin.Stop() }()
 
-		//		incoming := multiSelect.Select()
 		for {
 			message := <-fanin.Ch
 

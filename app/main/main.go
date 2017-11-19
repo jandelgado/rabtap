@@ -147,9 +147,9 @@ func createMessageReaderFunc(jsonFormat bool, reader io.Reader) MessageReaderFun
 	return func() (amqp.Publishing, error) { return readMessageFromRawFile(reader) }
 }
 
-// sendMessages reads messages with the provided readNextMessageFunc and
+// publishMessages reads messages with the provided readNextMessageFunc and
 // publishes the messages to the given exchange.
-func sendMessages(publishChannel rabtap.PublishChannel,
+func publishMessages(publishChannel rabtap.PublishChannel,
 	exchange, routingKey string,
 	readNextMessageFunc MessageReaderFunc) {
 	for {
@@ -165,20 +165,20 @@ func sendMessages(publishChannel rabtap.PublishChannel,
 	}
 }
 
-// startSendMode reads messages with the provied readNextMessageFunc and
-// sends the messages to the given exchange.
-func startSendMode(amqpURI, sendExchange, routingKey string,
+// startPublishMode reads messages with the provied readNextMessageFunc and
+// publishes the messages to the given exchange.
+func startPublishMode(amqpURI, exchange, routingKey string,
 	insecureTLS bool, readNextMessageFunc MessageReaderFunc) {
 
 	log.Debugf("publishing message(s) to exchange %s with routingkey %s",
-		sendExchange, routingKey)
+		exchange, routingKey)
 	publisher := rabtap.NewAmqpPublish(amqpURI,
 		&tls.Config{InsecureSkipVerify: insecureTLS},
 		log)
 	defer publisher.Close()
 	publishChannel := make(rabtap.PublishChannel)
 	go publisher.EstablishConnection(publishChannel)
-	sendMessages(publishChannel, sendExchange, routingKey, readNextMessageFunc)
+	publishMessages(publishChannel, exchange, routingKey, readNextMessageFunc)
 }
 
 // establishTaps establish all message taps as specified by tapConfiguration
@@ -249,17 +249,17 @@ func main() {
 	log.Debugf("parsed cli-args: %+v", args)
 
 	switch args.Mode {
-	case SendMode:
+	case PubMode:
 		reader := os.Stdin
-		if args.SendFile != nil {
+		if args.PubFile != nil {
 			var err error
-			reader, err = os.Open(*args.SendFile)
-			failOnError(err, "error opening "+*args.SendFile, os.Exit)
+			reader, err = os.Open(*args.PubFile)
+			failOnError(err, "error opening "+*args.PubFile, os.Exit)
 		}
 		readerFunc := createMessageReaderFunc(args.JSONFormat, reader)
-		startSendMode(args.SendAmqpURI,
-			args.SendExchange,
-			args.SendRoutingKey,
+		startPublishMode(args.PubAmqpURI,
+			args.PubExchange,
+			args.PubRoutingKey,
 			args.InsecureTLS,
 			readerFunc)
 

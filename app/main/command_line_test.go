@@ -204,50 +204,50 @@ func TestCliInfoModeShowDefault(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliSendModeFromFile(t *testing.T) {
+func TestCliPubModeFromFile(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"send", "--uri=broker", "exchange", "file"})
+		[]string{"pub", "--uri=broker", "exchange", "file"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, SendMode, args.Mode)
-	assert.Equal(t, "broker", args.SendAmqpURI)
-	assert.Equal(t, "exchange", args.SendExchange)
-	assert.Equal(t, "file", *args.SendFile)
-	assert.Equal(t, "", args.SendRoutingKey)
+	assert.Equal(t, PubMode, args.Mode)
+	assert.Equal(t, "broker", args.PubAmqpURI)
+	assert.Equal(t, "exchange", args.PubExchange)
+	assert.Equal(t, "file", *args.PubFile)
+	assert.Equal(t, "", args.PubRoutingKey)
 	assert.False(t, args.JSONFormat)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliSendModeUriFromEnv(t *testing.T) {
+func TestCliPubModeUriFromEnv(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	os.Setenv(key, "URI")
 	defer os.Unsetenv(key)
 	args, err := ParseCommandLineArgs(
-		[]string{"send", "exchange"})
+		[]string{"pub", "exchange"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, SendMode, args.Mode)
-	assert.Equal(t, "URI", args.SendAmqpURI)
-	assert.Equal(t, "exchange", args.SendExchange)
+	assert.Equal(t, PubMode, args.Mode)
+	assert.Equal(t, "URI", args.PubAmqpURI)
+	assert.Equal(t, "exchange", args.PubExchange)
 }
 
-func TestCliSendModeMissingUri(t *testing.T) {
+func TestCliPubModeMissingUri(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	os.Unsetenv(key)
 	_, err := ParseCommandLineArgs(
-		[]string{"send", "exchange"})
+		[]string{"pub", "exchange"})
 	assert.NotNil(t, err)
 }
-func TestCliSendModeFromStdinWithRoutingKey(t *testing.T) {
+func TestCliPubModeFromStdinWithRoutingKey(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"send", "--uri=broker1", "exchange1", "--routingkey=key", "--json"})
+		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--json"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, SendMode, args.Mode)
-	assert.Equal(t, "broker1", args.SendAmqpURI)
-	assert.Equal(t, "exchange1", args.SendExchange)
-	assert.Nil(t, args.SendFile)
+	assert.Equal(t, PubMode, args.Mode)
+	assert.Equal(t, "broker1", args.PubAmqpURI)
+	assert.Equal(t, "exchange1", args.PubExchange)
+	assert.Nil(t, args.PubFile)
 	assert.True(t, args.JSONFormat)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)

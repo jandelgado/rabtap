@@ -41,7 +41,7 @@ func ExampleInfoMode() {
 	// http://rootnode
 }
 
-func TestSendModeRaw(t *testing.T) {
+func TestPublisPublishModeRaw(t *testing.T) {
 
 	conn, ch := testhelper.IntegrationTestConnection(t, "exchange", "topic", 1, false)
 	defer conn.Close()
@@ -61,7 +61,7 @@ func TestSendModeRaw(t *testing.T) {
 	require.Nil(t, err)
 
 	reader := strings.NewReader("hello")
-	startSendMode(testhelper.IntegrationURIFromEnv(),
+	startPublishMode(testhelper.IntegrationURIFromEnv(),
 		"exchange", bindingKey, false, createMessageReaderFunc(false, reader))
 
 	select {
@@ -74,7 +74,7 @@ func TestSendModeRaw(t *testing.T) {
 	}
 }
 
-func TestSendModeJSON(t *testing.T) {
+func TestPublishModeJSON(t *testing.T) {
 
 	// note: base64dec("aGVsbG8=") == "hello"
 	message := `
@@ -116,7 +116,7 @@ func TestSendModeJSON(t *testing.T) {
 	require.Nil(t, err)
 
 	reader := strings.NewReader(message)
-	startSendMode(testhelper.IntegrationURIFromEnv(),
+	startPublishMode(testhelper.IntegrationURIFromEnv(),
 		"exchange", bindingKey, false, createMessageReaderFunc(true, reader))
 
 	select {

@@ -21,7 +21,7 @@ your distributed apps.
         * [Broker info](#broker-info)
         * [Wire-tapping messages](#wire-tapping-messages)
         * [Message recorder](#message-recorder)
-        * [Send Messages](#send-messages)
+        * [Publish Messages](#publish-messages)
         * [Poor mans shovel](#poor-mans-shovel)
 * [JSON message format](#json-message-format)
 * [Build from source](#build-from-source)
@@ -38,7 +38,7 @@ your distributed apps.
 * display broker related information using the
   [RabbitMQ REST management API](https://rawcdn.githack.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_14/priv/www/api/index.html)
 * save messages and meta data for later analysis and replay
-* send messages to exchanges
+* publish messages to exchanges
 * TLS support
 * no runtime dependencies (statically linked go single file binary)
 * simple to use command line tool
@@ -70,14 +70,14 @@ rabtap - RabbitMQ message tap.
 Usage:
   rabtap tap [--uri URI] EXCHANGES [--saveto=DIR] [-jkvn]
   rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jkvn]
-  rabtap send [--uri URI] EXCHANGE [FILE] [--routingkey KEY] [-jkv]
+  rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey KEY] [-jkv]
   rabtap info [--api APIURI] [--consumers] [--stats] [--show-default] [-kvn]
   rabtap -h|--help
 
 Examples:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.topic:#,amq.fanout:
-  rabtap send --uri amqp://guest:guest@localhost/ amq.topic message.JSON -j
+  rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
   rabtap info --api http://guest:guest@localhost:15672/api
 
 Options:
@@ -87,16 +87,16 @@ Options:
  EXCHANGES            comma-separated list of exchanges and routing keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
- FILE                 file to send with in send mode. If omitted, stdin will
+ FILE                 file to publish in pub mode. If omitted, stdin will
                       be read.
  --saveto DIR         also save messages and metadata to DIR.
- -j, --json           print/save/send message metadata and body to a
+ -j, --json           print/save/publish message metadata and body to a
                       single JSON file. JSON body is base64 encoded. Otherwise
                       metadata and body (as-is) are saved separately.
- -r, --routingkey KEY routing key to use in send mode.
+ -r, --routingkey KEY routing key to use in publish mode.
  --api APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
- -n, --no-color       don't color output.
+ -n, --no-color       don't colorize output.
  --consumers          include consumers in output of info command.
  --stats              include statistics in output of info command.
  --show-default       include default exchange in output info command.
@@ -202,24 +202,24 @@ All tapped messages can be also be saved for later analysis or replay.
 
 Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` + `<extension>`.
 
-#### Send Messages
+#### Publish Messages
 
-* `$ rabtap send amq.direct -r routingKey message.json --json`  - Send
+* `$ rabtap pub amq.direct -r routingKey message.json --json`  - publish
   message(s) in JSON format to exchange `amq.direct` with routing key
   `routingKey`.
-* `$ cat message.json | rabtap send amqp.direct -r routingKey --json` - same
+* `$ cat message.json | rabtap pub amqp.direct -r routingKey --json` - same
   as above, but read message(s) from stdin.
 
 #### Poor mans shovel
 
 Rabtap instances can be connected through a pipe and messages will be read on
-one side and send to the other. Note that for send to work in streaming mode,
-the JSON mode (`--json`) must be used on both sides, so that messages are
+one side and publish to the other. Note that for publish to work in streaming
+mode, the JSON mode (`--json`) must be used on both sides, so that messages are
 encapsulated in JSON messages.
 
 ```
 $ rabtap tap --uri amqp://broker1 my-topic-exchange:# --json | \
-  rabtap send --uri amqp://broker2 amq.direct -r routingKey --json
+  rabtap pub --uri amqp://broker2 amq.direct -r routingKey --json
 ```
 
 ## JSON message format

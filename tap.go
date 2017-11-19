@@ -8,7 +8,6 @@ package rabtap
 
 import (
 	"crypto/tls"
-	"reflect"
 
 	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -86,52 +85,38 @@ func (s *AmqpTap) createWorkerFunc(
 		// clear any previously created exchanges and queues (re-connect case)
 		s.cleanup(rabbitConn)
 
-		// establish each tap with its own channel. The errorChannel
-		// will also be monitotred
-		messageChannels := []reflect.SelectCase{}
-		messageChannels = append(messageChannels,
-			reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(controlChan)})
+		// create array of channels for fanin: controlChan + tap-channels
+		channels := []interface{}{controlChan}
+
+		// establish each tap with its own channel.
 		for _, exchangeConfig := range exchangeConfigList {
-			exchange, queue, msgs, err := s.setupTap(rabbitConn, exchangeConfig)
+			exchange, queue, msgChan, err := s.setupTap(rabbitConn, exchangeConfig)
 			if err != nil {
 				// pass err to client, can decide to close tap.
 				tapChannel <- &TapMessage{nil, err}
 				break
 			}
+			//			multiSelect.Add(msgChan)
+			channels = append(channels, msgChan)
 			// store created exchanges and queues for later cleanup
-			messageChannels = append(messageChannels,
-				reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(msgs)})
 			s.exchanges = append(s.exchanges, exchange)
 			s.queues = append(s.queues, queue)
 		}
+		fanin := NewFanin(channels)
+		defer func() { fanin.Stop() }()
 
-		// process array of message channels and the error channel, see
-		// https://play.golang.org/p/8zwvSk4kjx
-		remaining := len(messageChannels)
+		//		incoming := multiSelect.Select()
 		for {
-			chosen, message, ok := reflect.Select(messageChannels)
-			if !ok {
-				// The chosen channel has been closed, so zero
-				// out the channel to disable the case (happens on normal
-				// shutdown)
-				remaining--
-				messageChannels[chosen].Chan = reflect.ValueOf(nil)
-				if remaining == 1 {
-					// all message and the error (go-)channels were closed
-					// (only the shutdown channel is remaining)
-					// -> reconnect
-					return true
-				}
-				continue
-			}
-			switch message.Interface().(type) {
+			message := <-fanin.Ch
+
+			switch message.(type) {
 
 			case amqp.Delivery: // message received on message channels
-				amqpMessage, _ := message.Interface().(amqp.Delivery)
+				amqpMessage, _ := message.(amqp.Delivery)
 				tapChannel <- &TapMessage{&amqpMessage, nil}
 
 			case ControlMessage: // mesage received on control channel
-				controlMessage := message.Interface().(ControlMessage)
+				controlMessage := message.(ControlMessage)
 				switch controlMessage {
 				case ShutdownMessage:
 					err := s.cleanup(rabbitConn)

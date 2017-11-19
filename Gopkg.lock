@@ -69,13 +69,25 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/net"
+  packages = ["context"]
+  revision = "9dfe39835686865bff950a07b394c12a98ddc811"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
   revision = "d4266bc12aae0b4128952c889b769442fce5d2f1"
 
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/tomb.v2"
+  packages = ["."]
+  revision = "d5d1b5820637886def9eef33e03a27a9f166942c"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c2c248f4961985397c7d655eae124b74598b50e1012978e0b24c473f0e29ee36"
+  inputs-digest = "4a548d466e99430f7446d467ac7752254d82c7a8d1f90a513213e6afc24ef62c"
   solver-name = "gps-cdcl"
   solver-version = 1

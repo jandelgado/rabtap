@@ -83,25 +83,27 @@ type AmqpWorkerFunc func(conn *amqp.Connection, controlChan chan ControlMessage)
 // Connect  (re-)establishes the connection to RabbitMQ broker.
 func (s *AmqpConnector) Connect(tlsConfig *tls.Config, worker AmqpWorkerFunc) {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// the error channel is used to detect when (re-)connect is needed
-	errorChan := make(chan *amqp.Error)
-
-	// translate amqp notifications (*amqp.Error) to events for the worker
-	go func() {
-		select {
-		case <-ctx.Done():
-			// prevent go-routine leaking
-			return
-		case <-errorChan:
-			// let the worker know we are re-connecting
-			s.controlChan <- ReconnectMessage
-		}
-	}()
-
 	for {
+
+		// the error channel is used to detect when (re-)connect is needed
+		// will be closed by amqp lib when event is sent.
+		errorChan := make(chan *amqp.Error)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// translate amqp notifications (*amqp.Error) to events for the worker
+		go func() {
+			select {
+			case <-ctx.Done():
+				// prevents go-routine leaking
+				return
+			case <-errorChan:
+				// let the worker know we are re-connecting
+				s.controlChan <- ReconnectMessage
+				// amqp lib closes channel afterwards.
+				return
+			}
+		}()
 		rabbitConn := s.connect(tlsConfig)
 		rabbitConn.NotifyClose(errorChan)
 
@@ -125,7 +127,6 @@ func (s *AmqpConnector) Close() error {
 	if !s.Connected() {
 		return errors.New("not connected")
 	}
-
 	s.controlChan <- ShutdownMessage
 	return <-s.workerFinished
 }

@@ -12,4 +12,6 @@ Usage of ./testgen:
 Use the `RABTAP_TESTGEN_AMQP_URI` environment variable to specify the RabbitMQ
 broker to be used. If not set, `amqp://guest:guest@localhost:5672` will be used.
 
+Be careful when running this tool in a non-test environment since it creates
+exchanges, queues and publishes messages.
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // testMessage used troughout tests
@@ -36,7 +37,7 @@ var testMessage = &amqp.Delivery{
 // writing to and reading from temporary files.
 func TestSaveMessageToRawFile(t *testing.T) {
 	testdir, err := ioutil.TempDir("", "")
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	defer os.RemoveAll(testdir)
 
 	// SaveMessagesToFiles() will create files "test.dat" and "test.json" in
@@ -160,7 +161,7 @@ func ExampleWriteMessageJSON_withBody() {
 }
 
 func ExampleWriteMessageJSON_withoutBody() {
-	err := WriteMessageJSON(os.Stdout, false /*no body*/, testMessage)
+	err := WriteMessageJSON(os.Stdout, false /*w/o body*/, testMessage)
 	if err != nil {
 		log.Fatal(err)
 	}

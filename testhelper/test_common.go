@@ -15,13 +15,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// func integrationiApiURLFromEnv() string {
-//     url := os.Getenv("RABBIT_API_URL")
-//     if url == "" {
-//         url = "http://guest:guest@127.0.0.1:15672/api"
-//     }
-//     return url
-// }
+// IntegrationAPIURIFromEnv return the REST API URL to use for tests
+func IntegrationAPIURIFromEnv() string {
+	url := os.Getenv("RABBIT_API_URL")
+	if url == "" {
+		url = "http://guest:guest@127.0.0.1:15672/api"
+	}
+	return url
+}
 
 // IntegrationURIFromEnv return the amqp URL to use for tests
 func IntegrationURIFromEnv() string {
@@ -38,18 +39,23 @@ func IntegrationQueueName(i int) string {
 }
 
 // IntegrationTestConnection creates connection to rabbitmq broker and set up
-// an exchange of the given type and bind given number of queues to the
-// exchange.  The binding key will aways be the queue name. The queues are
+// optionally an exchange of the given type and bind given number of queues to
+// the exchange.  The binding key will aways be the queue name. The queues are
 // named "queue-0" "queue-1" etc (see integrationQueueName() func).  If
 // parameter addRoutingHeader is true, then the queue will be bound using an
 // additional routing header ("x-match":"any", "header1":"test0" for first
 // queue etc; this feature is needed by the headers test).
 func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
 	numQueues int, addRoutingHeader bool) (*amqp.Connection, *amqp.Channel) {
+
 	conn, err := amqp.Dial(IntegrationURIFromEnv())
 	require.Nil(t, err)
 	ch, err := conn.Channel()
 	require.Nil(t, err)
+
+	if exchangeName == "" {
+		return conn, ch
+	}
 	// create test exchanges and queues
 	err = ch.ExchangeDeclare(
 		exchangeName,

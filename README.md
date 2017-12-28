@@ -4,8 +4,10 @@
 [![Coverage Status](https://coveralls.io/repos/github/jandelgado/rabtap/badge.svg?branch=master)](https://coveralls.io/github/jandelgado/rabtap?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jandelgado/rabtap)](https://goreportcard.com/report/github.com/jandelgado/rabtap)
 
-Rabtap helps you understand what's going on in your RabbitMQ message broker and
-your distributed apps.
+Swiss army knife for RabbitMQ. Tap/Pub/Sub messages, create/delete/bind queues
+and exchanges, discover broker.
+
+## Contents 
 
 <!-- vim-markdown-toc GFM -->
 
@@ -13,6 +15,7 @@ your distributed apps.
 * [Screenshots](#screenshots)
 * [Installation](#installation)
 * [Usage](#usage)
+    * [Basic commands](#basic-commands)
     * [Broker URI specification](#broker-uri-specification)
     * [Environment variables](#environment-variables)
         * [Default RabbitMQ broker](#default-rabbitmq-broker)
@@ -21,7 +24,8 @@ your distributed apps.
         * [Broker info](#broker-info)
         * [Wire-tapping messages](#wire-tapping-messages)
         * [Message recorder](#message-recorder)
-        * [Publish Messages](#publish-messages)
+        * [Publish messages](#publish-messages)
+        * [Messages consumer (subscribe)](#messages-consumer-subscribe)
         * [Poor mans shovel](#poor-mans-shovel)
 * [JSON message format](#json-message-format)
 * [Build from source](#build-from-source)
@@ -33,14 +37,15 @@ your distributed apps.
 
 ## Features
 
-* display messages being sent to exchanges using RabbitMQ
+* tap to messages being sent to exchanges using RabbitMQ
   exchange-to-exchange bindings without affecting actual message delivery (aka _tapping_)
 * display broker related information using the
   [RabbitMQ REST management API](https://rawcdn.githack.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_14/priv/www/api/index.html)
 * save messages and meta data for later analysis and replay
 * publish messages to exchanges
-* TLS support
-* no runtime dependencies (statically linked go single file binary)
+* consume messages from a queue (subscribe)
+* supports TLS
+* no runtime dependencies (statically linked golang single file binary)
 * simple to use command line tool
 * runs on Linux, Windows, Mac and wherever you can compile go
 
@@ -68,11 +73,18 @@ See [below](#build-from-source) if you prefer to compile from source.
 rabtap - RabbitMQ message tap.
 
 Usage:
-  rabtap tap [--uri URI] EXCHANGES [--saveto=DIR] [-jkvn]
-  rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jkvn]
-  rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey KEY] [-jkv]
-  rabtap info [--api APIURI] [--consumers] [--stats] [--show-default] [-kvn]
   rabtap -h|--help
+  rabtap tap EXCHANGES [--uri URI] [--saveto=DIR] [-jknv]
+  rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jknv]
+  rabtap info [--api APIURI] [--consumers] [--stats] [--show-default] [-knv]
+  rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [-jkvn]
+  rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
+  rabtap exchange rm EXCHANGE [--uri URI] [-kv]
+  rabtap queue create QUEUE [--uri URI] [-adkv]
+  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
+  rabtap queue rm QUEUE [--uri URI] [-kv]
+  rabtap --version
 
 Examples:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
@@ -80,29 +92,55 @@ Examples:
   rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
   rabtap info --api http://guest:guest@localhost:15672/api
 
+  # use RABTAP_AMQPURI environment variable to specify broker instead of --uri
+  export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
+  rabtap queue create JDQ
+  rabtap queue bind JDQ to amq.direct --bindingkey=key
+  rabtap queue rm JDQ
+
 Options:
- -h, --help           print this help.
- --uri URI            connect to given AQMP broker. If omitted, the
-                      environment variable RABTAP_AMQPURI will be used.
  EXCHANGES            comma-separated list of exchanges and routing keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
  FILE                 file to publish in pub mode. If omitted, stdin will
                       be read.
- --saveto DIR         also save messages and metadata to DIR.
+ QUEUE                name of a queue.
+ -a, --autodelete     create auto delete exchange/queue.
+ --api APIURI         connect to given API server. If APIURI is omitted,
+                      the environment variable RABTAP_APIURI will be used.
+ -b, --bindingkey KEY binding key to use in bind queue command.
+ --consumers          include consumers in output of info command.
+ -d, --durable        create durable exchange/queue.
+ -h, --help           print this help.
  -j, --json           print/save/publish message metadata and body to a
                       single JSON file. JSON body is base64 encoded. Otherwise
                       metadata and body (as-is) are saved separately.
- -r, --routingkey KEY routing key to use in publish mode.
- --api APIURI         connect to given API server. If APIURI is omitted,
-                      the environment variable RABTAP_APIURI will be used.
- -n, --no-color       don't colorize output.
- --consumers          include consumers in output of info command.
- --stats              include statistics in output of info command.
- --show-default       include default exchange in output info command.
  -k, --insecure       allow insecure TLS connections (no certificate check).
+ -n, --no-color       don't colorize output.
+ -r, --routingkey KEY routing key to use in publish mode.
+ --saveto DIR         also save messages and metadata to DIR.
+ --show-default       include default exchange in output info command.
+ --stats              include statistics in output of info command.
+ -t, --type TYPE      exchange type [default: fanout].
+ --uri URI            connect to given AQMP broker. If omitted, the
+                      environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
+ --version            show version information and exit.
 ```
+
+### Basic commands
+
+Rabtap understand the following commands:
+
+* `tap` - taps to an exchange and transparently receives messages sent to the
+   exchange, without affecting actual message delivery (using exchange-to-exchange
+   binding)
+* `sub` - subscribes to a queue and consumes messages sent to the queue (acts
+   like a RabbitMQ consumer)
+* `pub` - send messages to an exchange
+* `info` - show broker related info (exchanges, queues, bindings, stats)
+* `queue` - create/bind/remove queue
+* `exchange` - create/remove exhange
 
 ### Broker URI specification
 
@@ -111,6 +149,8 @@ specification](https://www.rabbitmq.com/uri-spec.html) as implemented by the
 [go RabbitMQ client library](https://github.com/streadway/amqp).
 
 ### Environment variables
+
+Use environment variables to specify standard values for broker and api endpoint.
 
 #### Default RabbitMQ broker
 
@@ -202,13 +242,24 @@ All tapped messages can be also be saved for later analysis or replay.
 
 Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` + `<extension>`.
 
-#### Publish Messages
+#### Publish messages
 
 * `$ rabtap pub amq.direct -r routingKey message.json --json`  - publish
   message(s) in JSON format to exchange `amq.direct` with routing key
   `routingKey`.
 * `$ cat message.json | rabtap pub amqp.direct -r routingKey --json` - same
   as above, but read message(s) from stdin.
+
+#### Messages consumer (subscribe)
+
+* `$ rabtap sub somequeue -j`
+
+Will consume messages from queue `somequeue` and print out messages in JSON
+format (`-j`). Example assumes that `RABTAP_AMQPURI` environment variable is
+set.
+
+Note that unlike `tap`, `sub` will consume messages that are in effect 
+removed from the specified queue.
 
 #### Poor mans shovel
 
@@ -276,7 +327,7 @@ $ make build-all
 ## Test data generator
 
 A simple [test data generator tool](app/testgen/README.md) for manual tests is
-included in the `app/testgen` directory.
+included in the `app/testgen` directory. 
 
 ## Author
 

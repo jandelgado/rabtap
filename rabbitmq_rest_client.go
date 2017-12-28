@@ -247,48 +247,33 @@ func (s *RabbitHTTPClient) getResource(uri string, result interface{}) error {
 func (s *RabbitHTTPClient) GetOverview() (RabbitOverview, error) {
 	var result RabbitOverview
 	err := s.getResource(s.uri+"/overview", &result)
-	if err != nil {
-		return RabbitOverview{}, err
-	}
-	return result, nil
+	return result, err
 }
 
 // GetExchanges returns the /exchanges ressource of the broker
 func (s *RabbitHTTPClient) GetExchanges() ([]RabbitExchange, error) {
 	var result []RabbitExchange
 	err := s.getResource(s.uri+"/exchanges", &result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 // GetQueues returns the /queues ressource of the broker
 func (s *RabbitHTTPClient) GetQueues() ([]RabbitQueue, error) {
 	var result []RabbitQueue
 	err := s.getResource(s.uri+"/queues", &result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 // GetConsumers returns the /consumers ressource of the broker
 func (s *RabbitHTTPClient) GetConsumers() ([]RabbitConsumer, error) {
 	var result []RabbitConsumer
 	err := s.getResource(s.uri+"/consumers", &result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 // GetBindings returns the /bindings ressource of the broker
 func (s *RabbitHTTPClient) GetBindings() ([]RabbitBinding, error) {
 	var result []RabbitBinding
 	err := s.getResource(s.uri+"/bindings", &result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }

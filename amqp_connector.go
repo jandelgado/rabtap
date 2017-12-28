@@ -17,20 +17,48 @@ const (
 	reconnectDelayTime = 2000 * time.Millisecond
 )
 
+// ReconnectAction signals if connection should be reconnected or not.
+type ReconnectAction int
+
+const (
+	// DoNotReconnect signals caller of worker func not to reconnect
+	doNotReconnect = iota
+	// DoReconnect signals caller of worker func to reconnect
+	doReconnect
+)
+
+func (s ReconnectAction) shouldReconnect() bool {
+	return s == doReconnect
+}
+
+// An AmqpWorkerFunc does the actual work after the connection is established.
+// If the worker returns true, the caller should re-connect to the broker.  If
+// the worker returne false, the caller should finish its processing.  The
+// worker must return with NoReconnect if a ShutdownMessage is received via
+// shutdownChan, otherwise with Reconnect.
+type AmqpWorkerFunc func(conn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction
+
 // ControlMessage contols the amqp-worker.
 type ControlMessage int
 
 const (
 	// ShutdownMessage signals shutdown. Worker should perform cleanup operations
-	ShutdownMessage ControlMessage = iota
+	shutdownMessage ControlMessage = iota
 	// ReconnectMessage signals that the connection to the broker is re-established
-	ReconnectMessage
+	reconnectMessage
 )
 
-// AmqpConnector manages the connection to the amqp broker
+// IsReconnect returns true if the given control message is a reconnect message
+func (s ControlMessage) IsReconnect() bool {
+	return s == reconnectMessage
+}
+
+// AmqpConnector manages the connection to the amqp broker and automatically
+// reconnects after connections losses
 type AmqpConnector struct {
 	logger         logrus.StdLogger
 	uri            string
+	tlsConfig      *tls.Config
 	connection     *amqp.Connection
 	connected      *atomic.Value
 	controlChan    chan ControlMessage // signal to worker to shutdown/reconnect
@@ -38,11 +66,12 @@ type AmqpConnector struct {
 }
 
 // NewAmqpConnector creates a new AmqpConnector object.
-func NewAmqpConnector(uri string, logger logrus.StdLogger) *AmqpConnector {
+func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpConnector {
 	connected := &atomic.Value{}
 	connected.Store(false)
 	return &AmqpConnector{
 		uri:            uri,
+		tlsConfig:      tlsConfig,
 		logger:         logger,
 		connected:      connected,
 		controlChan:    make(chan ControlMessage),
@@ -56,12 +85,12 @@ func (s *AmqpConnector) Connected() bool {
 
 // Try to connect to the RabbitMQ server as  long as it takes to establish a
 // connection
-func (s *AmqpConnector) connect(tlsConfig *tls.Config) *amqp.Connection {
+func (s *AmqpConnector) connect() *amqp.Connection {
 	s.connection = nil
 	s.connected.Store(false)
 	for {
 		s.logger.Printf("(re-)connecting to %s\n", s.uri)
-		conn, err := amqp.DialTLS(s.uri, tlsConfig)
+		conn, err := amqp.DialTLS(s.uri, s.tlsConfig)
 		if err == nil {
 			s.logger.Printf("connection established.")
 			s.connection = conn
@@ -73,18 +102,10 @@ func (s *AmqpConnector) connect(tlsConfig *tls.Config) *amqp.Connection {
 	}
 }
 
-// An AmqpWorkerFunc does the actual work after the connection is established.
-// If the worker returns true, the caller should re-connect to the broker.  If
-// the worker returne false, the caller should finish its processing.  The
-// worker must return with false if a ShutdownMessage is received via
-// shutdownChan.
-type AmqpWorkerFunc func(conn *amqp.Connection, controlChan chan ControlMessage) bool
-
 // Connect  (re-)establishes the connection to RabbitMQ broker.
-func (s *AmqpConnector) Connect(tlsConfig *tls.Config, worker AmqpWorkerFunc) {
+func (s *AmqpConnector) Connect(worker AmqpWorkerFunc) {
 
 	for {
-
 		// the error channel is used to detect when (re-)connect is needed
 		// will be closed by amqp lib when event is sent.
 		errorChan := make(chan *amqp.Error)
@@ -99,15 +120,15 @@ func (s *AmqpConnector) Connect(tlsConfig *tls.Config, worker AmqpWorkerFunc) {
 				return
 			case <-errorChan:
 				// let the worker know we are re-connecting
-				s.controlChan <- ReconnectMessage
+				s.controlChan <- reconnectMessage
 				// amqp lib closes channel afterwards.
 				return
 			}
 		}()
-		rabbitConn := s.connect(tlsConfig)
+		rabbitConn := s.connect()
 		rabbitConn.NotifyClose(errorChan)
 
-		if !worker(rabbitConn, s.controlChan) {
+		if !worker(rabbitConn, s.controlChan).shouldReconnect() {
 			break
 		}
 		s.shutdown()
@@ -127,6 +148,6 @@ func (s *AmqpConnector) Close() error {
 	if !s.Connected() {
 		return errors.New("not connected")
 	}
-	s.controlChan <- ShutdownMessage
+	s.controlChan <- shutdownMessage
 	return <-s.workerFinished
 }

@@ -17,10 +17,15 @@ func TestInitLogging(t *testing.T) {
 	assert.Equal(t, logrus.WarnLevel, log.Level)
 	initLogging(true)
 	assert.Equal(t, logrus.DebugLevel, log.Level)
+	initLogging(false)
 }
 
-func TestCreateMessageReceiveFunc(t *testing.T) {
-	// TODO
+func TestGetTLSConfig(t *testing.T) {
+
+	tls := getTLSConfig(true)
+	assert.True(t, tls.InsecureSkipVerify)
+	tls = getTLSConfig(false)
+	assert.False(t, tls.InsecureSkipVerify)
 }
 
 func TestFailOnError(t *testing.T) {

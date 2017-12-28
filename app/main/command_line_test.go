@@ -11,18 +11,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCliTapNoBinding(t *testing.T) {
-	// EXCHANGE has not required format of "exchange:key[,exchange:key]*"
-	_, err := ParseCommandLineArgs([]string{"tap", "exchange"})
+func TestParseAmqpURI(t *testing.T) {
+	// since multple --uri arguments are possible docopt returns an array
+	args := map[string]interface{}{"--uri": []string{"URI"}}
+	uri, err := parseAmqpURI(args)
+	assert.Nil(t, err)
+	assert.Equal(t, "URI", uri)
+}
+
+func TestParseAmqpURINotSet(t *testing.T) {
+	const key = "RABTAP_AMQPURI"
+	os.Unsetenv(key)
+	args := map[string]interface{}{"--uri": []string{}}
+	_, err := parseAmqpURI(args)
 	assert.NotNil(t, err)
 }
 
+func TestParseAmqpURIUseEnvironment(t *testing.T) {
+	const key = "RABTAP_AMQPURI"
+	os.Setenv(key, "URI")
+	defer os.Unsetenv(key)
+	args := map[string]interface{}{"--uri": []string{}}
+	uri, err := parseAmqpURI(args)
+	assert.Nil(t, err)
+	assert.Equal(t, "URI", uri)
+}
 func TestCliTapSingleUri(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=broker1", "exchange1:binding1"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, TapMode, args.Mode)
+	assert.Equal(t, TapCmd, args.Cmd)
 	assert.Equal(t, 1, len(args.TapConfig))
 	assert.Equal(t, "broker1", args.TapConfig[0].AmqpURI)
 	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
@@ -40,7 +59,7 @@ func TestCliTapSingleUriFromEnv(t *testing.T) {
 		[]string{"tap", "exchange1:binding1"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, TapMode, args.Mode)
+	assert.Equal(t, TapCmd, args.Cmd)
 	assert.Equal(t, 1, len(args.TapConfig))
 	assert.Equal(t, "URI", args.TapConfig[0].AmqpURI)
 	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
@@ -63,7 +82,7 @@ func TestCliTapWithMultipleUris(t *testing.T) {
 			"--saveto", "savedir", "--no-color"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, TapMode, args.Mode)
+	assert.Equal(t, TapCmd, args.Cmd)
 	assert.Equal(t, 2, len(args.TapConfig))
 	assert.Equal(t, "broker1", args.TapConfig[0].AmqpURI)
 	assert.Equal(t, "broker2", args.TapConfig[1].AmqpURI)
@@ -90,7 +109,7 @@ func TestCliInsecureLongOpt(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(args.TapConfig))
-	assert.Equal(t, TapMode, args.Mode)
+	assert.Equal(t, TapCmd, args.Cmd)
 	assert.Equal(t, "broker", args.TapConfig[0].AmqpURI)
 	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
 	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
@@ -106,7 +125,7 @@ func TestCliInsecureOpt(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(args.TapConfig))
-	assert.Equal(t, TapMode, args.Mode)
+	assert.Equal(t, TapCmd, args.Cmd)
 	assert.Equal(t, "broker", args.TapConfig[0].AmqpURI)
 	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
 	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
@@ -122,7 +141,7 @@ func TestCliVerboseOpt(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(args.TapConfig))
-	assert.Equal(t, TapMode, args.Mode)
+	assert.Equal(t, TapCmd, args.Cmd)
 	assert.Equal(t, "broker", args.TapConfig[0].AmqpURI)
 	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
 	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
@@ -133,13 +152,13 @@ func TestCliVerboseOpt(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliInfoMode(t *testing.T) {
+func TestCliInfoCmd(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"info", "--api=APIURI"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(args.TapConfig))
-	assert.Equal(t, InfoMode, args.Mode)
+	assert.Equal(t, InfoCmd, args.Cmd)
 	assert.Equal(t, "APIURI", args.APIURI)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowStats)
@@ -148,14 +167,14 @@ func TestCliInfoMode(t *testing.T) {
 	assert.False(t, args.NoColor)
 }
 
-func TestCliInfoModeMissingApi(t *testing.T) {
+func TestCliInfoCmdMissingApi(t *testing.T) {
 	const key = "RABTAP_APIURI"
 	os.Unsetenv(key)
 	_, err := ParseCommandLineArgs(
 		[]string{"info"})
 	assert.NotNil(t, err)
 }
-func TestCliInfoModeApiFromEnv(t *testing.T) {
+func TestCliInfoCmdApiFromEnv(t *testing.T) {
 	const key = "RABTAP_APIURI"
 	os.Setenv(key, "APIURI")
 	defer os.Unsetenv(key)
@@ -165,7 +184,7 @@ func TestCliInfoModeApiFromEnv(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(args.TapConfig))
-	assert.Equal(t, InfoMode, args.Mode)
+	assert.Equal(t, InfoCmd, args.Cmd)
 	assert.Equal(t, "APIURI", args.APIURI)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowConsumers)
@@ -173,13 +192,13 @@ func TestCliInfoModeApiFromEnv(t *testing.T) {
 	assert.False(t, args.NoColor)
 }
 
-func TestCliInfoModeShowConsumersWithoutColor(t *testing.T) {
+func TestCliInfoCmdShowConsumersWithoutColor(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"info", "--api=APIURI", "--stats", "--consumers", "--no-color"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(args.TapConfig))
-	assert.Equal(t, InfoMode, args.Mode)
+	assert.Equal(t, InfoCmd, args.Cmd)
 	assert.Equal(t, "APIURI", args.APIURI)
 	assert.Nil(t, args.SaveDir)
 	assert.False(t, args.Verbose)
@@ -190,13 +209,13 @@ func TestCliInfoModeShowConsumersWithoutColor(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliInfoModeShowDefault(t *testing.T) {
+func TestCliInfoCmdShowDefault(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"info", "--api=APIURI", "--show-default"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(args.TapConfig))
-	assert.Equal(t, InfoMode, args.Mode)
+	assert.Equal(t, InfoCmd, args.Cmd)
 	assert.Equal(t, "APIURI", args.APIURI)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowConsumers)
@@ -204,13 +223,13 @@ func TestCliInfoModeShowDefault(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliPubModeFromFile(t *testing.T) {
+func TestCliPubCmdFromFile(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"pub", "--uri=broker", "exchange", "file"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, PubMode, args.Mode)
-	assert.Equal(t, "broker", args.PubAmqpURI)
+	assert.Equal(t, PubCmd, args.Cmd)
+	assert.Equal(t, "broker", args.AmqpURI)
 	assert.Equal(t, "exchange", args.PubExchange)
 	assert.Equal(t, "file", *args.PubFile)
 	assert.Equal(t, "", args.PubRoutingKey)
@@ -219,7 +238,7 @@ func TestCliPubModeFromFile(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliPubModeUriFromEnv(t *testing.T) {
+func TestCliPubCmdUriFromEnv(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	os.Setenv(key, "URI")
 	defer os.Unsetenv(key)
@@ -227,28 +246,119 @@ func TestCliPubModeUriFromEnv(t *testing.T) {
 		[]string{"pub", "exchange"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, PubMode, args.Mode)
-	assert.Equal(t, "URI", args.PubAmqpURI)
+	assert.Equal(t, PubCmd, args.Cmd)
+	assert.Equal(t, "URI", args.AmqpURI)
 	assert.Equal(t, "exchange", args.PubExchange)
 }
 
-func TestCliPubModeMissingUri(t *testing.T) {
+func TestCliPubCmdMissingUri(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	os.Unsetenv(key)
 	_, err := ParseCommandLineArgs(
 		[]string{"pub", "exchange"})
 	assert.NotNil(t, err)
 }
-func TestCliPubModeFromStdinWithRoutingKey(t *testing.T) {
+
+func TestCliPubCmdFromStdinWithRoutingKey(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--json"})
 
 	assert.Nil(t, err)
-	assert.Equal(t, PubMode, args.Mode)
-	assert.Equal(t, "broker1", args.PubAmqpURI)
+	assert.Equal(t, PubCmd, args.Cmd)
+	assert.Equal(t, "broker1", args.AmqpURI)
 	assert.Equal(t, "exchange1", args.PubExchange)
 	assert.Nil(t, args.PubFile)
 	assert.True(t, args.JSONFormat)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+}
+
+func TestCliSubCmd(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"sub", "queuename", "--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, SubCmd, args.Cmd)
+	assert.Equal(t, "queuename", args.QueueName)
+	assert.Equal(t, "uri", args.AmqpURI)
+}
+
+func TestCliCreateQueue(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"queue", "create", "name", "--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, QueueCreateCmd, args.Cmd)
+	assert.Equal(t, "name", args.QueueName)
+	assert.Equal(t, "uri", args.AmqpURI)
+	assert.False(t, args.Durable)
+	assert.False(t, args.Autodelete)
+}
+
+func TestCliCreateDurableAutodeleteQueue(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"queue", "create", "name", "--uri", "uri",
+			"--durable", "--autodelete"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, QueueCreateCmd, args.Cmd)
+	assert.True(t, args.Durable)
+	assert.True(t, args.Autodelete)
+}
+
+func TestCliRemoveQueue(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"queue", "rm", "name", "--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, QueueRemoveCmd, args.Cmd)
+	assert.Equal(t, "name", args.QueueName)
+	assert.Equal(t, "uri", args.AmqpURI)
+}
+
+func TestCliBindQueue(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"queue", "bind", "queuename", "to", "exchangename",
+			"--bindingkey", "key", "--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, QueueBindCmd, args.Cmd)
+	assert.Equal(t, "queuename", args.QueueName)
+	assert.Equal(t, "exchangename", args.ExchangeName)
+	assert.Equal(t, "key", args.QueueBindingKey)
+	assert.Equal(t, "uri", args.AmqpURI)
+}
+
+func TestCliCreateExchange(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"exchange", "create", "name", "--type", "topic",
+			"--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, ExchangeCreateCmd, args.Cmd)
+	assert.Equal(t, "name", args.ExchangeName)
+	assert.Equal(t, "topic", args.ExchangeType)
+	assert.Equal(t, "uri", args.AmqpURI)
+	assert.False(t, args.Durable)
+	assert.False(t, args.Autodelete)
+}
+
+func TestCliCreateDurableAutodeleteExchange(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"exchange", "create", "name", "--type", "topic",
+			"--uri", "uri", "--durable", "--autodelete"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, ExchangeCreateCmd, args.Cmd)
+	assert.True(t, args.Durable)
+	assert.True(t, args.Autodelete)
+}
+func TestCliRemoveExchange(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"exchange", "rm", "name", "--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, ExchangeRemoveCmd, args.Cmd)
+	assert.Equal(t, "name", args.ExchangeName)
+	assert.Equal(t, "uri", args.AmqpURI)
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/jandelgado/rabtap/testhelper"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestIntegrationWorkerInteraction checks that our worker function is properly
@@ -26,22 +27,24 @@ func TestIntegrationWorkerInteraction(t *testing.T) {
 
 	resultChan := make(chan int, 1)
 
-	worker := func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) bool {
-		assert.NotNil(t, rabbitConn)
+	worker := func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
+		require.NotNil(t, rabbitConn)
 		for {
 			select {
 			case controlMessage := <-controlChan:
 				// when triggered by AmqpConnector.Close(), ShutdownMessage is expected
-				assert.Equal(t, ShutdownMessage, controlMessage)
+				assert.Equal(t, shutdownMessage, controlMessage)
 				resultChan <- 1337
-				// true signals caller to re-connect, false to end processing
-				return controlMessage == ReconnectMessage
+				if controlMessage.IsReconnect() {
+					return doReconnect
+				}
+				return doNotReconnect
 			}
 		}
 	}
 
-	conn := NewAmqpConnector(testhelper.IntegrationURIFromEnv(), log)
-	go conn.Connect(&tls.Config{}, worker)
+	conn := NewAmqpConnector(testhelper.IntegrationURIFromEnv(), &tls.Config{}, log)
+	go conn.Connect(worker)
 
 	time.Sleep(time.Second * 2) // wait for connection to be established
 

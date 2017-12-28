@@ -62,7 +62,7 @@ func createQueue(ch *amqp.Channel, queueName string) {
 		queueName,
 		false, // non durable
 		false, // delete when unused
-		true,  // exclusive
+		false, // non exclusive
 		true,  // wait for response
 		nil)   // arguments
 	failOnError(err, "could not create queue "+queueName)

@@ -24,15 +24,13 @@ type PublishChannel chan *PublishMessage
 type AmqpPublish struct {
 	logger     logrus.StdLogger
 	connection *AmqpConnector
-	tlsConfig  *tls.Config
 }
 
 // NewAmqpPublish returns a new AmqpTap object associated with the RabbitMQ
 // broker denoted by the uri parameter.
 func NewAmqpPublish(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpPublish {
 	return &AmqpPublish{
-		connection: NewAmqpConnector(uri, logger),
-		tlsConfig:  tlsConfig,
+		connection: NewAmqpConnector(uri, tlsConfig, logger),
 		logger:     logger}
 }
 
@@ -49,11 +47,11 @@ func (s *AmqpPublish) Connected() bool {
 // through the errorChannel.
 func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorkerFunc {
 
-	return func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) bool {
+	return func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
 
 		channel, err := rabbitConn.Channel()
 		if err != nil {
-			return true // reconnect
+			return doReconnect
 		}
 		defer channel.Close()
 
@@ -62,7 +60,7 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 			case message, more := <-publishChannel:
 				if !more {
 					s.logger.Print("publishing channel closed.")
-					return false
+					return doNotReconnect
 				}
 				//s.logger.Printf("publishing message %#v to %s/%s", message,
 				//	message.Exchange, message.RoutingKey)
@@ -80,9 +78,13 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 				}
 
 			case controlMessage := <-controlChan:
-				s.logger.Printf("received control message: %d", controlMessage)
+				s.logger.Printf("received message on control channel: %#v", controlMessage)
 				// true signals caller to re-connect, false to end processing
-				return controlMessage == ReconnectMessage
+				if controlMessage.IsReconnect() {
+					return doReconnect
+				}
+				return doNotReconnect
+				//				return controlMessage == ReconnectMessage
 			}
 		}
 	}
@@ -92,8 +94,7 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 // the tap, which is bound to the provided consumer function. Typically
 // started as go-routine.
 func (s *AmqpPublish) EstablishConnection(publishChannel PublishChannel) {
-	s.connection.Connect(s.tlsConfig,
-		s.createWorkerFunc(publishChannel))
+	s.connection.Connect(s.createWorkerFunc(publishChannel))
 }
 
 // Close closes the connection to the broker and ends tapping.

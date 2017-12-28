@@ -49,7 +49,7 @@ func (s ColorPrinter) GetFuncMap() map[string]interface{} {
 }
 
 // NewColorableWriter returns a colorable writer for the given file (e.g
-// os.Stdout). Needed for on windows platform.
+// os.Stdout). Needed for windows platform to make colors work.
 func NewColorableWriter(file *os.File) io.Writer {
 	return colorable.NewColorable(file)
 }

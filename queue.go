@@ -1,0 +1,37 @@
+// Copyright (C) 2017 Jan Delgado
+// RabbitMQ wire-tap.
+
+package rabtap
+
+import "github.com/streadway/amqp"
+
+// CreateQueue creates a new queue
+// TODO(JD) get rid of bool types
+func CreateQueue(channel *amqp.Channel, queueName string,
+	durable, autoDelete, exclusive bool) error {
+
+	_, err := channel.QueueDeclare(
+		queueName,
+		durable,
+		autoDelete, // auto delete
+		exclusive,  // exclusive
+		false,      // wait for response
+		nil)
+	return err
+}
+
+// RemoveQueue removes a queue
+func RemoveQueue(channel *amqp.Channel,
+	queueName string, ifUnused, ifEmpty bool) error {
+
+	_, err := channel.QueueDelete(queueName, ifUnused, ifEmpty, false /* wait*/)
+	return err
+}
+
+// BindQueueToExchange binds the given queue to the given exchange.
+// TODO(JD) support for header based routing
+func BindQueueToExchange(channel *amqp.Channel,
+	queueName, key, exchangeName string) error {
+
+	return channel.QueueBind(queueName, key, exchangeName, false /* wait */, nil)
+}

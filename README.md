@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/jandelgado/rabtap)](https://goreportcard.com/report/github.com/jandelgado/rabtap)
 
 Swiss army knife for RabbitMQ. Tap/Pub/Sub messages, create/delete/bind queues
-and exchanges, discover broker.
+and exchanges, inspect broker.
 
 ## Contents 
 
@@ -63,7 +63,7 @@ with unset attributes filtered out and the message body:
 ## Installation
 
 Pre-compiled binaries can be downloaded for multiple platforms from the
-[releases page](releases/).
+[releases page](https://github.com/jandelgado/rabtap/releases).
 
 See [below](#build-from-source) if you prefer to compile from source.
 

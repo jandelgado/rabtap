@@ -127,7 +127,25 @@ func TestRabbitClientGetConsumers(t *testing.T) {
 
 	consumer, err := client.GetConsumers()
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(consumer))
+	assert.Equal(t, 2, len(consumer))
 	assert.Equal(t, "some_consumer", consumer[0].ConsumerTag)
+	assert.Equal(t, "another_consumer w/ faulty channel", consumer[1].ConsumerTag)
 
+}
+
+// test of GET /api/consumers endpoint workaround for empty channel_details
+func TestRabbitClientGetConsumersChannelDetailsIsEmptyArray(t *testing.T) {
+
+	mock := testhelper.NewRabbitAPIMock()
+	defer mock.Close()
+	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+
+	consumer, err := client.GetConsumers()
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(consumer))
+
+	// the second channel_details were "[]" to test behaviour of RabbitMQ
+	// api when [] is returned instead of a null object.
+	assert.Equal(t, "another_consumer w/ faulty channel", consumer[1].ConsumerTag)
+	assert.Equal(t, "", consumer[1].ChannelDetails.Name)
 }

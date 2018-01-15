@@ -192,6 +192,36 @@ type RabbitExchange struct {
 	//} `json:"arguments"`
 }
 
+// ChannelDetails model channel_details in RabbitConsumer
+type ChannelDetails struct {
+	PeerHost       string `json:"peer_host"`
+	PeerPort       int    `json:"peer_port"`
+	ConnectionName string `json:"connection_name"`
+	User           string `json:"user"`
+	Number         int    `json:"number"`
+	Node           string `json:"node"`
+	Name           string `json:"name"`
+}
+
+// UnmarshalJSON is a custom unmarshaler as a WORKAROUND for RabbitMQ API
+// returning "[]" instead of null.  To make sure deserialization does not
+// break, we catch this case, and return empty a ChannelDetails struct.
+// see e.g. https://github.com/rabbitmq/rabbitmq-management/issues/424
+func (d *ChannelDetails) UnmarshalJSON(data []byte) error {
+	// akias ChannelDetails to avoid recursion when callung Unmarshal
+	type Alias ChannelDetails
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(d),
+	}
+	if data[0] == '[' {
+		// JSON array detected
+		return nil
+	}
+	return json.Unmarshal(data, aux)
+}
+
 // RabbitConsumer models the /consumers resource of the rabbitmq http api
 type RabbitConsumer struct {
 	//	Arguments      []interface{} `json:"arguments"`
@@ -199,18 +229,9 @@ type RabbitConsumer struct {
 	AckRequired   bool   `json:"ack_required"`
 	Exclusive     bool   `json:"exclusive"`
 	ConsumerTag   string `json:"consumer_tag"`
-	// workaround, see above
-	//	Dummy          []interface{} `json:"channel_details,omitempty"`
-	ChannelDetails struct {
-		PeerHost       string `json:"peer_host"`
-		PeerPort       int    `json:"peer_port"`
-		ConnectionName string `json:"connection_name"`
-		User           string `json:"user"`
-		Number         int    `json:"number"`
-		Node           string `json:"node"`
-		Name           string `json:"name"`
-	} `json:"channel_details,omitempty"`
-	Queue struct {
+	// see WORKAROUND above
+	ChannelDetails ChannelDetails `json:"channel_details,omitempty"`
+	Queue          struct {
 		Vhost string `json:"vhost"`
 		Name  string `json:"name"`
 	} `json:"queue"`

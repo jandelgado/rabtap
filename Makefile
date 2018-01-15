@@ -7,7 +7,7 @@ BINARY_LINUX64=rabtap-linux-amd64
 SOURCE=$(shell find . -name "*go" -a -not -path "./vendor/*")
 VERSION=$(shell git describe --tags)
 
-build:	lint $(BINARY_LINUX64)
+build:	$(BINARY_LINUX64)
 
 build-all:	build $(BINARY_WIN64)  $(BINARY_DARWIN64)
 

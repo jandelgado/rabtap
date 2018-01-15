@@ -1134,6 +1134,19 @@ var consumerResult = `
             "vhost": "/",
             "name": "direct-q1"
         }
+    },
+    {
+        "arguments": [
+
+        ],
+        "prefetch_count": 0,
+        "ack_required": false,
+        "exclusive": true,
+        "consumer_tag": "another_consumer w/ faulty channel",
+        "channel_details": [],
+        "queue": {
+            "vhost": "/",
+            "name": "direct-q1"
+        }
     }
-]
-`
+]`

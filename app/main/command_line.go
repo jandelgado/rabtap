@@ -51,23 +51,23 @@ Options:
                       be read.
  QUEUE                name of a queue.
  -a, --autodelete     create auto delete exchange/queue.
- --api APIURI         connect to given API server. If APIURI is omitted, 
+ --api APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey KEY binding key to use in bind queue command.
  --consumers          include consumers in output of info command.
  -d, --durable        create durable exchange/queue.
  -h, --help           print this help.
- -j, --json           print/save/publish message metadata and body to a 
-                      single JSON file. JSON body is base64 encoded. Otherwise 
-                      metadata and body (as-is) are saved separately. 
+ -j, --json           print/save/publish message metadata and body to a
+                      single JSON file. JSON body is base64 encoded. Otherwise
+                      metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
- -n, --no-color       don't colorize output.
+ -n, --no-color       don't colorize output (also environment variable NO_COLOR)
  -r, --routingkey KEY routing key to use in publish mode.
  --saveto DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  --stats              include statistics in output of info command.
  -t, --type TYPE      exchange type [default: fanout].
- --uri URI            connect to given AQMP broker. If omitted, the 
+ --uri URI            connect to given AQMP broker. If omitted, the
                       environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
  --version            show version information and exit.
@@ -157,7 +157,7 @@ func parseCommonArgs(args map[string]interface{}) commonArgs {
 	return commonArgs{
 		Verbose:     args["--verbose"].(bool),
 		InsecureTLS: args["--insecure"].(bool),
-		NoColor:     args["--no-color"].(bool),
+		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != ""),
 		JSONFormat:  args["--json"].(bool)}
 }
 

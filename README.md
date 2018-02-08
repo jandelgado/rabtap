@@ -7,7 +7,7 @@
 Swiss army knife for RabbitMQ. Tap/Pub/Sub messages, create/delete/bind queues
 and exchanges, inspect broker.
 
-## Contents 
+## Contents
 
 <!-- vim-markdown-toc GFM -->
 
@@ -20,6 +20,7 @@ and exchanges, inspect broker.
     * [Environment variables](#environment-variables)
         * [Default RabbitMQ broker](#default-rabbitmq-broker)
         * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
+        * [Disable color output](#disable-color-output)
     * [Examples](#examples)
         * [Broker info](#broker-info)
         * [Wire-tapping messages](#wire-tapping-messages)
@@ -116,7 +117,7 @@ Options:
                       single JSON file. JSON body is base64 encoded. Otherwise
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
- -n, --no-color       don't colorize output.
+ -n, --no-color       don't colorize output (also environment variable NO_COLOR)
  -r, --routingkey KEY routing key to use in publish mode.
  --saveto DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
@@ -174,6 +175,10 @@ $ export RABTAP_APIURI=http://guest:guest@localhost:15672/
 $ rabtap info
 ...
 ```
+
+#### Disable color output
+
+Set environment variable `NO_COLOR` to disable color output.
 
 ### Examples
 
@@ -258,7 +263,7 @@ Will consume messages from queue `somequeue` and print out messages in JSON
 format (`-j`). Example assumes that `RABTAP_AMQPURI` environment variable is
 set.
 
-Note that unlike `tap`, `sub` will consume messages that are in effect 
+Note that unlike `tap`, `sub` will consume messages that are in effect
 removed from the specified queue.
 
 #### Poor mans shovel
@@ -327,7 +332,7 @@ $ make build-all
 ## Test data generator
 
 A simple [test data generator tool](app/testgen/README.md) for manual tests is
-included in the `app/testgen` directory. 
+included in the `app/testgen` directory.
 
 ## Author
 

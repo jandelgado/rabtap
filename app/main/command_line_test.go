@@ -79,7 +79,7 @@ func TestCliTapWithMultipleUris(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=broker1", "exchange1:binding1,exchange2:binding2",
 			"tap", "--uri=broker2", "exchange3:binding3,exchange4:binding4",
-			"--saveto", "savedir", "--no-color"})
+			"--saveto", "savedir"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, TapCmd, args.Cmd)
@@ -97,7 +97,7 @@ func TestCliTapWithMultipleUris(t *testing.T) {
 	assert.Equal(t, "exchange4", args.TapConfig[1].Exchanges[1].Exchange)
 	assert.Equal(t, "binding4", args.TapConfig[1].Exchanges[1].BindingKey)
 	assert.Equal(t, "savedir", *args.SaveDir)
-	assert.True(t, args.NoColor)
+	assert.False(t, args.NoColor)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
@@ -353,6 +353,7 @@ func TestCliCreateDurableAutodeleteExchange(t *testing.T) {
 	assert.True(t, args.Durable)
 	assert.True(t, args.Autodelete)
 }
+
 func TestCliRemoveExchange(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"exchange", "rm", "name", "--uri", "uri"})
@@ -361,4 +362,18 @@ func TestCliRemoveExchange(t *testing.T) {
 	assert.Equal(t, ExchangeRemoveCmd, args.Cmd)
 	assert.Equal(t, "name", args.ExchangeName)
 	assert.Equal(t, "uri", args.AmqpURI)
+}
+
+func TestParseNoColorFromEnvironment(t *testing.T) {
+	const key = "NO_COLOR"
+	os.Setenv(key, "1")
+	defer os.Unsetenv(key)
+
+	args, err := ParseCommandLineArgs(
+		[]string{"info", "--api=APIURI"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, InfoCmd, args.Cmd)
+	assert.Equal(t, "APIURI", args.APIURI)
+	assert.True(t, args.NoColor)
 }

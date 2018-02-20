@@ -252,7 +252,7 @@ Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` + `<exte
 * `$ rabtap pub amq.direct -r routingKey message.json --json`  - publish
   message(s) in JSON format to exchange `amq.direct` with routing key
   `routingKey`.
-* `$ cat message.json | rabtap pub amqp.direct -r routingKey --json` - same
+* `$ rabtap pub amqp.direct -r routingKey --json < message.json` - same
   as above, but read message(s) from stdin.
 
 #### Messages consumer (subscribe)

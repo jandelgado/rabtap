@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	colorHost     = color.FgHiWhite
+	colorURL      = color.FgHiWhite
 	colorVHost    = color.FgMagenta
 	colorExchange = color.FgHiBlue
 	colorQueue    = color.FgHiYellow
@@ -27,7 +27,7 @@ type ColorPrinterFunc func(a ...interface{}) string
 
 // ColorPrinter allows to print various items colorized
 type ColorPrinter struct {
-	Host     ColorPrinterFunc
+	URL      ColorPrinterFunc
 	VHost    ColorPrinterFunc
 	Exchange ColorPrinterFunc
 	Queue    ColorPrinterFunc
@@ -41,7 +41,7 @@ func (s ColorPrinter) GetFuncMap() map[string]interface{} {
 	return map[string]interface{}{
 		"QueueColor":    s.Queue,
 		"ExchangeColor": s.Exchange,
-		"HostColor":     s.Host,
+		"URLColor":      s.URL,
 		"VHostColor":    s.VHost,
 		"ConsumerColor": s.Consumer,
 		"MessageColor":  s.Message,
@@ -65,7 +65,7 @@ func NewColorPrinter(noColor bool) ColorPrinter {
 			nullPrinter, nullPrinter, nullPrinter, nullPrinter, nullPrinter}
 	}
 	return ColorPrinter{
-		Host:     color.New(colorHost).SprintFunc(),
+		URL:      color.New(colorURL).SprintFunc(),
 		VHost:    color.New(colorVHost).SprintFunc(),
 		Exchange: color.New(colorExchange).SprintFunc(),
 		Queue:    color.New(colorQueue).SprintFunc(),

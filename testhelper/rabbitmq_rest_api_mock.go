@@ -8,36 +8,62 @@ import (
 	"net/http/httptest"
 )
 
+// MockMode defines operation of the REST API mock
+type MockMode int
+
+const (
+	// MockModeEmpty returns empty structures, except for overview
+	MockModeEmpty MockMode = iota
+	// MockModeStd simulates broker with active queues and exchanges
+	MockModeStd MockMode = iota
+)
+
 // NewRabbitAPIMock returns a mock server for the rabbitmq http managemet
 // API. It is used by the integration test. Only a very limited subset
 // of resources is support (GET exchanges, bindings, queues, overviews).
 // Usage:
-//   mockServer := NewRabbitAPIMock()
+//   mockServer := NewRabbitAPIMock(MockModeStd)
 //   defer mockServer.Close()
 //   client f := NewRabbitHTTPClient(mockServe.URL)
 //
-func NewRabbitAPIMock() *httptest.Server {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		// TODO add test for GET
-		result := ""
-		switch r.URL.RequestURI() {
-		case "/exchanges":
-			result = exchangeResult
-		case "/bindings":
-			result = bindingResult
-		case "/queues":
-			result = queueResult
-		case "/overview":
-			result = overviewResult
-		case "/consumers":
-			result = consumerResult
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-		fmt.Fprint(w, result)
+func NewRabbitAPIMock(mode MockMode) *httptest.Server {
+	switch mode {
+	case MockModeEmpty:
+		return httptest.NewServer(http.HandlerFunc(mockEmptyHandler))
+	default:
+		return httptest.NewServer(http.HandlerFunc(mockStdHandler))
 	}
-	return httptest.NewServer(http.HandlerFunc(handler))
-	//	defer ts.Close()
+}
+
+func mockEmptyHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO add test for GET
+	var result string
+	if r.URL.RequestURI() == "/overview" {
+		result = overviewResult
+	} else {
+		result = "[]"
+	}
+	fmt.Fprint(w, result)
+}
+
+func mockStdHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO add test for GET
+	result := ""
+	switch r.URL.RequestURI() {
+	case "/exchanges":
+		result = exchangeResult
+	case "/bindings":
+		result = bindingResult
+	case "/queues":
+		result = queueResult
+	case "/overview":
+		result = overviewResult
+	case "/consumers":
+		result = consumerResult
+	default:
+		w.WriteHeader(http.StatusNotFound)
+	}
+	fmt.Fprint(w, result)
 }
 
 var bindingResult = `

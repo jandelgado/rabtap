@@ -1,28 +1,21 @@
 // Copyright (C) 2017 Jan Delgado
 
-// +build integration
-
 package main
 
 import (
 	"bytes"
 	"crypto/tls"
-	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/jandelgado/rabtap"
+	"github.com/jandelgado/rabtap/testhelper"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCmdInfo(t *testing.T) {
-	// REST api mock returning only empty messages
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "[ ]")
-	}
-	apiMock := httptest.NewServer(http.HandlerFunc(handler))
+func TestCmdInfoRootNodeOnly(t *testing.T) {
+	// REST api mock returning "empty" broker
+	apiMock := testhelper.NewRabbitAPIMock(testhelper.MockModeEmpty)
 	client := rabtap.NewRabbitHTTPClient(apiMock.URL, &tls.Config{})
 
 	printBrokerInfoConfig := PrintBrokerInfoConfig{
@@ -37,5 +30,6 @@ func TestCmdInfo(t *testing.T) {
 		client:                client,
 		printBrokerInfoConfig: printBrokerInfoConfig,
 		out: buf})
-	assert.Equal(t, "http://rootnode", strings.TrimSpace(buf.String()))
+	assert.Equal(t, "http://rootnode (broker ver=3.6.9, mgmt ver=3.6.9, cluster=rabbit@08f57d1fe8ab)",
+		strings.TrimSpace(buf.String()))
 }

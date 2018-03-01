@@ -16,7 +16,7 @@ import (
 // test invalid resource passed to getResource()
 func TestGetResourceInvalidUri(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -58,7 +58,7 @@ func TestGetResourceInvalidJSON(t *testing.T) {
 // test of GET /api/exchanges endpoint
 func TestRabbitClientGetExchanges(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -80,7 +80,7 @@ func TestRabbitClientGetExchanges(t *testing.T) {
 // test of GET /api/queues endpoint
 func TestRabbitClientGetQueues(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -95,7 +95,7 @@ func TestRabbitClientGetQueues(t *testing.T) {
 // test of GET /api/overview endpoint
 func TestRabbitClientGetOverview(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -108,7 +108,7 @@ func TestRabbitClientGetOverview(t *testing.T) {
 // test of GET /api/bindings endpoint
 func TestRabbitClientGetBindings(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -121,7 +121,7 @@ func TestRabbitClientGetBindings(t *testing.T) {
 // test of GET /api/consumers endpoint
 func TestRabbitClientGetConsumers(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -136,7 +136,7 @@ func TestRabbitClientGetConsumers(t *testing.T) {
 // test of GET /api/consumers endpoint workaround for empty channel_details
 func TestRabbitClientGetConsumersChannelDetailsIsEmptyArray(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 

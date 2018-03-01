@@ -63,6 +63,22 @@ func findExchangeByName(exchanges []rabtap.RabbitExchange,
 	return nil
 }
 
+// resolveTemplate resolves a template for use in the broker info printer,
+// with support for colored output. name is just an informational name
+// passed to the template ctor. tpl is the actual template and args
+// the arguments used during rendering.
+func (s BrokerInfoPrinter) resolveTemplate(name string, tpl string, args interface{}) string {
+	tmpl := template.Must(template.New(name).Funcs(
+		s.colorizer.GetFuncMap()).Parse(tpl))
+
+	var buf bytes.Buffer
+	err := tmpl.Execute(&buf, args)
+	if err != nil {
+		panic(err)
+	}
+	return buf.String()
+}
+
 func (s BrokerInfoPrinter) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
 	var flags []string
 	if queue.Durable {
@@ -108,7 +124,7 @@ func (s BrokerInfoPrinter) renderQueueElementAsString(queue rabtap.RabbitQueue, 
 	}
 	args := QueueInfo{s.config, binding, queue, queueFlags}
 
-	const queueTemplate = `
+	const tpl = `
 	    {{- QueueColor .Binding.Destination }} (queue,
 		{{- with .Binding.RoutingKey }} key={{ KeyColor .}},{{end}}
 		{{- with .Binding.Arguments}} args={{ KeyColor .}},{{end}}
@@ -120,13 +136,24 @@ func (s BrokerInfoPrinter) renderQueueElementAsString(queue rabtap.RabbitQueue, 
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
 		{{- " "}}{{ .QueueFlags}})`
 
-	tmpl := template.Must(template.New("queue-tpl").Funcs(s.colorizer.GetFuncMap()).Parse(queueTemplate))
-	var buf bytes.Buffer
-	err := tmpl.Execute(&buf, args)
-	if err != nil {
-		panic(err) // actually it's a programming error if the template fails
+	return s.resolveTemplate("queue-tpl", tpl, args)
+}
+
+func (s BrokerInfoPrinter) renderRootNodeAsString(rabbitURL url.URL, overview rabtap.RabbitOverview) string {
+
+	type RootInfo struct {
+		Config   PrintBrokerInfoConfig
+		URL      url.URL
+		Overview rabtap.RabbitOverview
 	}
-	return buf.String()
+	args := RootInfo{s.config, rabbitURL, overview}
+
+	const tpl = `{{ printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path | URLColor }} 
+		   {{- if .Overview }} (broker ver={{ .Overview.RabbitmqVersion }},
+		   {{- "" }} mgmt ver={{ .Overview.ManagementVersion }},
+		   {{- "" }} cluster={{ .Overview.ClusterName }}{{end}})`
+
+	return s.resolveTemplate("rootnode", tpl, args)
 }
 
 func (s BrokerInfoPrinter) renderExchangeElementAsString(exchange rabtap.RabbitExchange) string {
@@ -144,17 +171,10 @@ func (s BrokerInfoPrinter) renderExchangeElementAsString(exchange rabtap.RabbitE
 	exchangeFlags := s.renderExchangeFlagsAsString(exchange)
 	args := ExchangeInfo{s.config, exchange, exchangeFlags, printName}
 
-	const exchangeTemplate = `{{ ExchangeColor .PrintName }} (exchange, type '
-	{{- .Exchange.Type  }}' {{ .ExchangeFlags  }})`
+	const tpl = `{{ ExchangeColor .PrintName }} (exchange, type '
+	                {{- .Exchange.Type  }}' {{ .ExchangeFlags  }})`
 
-	tmpl := template.Must(template.New("exchange-tpl").Funcs(s.colorizer.GetFuncMap()).Parse(exchangeTemplate))
-
-	var buf bytes.Buffer
-	err := tmpl.Execute(&buf, args)
-	if err != nil {
-		panic(err)
-	}
-	return buf.String()
+	return s.resolveTemplate("exchange-tpl", tpl, args)
 }
 
 func (s BrokerInfoPrinter) addConsumerNode(node *TreeNode, consumers []rabtap.RabbitConsumer,
@@ -253,8 +273,7 @@ func (s BrokerInfoPrinter) Print(brokerInfo BrokerInfo,
 	if err != nil {
 		return err
 	}
-	root := NewInfoTree(fmt.Sprintf(s.colorizer.Host("%s://%s%s"),
-		url.Scheme, url.Host, url.Path))
+	root := NewInfoTree(s.renderRootNodeAsString(*url, brokerInfo.Overview))
 
 	// collect set of vhosts
 	vhosts := make(map[string]bool)

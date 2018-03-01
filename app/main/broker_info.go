@@ -6,6 +6,7 @@ import "github.com/jandelgado/rabtap"
 
 // BrokerInfo collects information of an RabbitMQ broker
 type BrokerInfo struct {
+	Overview  rabtap.RabbitOverview
 	Exchanges []rabtap.RabbitExchange
 	Queues    []rabtap.RabbitQueue
 	Bindings  []rabtap.RabbitBinding
@@ -19,6 +20,11 @@ func NewBrokerInfo(client *rabtap.RabbitHTTPClient) (BrokerInfo, error) {
 	var s BrokerInfo
 
 	// collect infos from rabtap.RabbitMQ API
+	s.Overview, err = client.GetOverview()
+	if err != nil {
+		return s, err
+	}
+
 	s.Exchanges, err = client.GetExchanges()
 	if err != nil {
 		return s, err

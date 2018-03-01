@@ -12,7 +12,7 @@ import (
 
 func TestDiscoveryUnknownExchange(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -22,7 +22,7 @@ func TestDiscoveryUnknownExchange(t *testing.T) {
 
 func TestDiscoveryDirectExchange(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -35,7 +35,7 @@ func TestDiscoveryDirectExchange(t *testing.T) {
 
 func TestDiscoveryTopicExchange(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -47,7 +47,7 @@ func TestDiscoveryTopicExchange(t *testing.T) {
 
 func TestDiscoveryFanoutExchange(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 	result, err := DiscoverBindingsForExchange(client, "/", "test-fanout")
@@ -59,7 +59,7 @@ func TestDiscoveryFanoutExchange(t *testing.T) {
 
 func TestDiscoveryHeadersExchange(t *testing.T) {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 	result, err := DiscoverBindingsForExchange(client, "/", "test-headers")

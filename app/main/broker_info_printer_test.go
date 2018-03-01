@@ -12,6 +12,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestResolveTemplate(t *testing.T) {
+	type Info struct {
+		Name string
+	}
+	args := Info{"Jan"}
+
+	const tpl = "hello {{ .Name }}"
+
+	brokerInfoPrinter := NewBrokerInfoPrinter(
+		PrintBrokerInfoConfig{
+			ShowStats:           false,
+			ShowConsumers:       false,
+			ShowDefaultExchange: false,
+			NoColor:             true})
+
+	result := brokerInfoPrinter.resolveTemplate("test", tpl, args)
+	assert.Equal(t, "hello Jan", result)
+}
+
 func TestFindExchangeByName(t *testing.T) {
 	exchanges := []rabtap.RabbitExchange{
 		{Name: "exchange1", Vhost: "vhost"},
@@ -22,6 +41,13 @@ func TestFindExchangeByName(t *testing.T) {
 	assert.Equal(t, "exchange2", exchange.Name)
 }
 
+func TestFindExchangeByNameNotFound(t *testing.T) {
+	exchanges := []rabtap.RabbitExchange{
+		{Name: "exchange1", Vhost: "vhost"},
+	}
+	exchange := findExchangeByName(exchanges, "/", "not-available")
+	assert.Nil(t, exchange)
+}
 func TestFindQueueByName(t *testing.T) {
 	queues := []rabtap.RabbitQueue{
 		{Name: "q1", Vhost: "vhost"},
@@ -52,7 +78,7 @@ func TestFormatConsumerElement(t *testing.T) {
 **/
 func ExampleBrokerInfoPrinter_Print() {
 
-	mock := testhelper.NewRabbitAPIMock()
+	mock := testhelper.NewRabbitAPIMock(testhelper.MockModeStd)
 	defer mock.Close()
 	client := rabtap.NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
@@ -72,7 +98,7 @@ func ExampleBrokerInfoPrinter_Print() {
 	}
 
 	// Output:
-	// http://rabbitmq/api
+	// http://rabbitmq/api (broker ver=3.6.9, mgmt ver=3.6.9, cluster=rabbit@08f57d1fe8ab)
 	// └── Vhost /
 	//     ├── amq.direct (exchange, type 'direct' [D])
 	//     ├── amq.fanout (exchange, type 'fanout' [D])

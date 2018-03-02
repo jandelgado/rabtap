@@ -329,6 +329,12 @@ $ dep ensure
 $ make build-all
 ```
 
+or simply use this on-stop command:
+
+```
+$ go build -o rabtap github.com/jandelgado/rabtap/cmd/main
+```
+
 ## Test data generator
 
 A simple [test data generator tool](app/testgen/README.md) for manual tests is

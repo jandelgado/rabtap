@@ -4,8 +4,6 @@ vendor/
 *exe
 rabtap-*linux*
 rabtap-*darwin*
-app/testgen/testgen
-app/main/main
-amqp-wire-tap
+cmd/testgen/testgen
 *.out
 

@@ -337,7 +337,7 @@ $ go build -o rabtap github.com/jandelgado/rabtap/cmd/main
 
 ## Test data generator
 
-A simple [test data generator tool](app/testgen/README.md) for manual tests is
+A simple [test data generator tool](cmd/testgen/README.md) for manual tests is
 included in the `app/testgen` directory.
 
 ## Author

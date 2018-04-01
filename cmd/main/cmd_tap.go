@@ -7,7 +7,6 @@ package main
 import (
 	"crypto/tls"
 	"os"
-	"os/signal"
 
 	"github.com/jandelgado/rabtap/pkg"
 )
@@ -15,7 +14,9 @@ import (
 func tapCmdShutdownFunc(taps []*rabtap.AmqpTap) {
 	log.Info("rabtap tap threads shutting down ...")
 	for _, tap := range taps {
-		tap.Close()
+		if err := tap.Close(); err != nil {
+			log.Errorf("error closing tap: %v", err)
+		}
 	}
 }
 
@@ -23,15 +24,11 @@ func tapCmdShutdownFunc(taps []*rabtap.AmqpTap) {
 // messages.
 func cmdTap(tapConfig []rabtap.TapConfiguration, tlsConfig *tls.Config,
 	messageReceiveFunc MessageReceiveFunc, signalChannel chan os.Signal) {
-
 	// this channel is used to decouple message receiving threads
 	// with the main thread, which does the actual message processing
 	tapMessageChannel := make(rabtap.TapChannel)
 	taps := establishTaps(tapMessageChannel, tapConfig, tlsConfig)
 	defer tapCmdShutdownFunc(taps)
-
-	signal.Notify(signalChannel, os.Interrupt)
-
 	messageReceiveLoop(tapMessageChannel, messageReceiveFunc, signalChannel)
 }
 

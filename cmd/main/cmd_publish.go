@@ -45,10 +45,12 @@ func publishMessage(publishChannel rabtap.PublishChannel,
 }
 
 // readSingleMessageFromRawFile reads a single messages from the given io.Reader
-// which is typically stdin or a file. On subsequent calls, it returns io.EOF.
+// which is typically stdin or a file. If reading from stdin, CTRL+D (linux)
+// or CTRL+Z (Win) on an empty line terminates the reader.
 func readSingleMessageFromRawFile(reader io.Reader) (amqp.Publishing, error) {
 	buf := new(bytes.Buffer)
-	if numRead, err := buf.ReadFrom(reader); err != nil {
+	numRead, err := buf.ReadFrom(reader)
+	if err != nil {
 		return amqp.Publishing{}, err
 	} else if numRead == 0 {
 		return amqp.Publishing{}, io.EOF
@@ -102,7 +104,6 @@ func publishMessageStream(publishChannel rabtap.PublishChannel,
 // cmdPublish reads messages with the provied readNextMessageFunc and
 // publishes the messages to the given exchange.
 func cmdPublish(cmd CmdPublishArg) {
-
 	log.Debugf("publishing message(s) to exchange %s with routingkey %s",
 		cmd.exchange, cmd.routingKey)
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)

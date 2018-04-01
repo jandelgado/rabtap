@@ -17,33 +17,33 @@ type BrokerInfo struct {
 func NewBrokerInfo(client *rabtap.RabbitHTTPClient) (BrokerInfo, error) {
 
 	var err error
-	var s BrokerInfo
+	var bi BrokerInfo
 
 	// collect infos from rabtap.RabbitMQ API
-	s.Overview, err = client.GetOverview()
+	bi.Overview, err = client.GetOverview()
 	if err != nil {
-		return s, err
+		return bi, err
 	}
 
-	s.Exchanges, err = client.GetExchanges()
+	bi.Exchanges, err = client.GetExchanges()
 	if err != nil {
-		return s, err
+		return bi, err
 	}
 
-	s.Bindings, err = client.GetBindings()
+	bi.Bindings, err = client.GetBindings()
 	if err != nil {
-		return s, err
+		return bi, err
 	}
 
-	s.Queues, err = client.GetQueues()
+	bi.Queues, err = client.GetQueues()
 	if err != nil {
-		return s, err
+		return bi, err
 	}
 
-	s.Consumers, err = client.GetConsumers()
+	bi.Consumers, err = client.GetConsumers()
 	if err != nil {
-		return s, err
+		return bi, err
 	}
 
-	return s, nil
+	return bi, nil
 }

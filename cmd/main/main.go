@@ -5,6 +5,7 @@ package main
 import (
 	"crypto/tls"
 	"os"
+	"os/signal"
 
 	"github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"
@@ -35,9 +36,9 @@ func getTLSConfig(insecureTLS bool) *tls.Config {
 	return &tls.Config{InsecureSkipVerify: insecureTLS}
 }
 
-func startCmdInfo(args CommandLineArgs) {
+func startCmdInfo(args CommandLineArgs, title string) {
 	cmdInfo(CmdInfoArg{
-		rootNode: args.APIURI,
+		rootNode: title,
 		client:   rabtap.NewRabbitHTTPClient(args.APIURI, getTLSConfig(args.InsecureTLS)),
 		printBrokerInfoConfig: PrintBrokerInfoConfig{
 			ShowStats:           args.ShowStats,
@@ -66,6 +67,7 @@ func startCmdPublish(args CommandLineArgs) {
 func startCmdSubscribe(args CommandLineArgs) {
 	// signalChannel receives ctrl+C/interrput signal
 	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt)
 	// messageReceiveFunc receives the tapped messages, prints
 	// and optionally saves them.
 	messageReceiveFunc := createMessageReceiveFunc(
@@ -81,6 +83,7 @@ func startCmdSubscribe(args CommandLineArgs) {
 
 func startCmdTap(args CommandLineArgs) {
 	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt)
 	messageReceiveFunc := createMessageReceiveFunc(
 		NewColorableWriter(os.Stdout), args.JSONFormat,
 		args.SaveDir, args.NoColor)
@@ -100,7 +103,7 @@ func main() {
 
 	switch args.Cmd {
 	case InfoCmd:
-		startCmdInfo(args)
+		startCmdInfo(args, args.APIURI)
 	case SubCmd:
 		startCmdSubscribe(args)
 	case PubCmd:

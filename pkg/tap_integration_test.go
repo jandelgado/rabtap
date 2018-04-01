@@ -248,7 +248,7 @@ func TestIntegrationCloseTap(t *testing.T) {
 	assert.Nil(t, err)
 	assert.False(t, tap.Connected())
 
-	// try to close again
+	// try to close again, should not block & return error
 	err = tap.Close()
 	assert.NotNil(t, err)
 	assert.False(t, tap.Connected())

@@ -32,10 +32,8 @@ lint:
 	@./pre-commit
 
 short-test: 
-	go test -v  -cover -coverprofile=coverage.out github.com/jandelgado/rabtap 
-	go test -v  -cover -coverprofile=coverage_app.out github.com/jandelgado/rabtap/app/main
-	grep -v "^mode:" coverage_app.out >> coverage.out
-	go tool cover -func=coverage.out
+	go test -v -race  github.com/jandelgado/rabtap/cmd/main
+	go test -v -race  github.com/jandelgado/rabtap/pkg
 
 test-app:
 	go test -race -v -tags "integration" -cover -coverprofile=coverage_app.out github.com/jandelgado/rabtap/cmd/main

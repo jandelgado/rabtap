@@ -21,15 +21,23 @@ const (
 type ReconnectAction int
 
 const (
-	// DoNotReconnect signals caller of worker func not to reconnect
-	doNotReconnect = iota
-	// DoReconnect signals caller of worker func to reconnect
+	// doNotReconnect signals caller of worker func not to reconnect
+	doNotReconnect ReconnectAction = iota
+	// doReconnect signals caller of worker func to reconnect
 	doReconnect
 )
 
 func (s ReconnectAction) shouldReconnect() bool {
 	return s == doReconnect
 }
+
+type connectionState int
+
+const (
+	stateConnecting connectionState = iota
+	stateConnected
+	stateClosed
+)
 
 // An AmqpWorkerFunc does the actual work after the connection is established.
 // If the worker returns true, the caller should re-connect to the broker.  If
@@ -68,7 +76,7 @@ type AmqpConnector struct {
 // NewAmqpConnector creates a new AmqpConnector object.
 func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpConnector {
 	connected := &atomic.Value{}
-	connected.Store(false)
+	connected.Store(stateClosed)
 	return &AmqpConnector{
 		uri:            uri,
 		tlsConfig:      tlsConfig,
@@ -80,22 +88,29 @@ func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger logrus.StdLogger
 
 // Connected returns true if the connection is established, else false.
 func (s *AmqpConnector) Connected() bool {
-	return s.connected.Load().(bool)
+	return s.connected.Load().(connectionState) == stateConnected
 }
 
 // Try to connect to the RabbitMQ server as  long as it takes to establish a
-// connection
-func (s *AmqpConnector) connect() *amqp.Connection {
+// connection. Will be interrupted by any message on the control channel.
+func (s *AmqpConnector) redial() (*amqp.Connection, error) {
 	s.connection = nil
-	s.connected.Store(false)
+	s.connected.Store(stateConnecting)
 	for {
 		s.logger.Printf("(re-)connecting to %s\n", s.uri)
 		conn, err := amqp.DialTLS(s.uri, s.tlsConfig)
 		if err == nil {
 			s.logger.Printf("connection established.")
 			s.connection = conn
-			s.connected.Store(true)
-			return conn
+			s.connected.Store(stateConnected)
+			return conn, nil
+		}
+
+		// loop can be interrupted by call to Close()
+		select {
+		case <-s.controlChan:
+			return nil, errors.New("tap shutdown requested during connect")
+		default:
 		}
 		s.logger.Printf("error connecting to broker %+v", err)
 		time.Sleep(reconnectDelayTime)
@@ -103,29 +118,34 @@ func (s *AmqpConnector) connect() *amqp.Connection {
 }
 
 // Connect  (re-)establishes the connection to RabbitMQ broker.
-func (s *AmqpConnector) Connect(worker AmqpWorkerFunc) {
-
+func (s *AmqpConnector) Connect(worker AmqpWorkerFunc) error {
 	for {
-		// the error channel is used to detect when (re-)connect is needed
-		// will be closed by amqp lib when event is sent.
+		// the error channel is used to detect when (re-)connect is needed will
+		// be closed by amqp lib when connection is gracefully shut down.
 		errorChan := make(chan *amqp.Error)
 		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		defer cancel() // to prevent go-routine leaking
 
 		// translate amqp notifications (*amqp.Error) to events for the worker
 		go func() {
 			select {
 			case <-ctx.Done():
-				// prevents go-routine leaking
 				return
 			case <-errorChan:
 				// let the worker know we are re-connecting
 				s.controlChan <- reconnectMessage
-				// amqp lib closes channel afterwards.
 				return
 			}
 		}()
-		rabbitConn := s.connect()
+
+		rabbitConn, err := s.redial()
+		if err != nil {
+			// only returns with err set when interrupted by call to Close()
+			// end processing, but don't signal error.
+			s.workerFinished <- nil
+			return nil
+		}
+
 		rabbitConn.NotifyClose(errorChan)
 
 		if !worker(rabbitConn, s.controlChan).shouldReconnect() {
@@ -135,18 +155,19 @@ func (s *AmqpConnector) Connect(worker AmqpWorkerFunc) {
 	}
 	err := s.shutdown()
 	s.workerFinished <- err
+	return nil
 }
 
 func (s *AmqpConnector) shutdown() error {
-	err := s.connection.Close() // this should be a critical section
-	s.connected.Store(false)
+	err := s.connection.Close()
+	s.connected.Store(stateClosed)
 	return err
 }
 
 // Close closes the connection to the broker.
 func (s *AmqpConnector) Close() error {
-	if !s.Connected() {
-		return errors.New("not connected")
+	if s.connected.Load().(connectionState) == stateClosed {
+		return errors.New("already closed")
 	}
 	s.controlChan <- shutdownMessage
 	return <-s.workerFinished

@@ -196,10 +196,10 @@ rabbitmq:3-management` or similar command to start a RabbitMQ container.
 #### Wire-tapping messages
 
 The `tap` command allows to tap to multiple exchanges, with optionally
-specifying binding keys. The syntax of the `tap` command is `rabtap tap [--uri
-URI] EXCHANGES` where the `EXCHANGES` argument specifies the exchanges and
-binding keys to use. The `EXCHANGES` argument is of the form
-`EXCHANGE:[KEY][,EXCHANGE:[KEY]]*`.
+specifying binding keys. Rabtap automatically reconnects on connections
+failures. The syntax of the `tap` command is `rabtap tap [--uri URI] EXCHANGES`
+where the `EXCHANGES` argument specifies the exchanges and binding keys to use.
+The `EXCHANGES` argument is of the form `EXCHANGE:[KEY][,EXCHANGE:[KEY]]*`.
 
 The acutal format of the binding key depends on the exchange type (e.g.
 direct, topic, headers) and is described in the [RabbitMQ
@@ -327,12 +327,6 @@ $ go get github.com/jandelgado/rabtap
 $ cd $GOPATH/src/github.com/jandelgado/rabtap
 $ dep ensure
 $ make build-all
-```
-
-or simply use this on-stop command:
-
-```
-$ go build -o rabtap github.com/jandelgado/rabtap/cmd/main
 ```
 
 ## Test data generator

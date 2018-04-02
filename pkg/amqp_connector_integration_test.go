@@ -19,6 +19,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestAbortConnectionPhase(t *testing.T) {
+
+	log := log.New(os.Stdout, "ampq_connector_inttest: ", log.Lshortfile)
+
+	conn := NewAmqpConnector("amqp://localhost:1", &tls.Config{}, log)
+
+	worker := func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
+		assert.Fail(t, "worker unepctedly called during test")
+		return doNotReconnect
+	}
+
+	done := make(chan error)
+	go func() {
+		done <- conn.Connect(worker)
+	}()
+
+	time.Sleep(time.Second * 1) // wait for go-routine to start
+	conn.Close()
+
+	select {
+	case <-time.After(5 * time.Second):
+		assert.Fail(t, "Connect() did not shut down as expected")
+	case err := <-done:
+		assert.Nil(t, err)
+	}
+}
+
 // TestIntegrationWorkerInteraction checks that our worker function is properly
 // called an that the shutdown mechanism works.
 func TestIntegrationWorkerInteraction(t *testing.T) {

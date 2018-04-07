@@ -100,7 +100,7 @@ Examples:
   rabtap queue rm JDQ
 
 Options:
- EXCHANGES            comma-separated list of exchanges and routing keys,
+ EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
  FILE                 file to publish in pub mode. If omitted, stdin will
@@ -207,11 +207,11 @@ documentation](https://www.rabbitmq.com/tutorials/amqp-concepts.html).
 
 Some examples:
 
-* `#` on  an exchange of `type topic` will make the tap receive all messages
+* `#` on  an exchange of type `topic` will make the tap receive all messages
   on the exchange.
-* a valid queue name for an exchange of `type direct` binds exactly to messages
+* a valid queue name for an exchange of type `direct` binds exactly to messages
   destined for this queue
-* an empty binding key for exchanges of `type  fanout` or `type headers` will
+* an empty binding key for exchanges of type `fanout` or type `headers` will
   receive all messages published to these exchanges
 
 Note: on exchanges of type `headers` the binding key is currently ignored and

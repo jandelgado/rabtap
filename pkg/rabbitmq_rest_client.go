@@ -190,6 +190,16 @@ type RabbitExchange struct {
 	Arguments  map[string]interface{} `json:"arguments,omitempty"`
 	//Arguments  struct {
 	//} `json:"arguments"`
+	MessageStats struct {
+		PublishOut        int `json:"publish_out"`
+		PublishOutDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"publish_out_details"`
+		PublishIn        int `json:"publish_in"`
+		PublishInDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"publish_in_details"`
+	} `json:"message_stats,omitempty"`
 }
 
 // ChannelDetails model channel_details in RabbitConsumer

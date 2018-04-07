@@ -134,7 +134,7 @@ func (s BrokerInfoPrinter) renderQueueElementAsString(queue rabtap.RabbitQueue, 
 		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
 		{{- end }}
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
-		{{- " "}}{{ .QueueFlags}})`
+		{{- ""}}, {{ .QueueFlags}})`
 
 	return s.resolveTemplate("queue-tpl", tpl, args)
 }
@@ -171,8 +171,11 @@ func (s BrokerInfoPrinter) renderExchangeElementAsString(exchange rabtap.RabbitE
 	exchangeFlags := s.renderExchangeFlagsAsString(exchange)
 	args := ExchangeInfo{s.config, exchange, exchangeFlags, printName}
 
-	const tpl = `{{ ExchangeColor .PrintName }} (exchange, type '
-	                {{- .Exchange.Type  }}' {{ .ExchangeFlags  }})`
+	const tpl = `{{ ExchangeColor .PrintName }} (exchange, type '{{ .Exchange.Type  }}'
+		   {{- if and .Config.ShowStats .Exchange.MessageStats }}, in=(
+		   {{- .Exchange.MessageStats.PublishIn }}, {{printf "%.1f" .Exchange.MessageStats.PublishInDetails.Rate}}/s) msg, out=(
+		   {{- .Exchange.MessageStats.PublishOut }}, {{printf "%.1f" .Exchange.MessageStats.PublishOutDetails.Rate}}/s) msg
+		   {{- end }}, {{ .ExchangeFlags  }})`
 
 	return s.resolveTemplate("exchange-tpl", tpl, args)
 }

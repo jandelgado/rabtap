@@ -97,6 +97,13 @@ func (s *AmqpConnector) redial() (*amqp.Connection, error) {
 	s.connection = nil
 	s.connected.Store(stateConnecting)
 	for {
+		// loop can be interrupted by call to Close()
+		select {
+		case <-s.controlChan:
+			return nil, errors.New("tap shutdown requested during connect")
+		default:
+		}
+
 		s.logger.Printf("(re-)connecting to %s\n", s.uri)
 		conn, err := amqp.DialTLS(s.uri, s.tlsConfig)
 		if err == nil {
@@ -106,12 +113,6 @@ func (s *AmqpConnector) redial() (*amqp.Connection, error) {
 			return conn, nil
 		}
 
-		// loop can be interrupted by call to Close()
-		select {
-		case <-s.controlChan:
-			return nil, errors.New("tap shutdown requested during connect")
-		default:
-		}
 		s.logger.Printf("error connecting to broker %+v", err)
 		time.Sleep(reconnectDelayTime)
 	}

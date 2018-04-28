@@ -54,7 +54,7 @@ Options:
  --api APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey KEY binding key to use in bind queue command.
- --consumers          include consumers in output of info command.
+ --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
  -h, --help           print this help.
  -j, --json           print/save/publish message metadata and body to a

@@ -60,6 +60,10 @@ func mockStdHandler(w http.ResponseWriter, r *http.Request) {
 		result = overviewResult
 	case "/consumers":
 		result = consumerResult
+	case "/channels":
+		result = channelResult
+	case "/connections":
+		result = connectionResult
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
@@ -1150,11 +1154,11 @@ var consumerResult = `
         "channel_details": {
             "peer_host": "172.17.0.1",
             "peer_port": 58938,
-            "connection_name": "172.17.0.1:58938 -> 172.17.0.2:5672",
+            "connection_name": "172.17.0.1:40874 -> 172.17.0.2:5672",
             "user": "guest",
             "number": 2,
             "node": "rabbit@35b655845dfd",
-            "name": "172.17.0.1:58938 -> 172.17.0.2:5672 (2)"
+      		"name" : "172.17.0.1:40874 -> 172.17.0.2:5672 (1)"
         },
         "queue": {
             "vhost": "/",
@@ -1176,3 +1180,116 @@ var consumerResult = `
         }
     }
 ]`
+
+var channelResult = `
+
+[
+   {
+      "user" : "guest",
+      "garbage_collection" : {
+         "min_bin_vheap_size" : 46422,
+         "fullsweep_after" : 65535,
+         "min_heap_size" : 233,
+         "minor_gcs" : 23,
+         "max_heap_size" : 0
+      },
+      "confirm" : false,
+      "prefetch_count" : 0,
+      "messages_unconfirmed" : 0,
+      "vhost" : "/",
+      "messages_uncommitted" : 0,
+      "consumer_count" : 0,
+      "messages_unacknowledged" : 0,
+      "message_stats" : {
+         "confirm_details" : {
+            "rate" : 0
+         },
+         "publish" : 20680,
+         "return_unroutable" : 0,
+         "return_unroutable_details" : {
+            "rate" : 0
+         },
+         "publish_details" : {
+            "rate" : 72
+         },
+         "confirm" : 0
+      },
+      "global_prefetch_count" : 0,
+      "reductions" : 13649459,
+      "transactional" : false,
+      "reductions_details" : {
+         "rate" : 32643.2
+      },
+      "name" : "172.17.0.1:40874 -> 172.17.0.2:5672 (1)",
+      "acks_uncommitted" : 0,
+      "node" : "rabbit@ae1ad1477419",
+      "state" : "running",
+      "connection_details" : {
+         "name" : "172.17.0.1:40874 -> 172.17.0.2:5672",
+         "peer_port" : 40874,
+         "peer_host" : "172.17.0.1"
+      },
+      "number" : 1
+   }
+]
+`
+
+var connectionResult = `
+[
+   {
+      "host" : "172.17.0.2",
+      "ssl" : false,
+      "recv_cnt" : 8136,
+      "channels" : 1,
+      "timeout" : 10,
+      "reductions" : 1968995,
+      "node" : "rabbit@ae1ad1477419",
+      "recv_oct" : 6238173,
+      "name" : "172.17.0.1:40874 -> 172.17.0.2:5672",
+      "port" : 5672,
+      "type" : "network",
+      "send_oct_details" : {
+         "rate" : 1.6
+      },
+      "vhost" : "/",
+      "client_properties" : {
+         "product" : "https://github.com/streadway/amqp",
+         "capabilities" : {
+            "connection.blocked" : true,
+            "consumer_cancel_notify" : true
+         },
+         "version" : "β"
+      },
+      "peer_cert_validity" : null,
+      "state" : "running",
+      "user" : "guest",
+      "protocol" : "AMQP 0-9-1",
+      "peer_host" : "172.17.0.1",
+      "channel_max" : 65535,
+      "send_oct" : 1094,
+      "recv_oct_details" : {
+         "rate" : 16524
+      },
+      "ssl_cipher" : null,
+      "auth_mechanism" : "PLAIN",
+      "send_pend" : 0,
+      "send_cnt" : 73,
+      "ssl_hash" : null,
+      "ssl_key_exchange" : null,
+      "peer_port" : 40874,
+      "connected_at" : 1524852240438,
+      "ssl_protocol" : null,
+      "peer_cert_issuer" : null,
+      "peer_cert_subject" : null,
+      "garbage_collection" : {
+         "fullsweep_after" : 65535,
+         "minor_gcs" : 152,
+         "max_heap_size" : 0,
+         "min_bin_vheap_size" : 46422,
+         "min_heap_size" : 233
+      },
+      "frame_max" : 131072,
+      "reductions_details" : {
+         "rate" : 5928.2
+      }
+   }]`

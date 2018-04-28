@@ -18,7 +18,7 @@ func TestCmdInfoRootNodeOnly(t *testing.T) {
 	apiMock := testcommon.NewRabbitAPIMock(testcommon.MockModeEmpty)
 	client := rabtap.NewRabbitHTTPClient(apiMock.URL, &tls.Config{})
 
-	printBrokerInfoConfig := PrintBrokerInfoConfig{
+	printConfig := BrokerInfoPrinterConfig{
 		ShowStats:           false,
 		ShowConsumers:       false,
 		ShowDefaultExchange: false,
@@ -26,10 +26,10 @@ func TestCmdInfoRootNodeOnly(t *testing.T) {
 
 	buf := bytes.NewBufferString("")
 	cmdInfo(CmdInfoArg{
-		rootNode:              "http://x:y@rootnode",
-		client:                client,
-		printBrokerInfoConfig: printBrokerInfoConfig,
-		out: buf})
-	assert.Equal(t, "http://rootnode (broker ver=3.6.9, mgmt ver=3.6.9, cluster=rabbit@08f57d1fe8ab)",
+		rootNode:    "http://x:y@rootnode",
+		client:      client,
+		printConfig: printConfig,
+		out:         buf})
+	assert.Equal(t, "http://rootnode (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')",
 		strings.TrimSpace(buf.String()))
 }

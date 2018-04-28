@@ -50,7 +50,7 @@ func TestIntegrationAmqpQueueCreateBindRemove(t *testing.T) {
 		&tls.Config{})
 
 	// make sure queue does not exist before creation
-	queues, err := client.GetQueues()
+	queues, err := client.Queues()
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findQueue(queueTestName, queues))
 
@@ -61,22 +61,21 @@ func TestIntegrationAmqpQueueCreateBindRemove(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check if queue was created
-	queues, err = client.GetQueues()
+	queues, err = client.Queues()
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findQueue(queueTestName, queues))
 
 	// bind queue to exchange
 	err = BindQueueToExchange(ch, queueTestName, keyTestName, exchangeTestName)
 	assert.Nil(t, err)
-	bindings, err := client.GetBindings()
+	bindings, err := client.Bindings()
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// finally remove queue
 	err = RemoveQueue(ch, queueTestName, false, false)
 	assert.Nil(t, err)
-	queues, err = client.GetQueues()
+	queues, err = client.Queues()
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findQueue(queueTestName, queues))
-
 }

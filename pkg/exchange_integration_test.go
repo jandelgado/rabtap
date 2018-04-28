@@ -37,7 +37,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 		&tls.Config{})
 
 	// make sure exchange does not exist before creation
-	exchanges, err := client.GetExchanges()
+	exchanges, err := client.Exchanges()
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findExchange(testName, exchanges))
 
@@ -48,7 +48,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check if exchange was created
-	exchanges, err = client.GetExchanges()
+	exchanges, err = client.Exchanges()
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findExchange(testName, exchanges))
 
@@ -57,7 +57,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check if exchange was deleted
-	exchanges, err = client.GetExchanges()
+	exchanges, err = client.Exchanges()
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findExchange(testName, exchanges))
 }

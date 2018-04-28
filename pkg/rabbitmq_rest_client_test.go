@@ -62,7 +62,7 @@ func TestRabbitClientGetExchanges(t *testing.T) {
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
-	result, err := client.GetExchanges()
+	result, err := client.Exchanges()
 	assert.Nil(t, err)
 	assert.Equal(t, 12, len(result))
 	assert.Equal(t, "", (result)[0].Name)
@@ -84,7 +84,7 @@ func TestRabbitClientGetQueues(t *testing.T) {
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
-	result, err := client.GetQueues()
+	result, err := client.Queues()
 	assert.Nil(t, err)
 	assert.Equal(t, 8, len(result))
 	assert.Equal(t, "/", (result)[0].Vhost)
@@ -99,7 +99,7 @@ func TestRabbitClientGetOverview(t *testing.T) {
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
-	result, err := client.GetOverview()
+	result, err := client.Overview()
 	assert.Nil(t, err)
 	assert.Equal(t, "3.6.9", result.ManagementVersion)
 
@@ -112,7 +112,7 @@ func TestRabbitClientGetBindings(t *testing.T) {
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
-	_, err := client.GetBindings()
+	_, err := client.Bindings()
 	assert.Nil(t, err)
 	// TODO
 
@@ -125,12 +125,25 @@ func TestRabbitClientGetConsumers(t *testing.T) {
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
-	consumer, err := client.GetConsumers()
+	consumer, err := client.Consumers()
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(consumer))
 	assert.Equal(t, "some_consumer", consumer[0].ConsumerTag)
 	assert.Equal(t, "another_consumer w/ faulty channel", consumer[1].ConsumerTag)
 
+}
+
+// test of GET /api/consumers endpoint
+func TestRabbitClientGetConnections(t *testing.T) {
+
+	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
+	defer mock.Close()
+	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+
+	conn, err := client.Connections()
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(conn))
+	assert.Equal(t, "172.17.0.1:40874 -> 172.17.0.2:5672", conn[0].Name)
 }
 
 // test of GET /api/consumers endpoint workaround for empty channel_details
@@ -140,7 +153,7 @@ func TestRabbitClientGetConsumersChannelDetailsIsEmptyArray(t *testing.T) {
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
-	consumer, err := client.GetConsumers()
+	consumer, err := client.Consumers()
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(consumer))
 

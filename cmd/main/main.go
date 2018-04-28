@@ -40,7 +40,7 @@ func startCmdInfo(args CommandLineArgs, title string) {
 	cmdInfo(CmdInfoArg{
 		rootNode: title,
 		client:   rabtap.NewRabbitHTTPClient(args.APIURI, getTLSConfig(args.InsecureTLS)),
-		printBrokerInfoConfig: PrintBrokerInfoConfig{
+		printConfig: BrokerInfoPrinterConfig{
 			ShowStats:           args.ShowStats,
 			ShowConsumers:       args.ShowConsumers,
 			ShowDefaultExchange: args.ShowDefaultExchange,

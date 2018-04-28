@@ -21,7 +21,7 @@ func TestResolveTemplate(t *testing.T) {
 	const tpl = "hello {{ .Name }}"
 
 	brokerInfoPrinter := NewBrokerInfoPrinter(
-		PrintBrokerInfoConfig{
+		BrokerInfoPrinterConfig{
 			ShowStats:           false,
 			ShowConsumers:       false,
 			ShowDefaultExchange: false,
@@ -48,6 +48,7 @@ func TestFindExchangeByNameNotFound(t *testing.T) {
 	exchange := findExchangeByName(exchanges, "/", "not-available")
 	assert.Nil(t, exchange)
 }
+
 func TestFindQueueByName(t *testing.T) {
 	queues := []rabtap.RabbitQueue{
 		{Name: "q1", Vhost: "vhost"},
@@ -67,15 +68,38 @@ func TestFindQueueByNameNotFound(t *testing.T) {
 	assert.Nil(t, queue)
 }
 
-/*
-func TestFormatConsumerElement(t *testing.T) {
-
-	consumer := rabtap.RabbitConsumer{ConsumerTag: "consumertag"}
-	consumer.ChannelDetails.Name = "details"
-	assert.Equal(t, "consumertag (consumer, details)",
-		formatConsumerElement(consumer, noColorFunc))
+func TestFilterStringListOfEmptyLists(t *testing.T) {
+	flags := []bool{}
+	strs := []string{}
+	assert.Equal(t, []string{}, filterStringList(flags, strs))
 }
-**/
+
+func TestFilterStringListOneElementKeptInList(t *testing.T) {
+	flags := []bool{false, true, false}
+	strs := []string{"A", "B", "C"}
+	assert.Equal(t, []string{"B"}, filterStringList(flags, strs))
+}
+
+func TestFindConnectionByName(t *testing.T) {
+	conns := []rabtap.RabbitConnection{
+		{Name: "c1", Vhost: "vhost"},
+		{Name: "c2", Vhost: "vhost"},
+	}
+	conn := findConnectionByName(conns, "vhost", "c2")
+	assert.Equal(t, "c2", conn.Name)
+	assert.Equal(t, "vhost", conn.Vhost)
+}
+
+func TestFindConsumerByName(t *testing.T) {
+	con := rabtap.RabbitConsumer{}
+	con.Queue.Name = "q1"
+	con.Queue.Vhost = "vhost"
+	cons := []rabtap.RabbitConsumer{con}
+	foundCon := findConsumerByQueue(cons, "vhost", "q1")
+	assert.Equal(t, "q1", foundCon.Queue.Name)
+	assert.Equal(t, "vhost", foundCon.Queue.Vhost)
+}
+
 func ExampleBrokerInfoPrinter_Print() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
@@ -83,7 +107,7 @@ func ExampleBrokerInfoPrinter_Print() {
 	client := rabtap.NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
 	brokerInfoPrinter := NewBrokerInfoPrinter(
-		PrintBrokerInfoConfig{
+		BrokerInfoPrinterConfig{
 			ShowStats:           false,
 			ShowConsumers:       true,
 			ShowDefaultExchange: false,
@@ -98,7 +122,7 @@ func ExampleBrokerInfoPrinter_Print() {
 	}
 
 	// Output:
-	// http://rabbitmq/api (broker ver=3.6.9, mgmt ver=3.6.9, cluster=rabbit@08f57d1fe8ab)
+	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 	// └── Vhost /
 	//     ├── amq.direct (exchange, type 'direct', [D])
 	//     ├── amq.fanout (exchange, type 'fanout', [D])
@@ -108,18 +132,19 @@ func ExampleBrokerInfoPrinter_Print() {
 	//     ├── amq.rabbitmq.trace (exchange, type 'topic', [D|I])
 	//     ├── amq.topic (exchange, type 'topic', [D])
 	//     ├── test-direct (exchange, type 'direct', [D|AD|I])
-	//     │   ├── direct-q1 (queue, key=direct-q1, running, [D])
-	//     │   │   ├── some_consumer (consumer, 172.17.0.1:58938 -> 172.17.0.2:5672 (2))
-	//     │   │   └── another_consumer w/ faulty channel (consumer, )
-	//     │   └── direct-q2 (queue, key=direct-q2, running, [D])
+	//     │   ├── direct-q1 (queue, key='direct-q1', running, [D])
+	//     │   │   ├── some_consumer (consumer user='guest', chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
+	//     │   │   │   └── '172.17.0.1:40874 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:40874')
+	//     │   │   └── another_consumer w/ faulty channel (consumer user='', chan='')
+	//     │   └── direct-q2 (queue, key='direct-q2', running, [D])
 	//     ├── test-fanout (exchange, type 'fanout', [D])
 	//     │   ├── fanout-q1 (queue, idle since 2017-05-25 19:14:32, [D])
 	//     │   └── fanout-q2 (queue, idle since 2017-05-25 19:14:32, [D])
 	//     ├── test-headers (exchange, type 'headers', [D|AD])
-	//     │   ├── header-q1 (queue, key=headers-q1, idle since 2017-05-25 19:14:53, [D])
-	//     │   └── header-q2 (queue, key=headers-q2, idle since 2017-05-25 19:14:47, [D])
+	//     │   ├── header-q1 (queue, key='headers-q1', idle since 2017-05-25 19:14:53, [D])
+	//     │   └── header-q2 (queue, key='headers-q2', idle since 2017-05-25 19:14:47, [D])
 	//     └── test-topic (exchange, type 'topic', [D])
-	//         ├── topic-q1 (queue, key=topic-q1, idle since 2017-05-25 19:14:17, [D|AD|EX])
-	//         └── topic-q2 (queue, key=topic-q2, idle since 2017-05-25 19:14:21, [D])
+	//         ├── topic-q1 (queue, key='topic-q1', idle since 2017-05-25 19:14:17, [D|AD|EX])
+	//         └── topic-q2 (queue, key='topic-q2', idle since 2017-05-25 19:14:21, [D])
 
 }

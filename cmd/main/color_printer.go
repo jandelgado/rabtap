@@ -13,13 +13,15 @@ import (
 )
 
 const (
-	colorURL      = color.FgHiWhite
-	colorVHost    = color.FgMagenta
-	colorExchange = color.FgHiBlue
-	colorQueue    = color.FgHiYellow
-	colorConsumer = color.FgHiGreen
-	colorMessage  = color.FgHiYellow
-	colorKey      = color.FgHiCyan
+	colorURL        = color.FgHiWhite
+	colorVHost      = color.FgMagenta
+	colorExchange   = color.FgHiBlue
+	colorQueue      = color.FgHiYellow
+	colorConnection = color.FgRed
+	colorChannel    = color.FgWhite
+	colorConsumer   = color.FgHiGreen
+	colorMessage    = color.FgHiYellow
+	colorKey        = color.FgHiCyan
 )
 
 // ColorPrinterFunc takes fmt.Sprint like arguments and add colors
@@ -27,25 +29,29 @@ type ColorPrinterFunc func(a ...interface{}) string
 
 // ColorPrinter allows to print various items colorized
 type ColorPrinter struct {
-	URL      ColorPrinterFunc
-	VHost    ColorPrinterFunc
-	Exchange ColorPrinterFunc
-	Queue    ColorPrinterFunc
-	Consumer ColorPrinterFunc
-	Message  ColorPrinterFunc
-	Key      ColorPrinterFunc
+	URL        ColorPrinterFunc
+	VHost      ColorPrinterFunc
+	Exchange   ColorPrinterFunc
+	Queue      ColorPrinterFunc
+	Connection ColorPrinterFunc
+	Channel    ColorPrinterFunc
+	Consumer   ColorPrinterFunc
+	Message    ColorPrinterFunc
+	Key        ColorPrinterFunc
 }
 
 // GetFuncMap returns a function map that can be used in a template.
 func (s ColorPrinter) GetFuncMap() map[string]interface{} {
 	return map[string]interface{}{
-		"QueueColor":    s.Queue,
-		"ExchangeColor": s.Exchange,
-		"URLColor":      s.URL,
-		"VHostColor":    s.VHost,
-		"ConsumerColor": s.Consumer,
-		"MessageColor":  s.Message,
-		"KeyColor":      s.Key}
+		"QueueColor":      s.Queue,
+		"ConnectionColor": s.Connection,
+		"ChannelColor":    s.Channel,
+		"ExchangeColor":   s.Exchange,
+		"URLColor":        s.URL,
+		"VHostColor":      s.VHost,
+		"ConsumerColor":   s.Consumer,
+		"MessageColor":    s.Message,
+		"KeyColor":        s.Key}
 }
 
 // NewColorableWriter returns a colorable writer for the given file (e.g
@@ -61,16 +67,25 @@ func NewColorPrinter(noColor bool) ColorPrinter {
 		nullPrinter := func(a ...interface{}) string {
 			return fmt.Sprint(a...)
 		}
-		return ColorPrinter{nullPrinter, nullPrinter,
-			nullPrinter, nullPrinter, nullPrinter, nullPrinter, nullPrinter}
+		return ColorPrinter{nullPrinter,
+			nullPrinter,
+			nullPrinter,
+			nullPrinter,
+			nullPrinter,
+			nullPrinter,
+			nullPrinter,
+			nullPrinter,
+			nullPrinter}
 	}
 	return ColorPrinter{
-		URL:      color.New(colorURL).SprintFunc(),
-		VHost:    color.New(colorVHost).SprintFunc(),
-		Exchange: color.New(colorExchange).SprintFunc(),
-		Queue:    color.New(colorQueue).SprintFunc(),
-		Consumer: color.New(colorConsumer).SprintFunc(),
-		Message:  color.New(colorMessage).SprintFunc(),
-		Key:      color.New(colorKey).SprintFunc(),
+		URL:        color.New(colorURL).SprintFunc(),
+		VHost:      color.New(colorVHost).SprintFunc(),
+		Exchange:   color.New(colorExchange).SprintFunc(),
+		Queue:      color.New(colorQueue).SprintFunc(),
+		Channel:    color.New(colorChannel).SprintFunc(),
+		Connection: color.New(colorConnection).SprintFunc(),
+		Consumer:   color.New(colorConsumer).SprintFunc(),
+		Message:    color.New(colorMessage).SprintFunc(),
+		Key:        color.New(colorKey).SprintFunc(),
 	}
 }

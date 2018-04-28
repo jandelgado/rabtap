@@ -14,7 +14,7 @@ import (
 func DiscoverBindingsForExchange(rabbitAPIClient *RabbitHTTPClient, vhost, exchangeName string) ([]string, error) {
 
 	var bindingKeys []string
-	exchanges, err := rabbitAPIClient.GetExchanges()
+	exchanges, err := rabbitAPIClient.Exchanges()
 
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func DiscoverBindingsForExchange(rabbitAPIClient *RabbitHTTPClient, vhost, excha
 	switch *exchangeType {
 	case amqp.ExchangeDirect:
 		// filter out all bindings for given exchange
-		bindings, err := rabbitAPIClient.GetBindings()
+		bindings, err := rabbitAPIClient.Bindings()
 
 		if err != nil {
 			return nil, err

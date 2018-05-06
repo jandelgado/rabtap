@@ -24,7 +24,8 @@ and exchanges, inspect broker.
     * [Examples](#examples)
         * [Broker info](#broker-info)
         * [Wire-tapping messages](#wire-tapping-messages)
-        * [Message recorder](#message-recorder)
+            * [Connect to multiple brokers](#connect-to-multiple-brokers)
+            * [Message recorder](#message-recorder)
         * [Publish messages](#publish-messages)
         * [Messages consumer (subscribe)](#messages-consumer-subscribe)
         * [Poor mans shovel](#poor-mans-shovel)
@@ -135,13 +136,21 @@ Rabtap understand the following commands:
 
 * `tap` - taps to an exchange and transparently receives messages sent to the
    exchange, without affecting actual message delivery (using exchange-to-exchange
-   binding)
+   binding). Simulatanous 
 * `sub` - subscribes to a queue and consumes messages sent to the queue (acts
    like a RabbitMQ consumer)
-* `pub` - send messages to an exchange
-* `info` - show broker related info (exchanges, queues, bindings, stats)
+* `pub` - send messages to an exchange. 
+* `info` - show broker related info (exchanges, queues, bindings, stats). The
+   features of an exchange are displayed in square brackets with `D` (durable),
+   `AD` (auto delete) and `I` (internal). The features of a queue are displayed
+   in square brackets with `D` (durable), `AD` (auto delete) and `EX`
+   (exclusive). If `--statistics` option is enabled, basic statistics are
+   included in the output.
+
 * `queue` - create/bind/remove queue
 * `exchange` - create/remove exhange
+
+See the examples section for further information.
 
 ### Broker URI specification
 
@@ -182,21 +191,27 @@ Set environment variable `NO_COLOR` to disable color output.
 
 ### Examples
 
-The following examples expect a RabbitMQ broker running on localhost:5672 and
+The following examples assume a RabbitMQ broker running on localhost:5672 and
 the management API available on port 15672. Easiest way to start such an
 instance is by running `docker run -ti --rm -p 5672:5672 -p 15672:15672
 rabbitmq:3-management` or similar command to start a RabbitMQ container.
 
 #### Broker info
 
+The `info` command uses the REST API of RabbitMQ to gather and display 
+topolgy related information from the broker. Example:
+
 * `$ rabtap info --api http://guest:guest@localhost:15672/api --consumers` -
   shows exchanges, queues and consumers of given broker in an tree view (see
   [screenshot](#screenshots)).
 
+If `RABTAP_APIURI` environment variable is set, the command reduces to `$
+rabtap info --consumers`
+
 #### Wire-tapping messages
 
-The `tap` command allows to tap to multiple exchanges, with optionally
-specifying binding keys. Rabtap automatically reconnects on connections
+The `tap` command allows to tap exchanges and transparently receives messages
+sent to the exchanges.  Rabtap automatically reconnects on connections
 failures. The syntax of the `tap` command is `rabtap tap [--uri URI] EXCHANGES`
 where the `EXCHANGES` argument specifies the exchanges and binding keys to use.
 The `EXCHANGES` argument is of the form `EXCHANGE:[KEY][,EXCHANGE:[KEY]]*`.
@@ -205,7 +220,7 @@ The acutal format of the binding key depends on the exchange type (e.g.
 direct, topic, headers) and is described in the [RabbitMQ
 documentation](https://www.rabbitmq.com/tutorials/amqp-concepts.html).
 
-Some examples:
+Examples for binding keys used in `tap` command:
 
 * `#` on  an exchange of type `topic` will make the tap receive all messages
   on the exchange.
@@ -230,14 +245,22 @@ The following example connects to multiple exchanges:
 
 * `$ rabtap tap my-fanout-exchange:,my-topic-exchange:#,my-other-exchange:binding-key`
 
-Rabtap allows you to connect simultaneously to multiple brokers and
+##### Connect to multiple brokers
+
+Rabtap allows you also to connect simultaneously to multiple brokers and
 exchanges:
 
 * `$ raptap tap --uri amqp://broker1 amq.topic:# tap --uri amqp://broker2 amq.fanout:`
 
-#### Message recorder
+The example connects to `broker1` and taps to the `amq.topic` exchange and to 
+the `amq.fanout` exchange on `broker2`.
 
-All tapped messages can be also be saved for later analysis or replay.
+##### Message recorder
+
+All tapped messages can be also be saved for later analysis or replay. Rabtap
+supports saving of messages in two formats: raw body and metadata in separate
+files or [JSON message format](#json-message-format) with embedded metadata and
+message the body base64 encoded (`--json` option). Examples:
 
 * `$ rabtap tap amq.topic:# --saveto /tmp` - saves messages as pair of
   files consisting of raw message body and JSON meta data file to `/tmp`
@@ -245,9 +268,13 @@ All tapped messages can be also be saved for later analysis or replay.
 * `$ rabtap tap amq.topic:# --saveto /tmp --json` - saves messages as JSON
   files to `/tmp` directory.
 
-Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` + `<extension>`.
+Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` +
+`<extension>`.
 
 #### Publish messages
+
+The `pub` command allows to send messages to an exchange, specifying a 
+routing key.
 
 * `$ rabtap pub amq.direct -r routingKey message.json --json`  - publish
   message(s) in JSON format to exchange `amq.direct` with routing key
@@ -257,21 +284,26 @@ Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` + `<exte
 
 #### Messages consumer (subscribe)
 
+The `sub` command reads messages from a queue.  Note that unlike `tap`, `sub`
+will consume messages that are in effect removed from the specified queue.
+Example:
+
 * `$ rabtap sub somequeue -j`
 
 Will consume messages from queue `somequeue` and print out messages in JSON
 format (`-j`). Example assumes that `RABTAP_AMQPURI` environment variable is
 set.
 
-Note that unlike `tap`, `sub` will consume messages that are in effect
-removed from the specified queue.
 
 #### Poor mans shovel
 
 Rabtap instances can be connected through a pipe and messages will be read on
-one side and publish to the other. Note that for publish to work in streaming
+one side and published to the other. Note that for publish to work in streaming
 mode, the JSON mode (`--json`) must be used on both sides, so that messages are
 encapsulated in JSON messages.
+
+The example taps messages on `broker1` and publishes the messages to the
+`amq.direct` exchange on `broker2`
 
 ```
 $ rabtap tap --uri amqp://broker1 my-topic-exchange:# --json | \

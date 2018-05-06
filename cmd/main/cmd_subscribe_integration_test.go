@@ -4,7 +4,8 @@
 
 package main
 
-// cmd_{sub, queueCreate, queueBind, queueDelete} integration test
+// cmd_{exchangeCreate, sub, queueCreate, queueBind, queueDelete}
+// integration test
 
 import (
 	"crypto/tls"

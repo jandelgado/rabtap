@@ -162,3 +162,25 @@ func TestRabbitClientGetConsumersChannelDetailsIsEmptyArray(t *testing.T) {
 	assert.Equal(t, "another_consumer w/ faulty channel", consumer[1].ConsumerTag)
 	assert.Equal(t, "", consumer[1].ChannelDetails.Name)
 }
+
+// test of DELETE /connections/conn to close a connection
+func TestRabbitClientCloseExistingConnection(t *testing.T) {
+
+	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
+	defer mock.Close()
+	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+
+	err := client.CloseConnection("172.17.0.1:40874 -> 172.17.0.2:5672", "reason")
+	assert.Nil(t, err)
+}
+
+// test of DELETE /connections/conn to close a connection
+func TestRabbitClientCloseNonExistingConnectionRaisesError(t *testing.T) {
+
+	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
+	defer mock.Close()
+	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+
+	err := client.CloseConnection("DOES NOT EXIST", "reason")
+	assert.NotNil(t, err)
+}

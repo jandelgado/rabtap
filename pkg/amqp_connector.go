@@ -93,6 +93,7 @@ func (s *AmqpConnector) Connected() bool {
 
 // Try to connect to the RabbitMQ server as  long as it takes to establish a
 // connection. Will be interrupted by any message on the control channel.
+// TODO fail on first errornous connection attempt, only re-connect later.
 func (s *AmqpConnector) redial() (*amqp.Connection, error) {
 	s.connection = nil
 	s.connected.Store(stateConnecting)

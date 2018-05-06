@@ -364,6 +364,29 @@ func TestCliRemoveExchange(t *testing.T) {
 	assert.Equal(t, "uri", args.AmqpURI)
 }
 
+func TestCliCloseConnectionWithDefaultReason(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"conn", "close", "conn-name", "--api", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, ConnCloseCmd, args.Cmd)
+	assert.Equal(t, "uri", args.APIURI)
+	assert.Equal(t, "conn-name", args.ConnName)
+	assert.Equal(t, "closed by rabtap", args.CloseReason)
+}
+
+func TestCliCloseConnection(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"conn", "close", "conn-name", "--api", "uri",
+			"--reason", "reason"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, ConnCloseCmd, args.Cmd)
+	assert.Equal(t, "uri", args.APIURI)
+	assert.Equal(t, "conn-name", args.ConnName)
+	assert.Equal(t, "reason", args.CloseReason)
+}
+
 func TestParseNoColorFromEnvironment(t *testing.T) {
 	const key = "NO_COLOR"
 	os.Setenv(key, "1")

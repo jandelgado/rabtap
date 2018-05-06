@@ -29,6 +29,7 @@ Usage:
   rabtap queue create QUEUE [--uri URI] [-adkv]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
   rabtap queue rm QUEUE [--uri URI] [-kv]
+  rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
   rabtap --version
 
 Examples:
@@ -43,6 +44,11 @@ Examples:
   rabtap queue bind JDQ to amq.direct --bindingkey=key
   rabtap queue rm JDQ
 
+  # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
+  export RABTAP_APIURI=http://guest:guest@localhost:15672/api
+  raptap info
+  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
+
 Options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
@@ -50,6 +56,7 @@ Options:
  FILE                 file to publish in pub mode. If omitted, stdin will
                       be read.
  QUEUE                name of a queue.
+ CONNECTION           name of a connection.
  -a, --autodelete     create auto delete exchange/queue.
  --api APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
@@ -62,6 +69,8 @@ Options:
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
+ --reason=REASON      reason why the connection was closed 
+                      [default: closed by rabtap].
  -r, --routingkey KEY routing key to use in publish mode.
  --saveto DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
@@ -96,6 +105,8 @@ const (
 	QueueRemoveCmd
 	// QueueBindCmd binds a queue to an exchange
 	QueueBindCmd
+	// ConnCloseCmd closes a connection
+	ConnCloseCmd
 )
 
 type commonArgs struct {
@@ -128,6 +139,9 @@ type CommandLineArgs struct {
 	Autodelete          bool    // queue create, exchange create
 	SaveDir             *string // save mode: optional directory to stores files to
 	ShowDefaultExchange bool
+
+	ConnName    string // conn mode: name of connection
+	CloseReason string // conn mode: reason of close
 }
 
 // getAmqpURI returns the ith entry of amqpURIs array or the value
@@ -153,6 +167,19 @@ func parseAmqpURI(args map[string]interface{}) (string, error) {
 	return uri, nil
 }
 
+func parseAPIURI(args map[string]interface{}) (string, error) {
+	var apiURI string
+	if args["--api"] != nil {
+		apiURI = args["--api"].(string)
+	} else {
+		apiURI = os.Getenv("RABTAP_APIURI")
+	}
+	if apiURI == "" {
+		return "", fmt.Errorf("--api omitted but RABTAP_APIURI not set in environment")
+	}
+	return apiURI, nil
+}
+
 func parseCommonArgs(args map[string]interface{}) commonArgs {
 	return commonArgs{
 		Verbose:     args["--verbose"].(bool),
@@ -169,16 +196,26 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		ShowStats:           args["--stats"].(bool),
 		ShowDefaultExchange: args["--show-default"].(bool)}
 
-	var apiURI string
-	if args["--api"] != nil {
-		apiURI = args["--api"].(string)
-	} else {
-		apiURI = os.Getenv("RABTAP_APIURI")
+	var err error
+	if result.APIURI, err = parseAPIURI(args); err != nil {
+		return result, err
 	}
-	if apiURI == "" {
-		return CommandLineArgs{}, fmt.Errorf("--api omitted but RABTAP_APIURI not set in environment")
+	return result, nil
+}
+
+func parseConnCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
+	result := CommandLineArgs{
+		commonArgs: parseCommonArgs(args)}
+
+	var err error
+	if result.APIURI, err = parseAPIURI(args); err != nil {
+		return result, err
 	}
-	result.APIURI = apiURI
+	if args["close"].(bool) {
+		result.Cmd = ConnCloseCmd
+		result.ConnName = args["CONNECTION"].(string)
+		result.CloseReason = args["--reason"].(string)
+	}
 	return result, nil
 }
 
@@ -307,6 +344,8 @@ func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
 		return parseQueueCmdArgs(args)
 	} else if args["exchange"].(bool) {
 		return parseExchangeCmdArgs(args)
+	} else if args["conn"].(bool) {
+		return parseConnCmdArgs(args)
 	}
 	return CommandLineArgs{}, fmt.Errorf("command missing")
 }

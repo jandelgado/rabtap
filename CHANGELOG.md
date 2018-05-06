@@ -1,13 +1,18 @@
-# Changelog
+# Changelog for rabtap
 
-##  [unreleased] 
+## v1.8 (2018-05-06)
 
 ### Added
-* `--consumers` option of the `info` command now prints also information on
+
+* a changelog ;)
+* new `--consumers` option of the `info` command prints also information on
   the connection.
+* new command `conn` for connection related operations. Currently allows
+  to close a connection with `rabtap conn close <connection-name>`.
 
 ### Changed
-* minor changes to output of `info` command (i.e. some values now are quoted)
+
+* minor changes to output of `info` command (i.e. some values are now quoted)
 
 
 

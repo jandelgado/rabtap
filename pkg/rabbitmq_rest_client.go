@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"log"
 	"net/http"
 )
@@ -382,6 +383,32 @@ func (s *RabbitHTTPClient) getResource(uri string, result interface{}) error {
 	return nil
 }
 
+func (s *RabbitHTTPClient) delResource(uri string) error {
+	client := &http.Client{}
+
+	req, err := http.NewRequest("DELETE", uri, nil)
+	if err != nil {
+		return err
+	}
+
+	// Fetch Request
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 && resp.StatusCode != 204 {
+		return errors.New(uri + " : " + resp.Status)
+	}
+	defer resp.Body.Close()
+
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Connections returns the /connections ressource of the broker
 func (s *RabbitHTTPClient) Connections() ([]RabbitConnection, error) {
 	var result []RabbitConnection
@@ -430,4 +457,10 @@ func (s *RabbitHTTPClient) Bindings() ([]RabbitBinding, error) {
 	var result []RabbitBinding
 	err := s.getResource(s.uri+"/bindings", &result)
 	return result, err
+}
+
+// CloseConnection closes a connection by DELETING the associated
+// ressource
+func (s *RabbitHTTPClient) CloseConnection(conn, reason string) error {
+	return s.delResource(s.uri + "/connections/" + conn)
 }

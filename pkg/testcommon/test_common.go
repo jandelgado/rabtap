@@ -38,7 +38,7 @@ func IntegrationQueueName(i int) string {
 	return fmt.Sprintf("queue-%d", i)
 }
 
-// IntegrationTestConnection creates connection to rabbitmq broker and set up
+// IntegrationTestConnection creates connection to rabbitmq broker and sets up
 // optionally an exchange of the given type and bind given number of queues to
 // the exchange.  The binding key will aways be the queue name. The queues are
 // named "queue-0" "queue-1" etc (see integrationQueueName() func).  If

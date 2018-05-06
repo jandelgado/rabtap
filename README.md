@@ -29,6 +29,7 @@ and exchanges, inspect broker.
         * [Publish messages](#publish-messages)
         * [Messages consumer (subscribe)](#messages-consumer-subscribe)
         * [Poor mans shovel](#poor-mans-shovel)
+        * [Close connection](#close-connection)
 * [JSON message format](#json-message-format)
 * [Build from source](#build-from-source)
 * [Test data generator](#test-data-generator)
@@ -56,6 +57,10 @@ and exchanges, inspect broker.
 Output of `rabtap info` command:
 
 ![info mode](doc/images/info.png)
+
+Output of `rabtap info --stats` command, showing additional statistics:
+
+![info mode](doc/images/info-stats.png)
 
 Output of rabtap running in `tap` mode, showing message meta data
 with unset attributes filtered out and the message body:
@@ -86,6 +91,7 @@ Usage:
   rabtap queue create QUEUE [--uri URI] [-adkv]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
   rabtap queue rm QUEUE [--uri URI] [-kv]
+  rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
   rabtap --version
 
 Examples:
@@ -100,6 +106,11 @@ Examples:
   rabtap queue bind JDQ to amq.direct --bindingkey=key
   rabtap queue rm JDQ
 
+  # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
+  export RABTAP_APIURI=http://guest:guest@localhost:15672/api
+  raptap info
+  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
+
 Options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
@@ -107,6 +118,7 @@ Options:
  FILE                 file to publish in pub mode. If omitted, stdin will
                       be read.
  QUEUE                name of a queue.
+ CONNECTION           name of a connection.
  -a, --autodelete     create auto delete exchange/queue.
  --api APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
@@ -119,6 +131,8 @@ Options:
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
+ --reason=REASON      reason why the connection was closed
+                      [default: closed by rabtap].
  -r, --routingkey KEY routing key to use in publish mode.
  --saveto DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
@@ -149,6 +163,7 @@ Rabtap understand the following commands:
 
 * `queue` - create/bind/remove queue
 * `exchange` - create/remove exhange
+* `connection` - close connections
 
 See the examples section for further information.
 
@@ -308,6 +323,27 @@ The example taps messages on `broker1` and publishes the messages to the
 ```
 $ rabtap tap --uri amqp://broker1 my-topic-exchange:# --json | \
   rabtap pub --uri amqp://broker2 amq.direct -r routingKey --json
+```
+
+#### Close connection
+
+The `conn` command allows to close a connection. The name of the connection to
+be closed is expected as parameter. Use the `info` command with the
+`--consumers` option to find the connection associated with a queue. Example:
+
+```
+$ rabtap info
+http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@ae1ad1477419')
+└── Vhost /
+    ├── amq.direct (exchange, type 'direct', [D])
+    :
+    └── test-topic (exchange, type 'topic', [AD])
+        ├── test-q-test-topic-0 (queue, key='test-q-test-topic-0', running, [])
+        │   └── __rabtap-consumer-4823a3c0 (consumer user='guest', chan='172.17.0.1:59228 -> 172.17.0.2:5672 (1)')
+        │       └── '172.17.0.1:59228 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:59228')
+        ├── test-q-test-topic-1 (queue, key='test-q-test-topic-1', running, [])
+        :
+$ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672' 
 ```
 
 ## JSON message format

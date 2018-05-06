@@ -20,7 +20,8 @@ const (
 
 // NewRabbitAPIMock returns a mock server for the rabbitmq http managemet
 // API. It is used by the integration test. Only a very limited subset
-// of resources is support (GET exchanges, bindings, queues, overviews).
+// of resources is support (GET exchanges, bindings, queues, overviews,
+// channels, connections; DELETE connections)
 // Usage:
 //   mockServer := NewRabbitAPIMock(MockModeStd)
 //   defer mockServer.Close()
@@ -36,7 +37,6 @@ func NewRabbitAPIMock(mode MockMode) *httptest.Server {
 }
 
 func mockEmptyHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO add test for GET
 	var result string
 	if r.URL.RequestURI() == "/overview" {
 		result = overviewResult
@@ -47,7 +47,17 @@ func mockEmptyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func mockStdHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO add test for GET
+	switch r.Method {
+	case "GET":
+		mockStdGetHandler(w, r)
+	case "DELETE":
+		mockStdDeleteHandler(w, r)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
+func mockStdGetHandler(w http.ResponseWriter, r *http.Request) {
 	result := ""
 	switch r.URL.RequestURI() {
 	case "/exchanges":
@@ -66,8 +76,20 @@ func mockStdHandler(w http.ResponseWriter, r *http.Request) {
 		result = connectionResult
 	default:
 		w.WriteHeader(http.StatusNotFound)
+		return
 	}
+	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, result)
+}
+
+func mockStdDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.RequestURI() {
+	case "/connections/172.17.0.1:40874%20-%3E%20172.17.0.2:5672":
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		w.WriteHeader(http.StatusNotFound)
+	}
+	fmt.Fprint(w, "")
 }
 
 var bindingResult = `

@@ -40,21 +40,19 @@ func getTapQueueNameForExchange(exchange, postfix string) string {
 // the tap, which is bound to the provided consumer function. Typicall
 // this function is run as a go-routine.
 func (s *AmqpTap) EstablishTap(exchangeConfigList []ExchangeConfiguration,
-	tapChannel TapChannel) {
-	s.connection.Connect(s.createWorkerFunc(exchangeConfigList, tapChannel))
+	tapCh TapChannel) error {
+	err := s.connection.Connect(s.createWorkerFunc(exchangeConfigList, tapCh))
+	if err != nil {
+		tapCh <- &TapMessage{nil, err}
+	}
+	return err
 }
 
-// (re-)establish the connection to RabbitMQ in case the connection has died.
-// this function is run in a go-routine. after the connection is established
-// a channel is created and the list of provided exchanges is wire-tapped.
-// To start the first connection process,  send an amqp.ErrClosed message
-// through the errorChannel. See EstablishTap() for example.
 func (s *AmqpTap) createWorkerFunc(
 	exchangeConfigList []ExchangeConfiguration,
 	tapCh TapChannel) AmqpWorkerFunc {
 
 	return func(rabbitConn *amqp.Connection, controlCh chan ControlMessage) ReconnectAction {
-
 		amqpChs := s.setupTapsForExchanges(rabbitConn, exchangeConfigList, tapCh)
 		fanin := NewFanin(amqpChs)
 		defer func() { fanin.Stop() }()
@@ -135,9 +133,6 @@ func (s *AmqpTap) setupTap(conn *amqp.Connection,
 		true,  // auto delete
 		true)  // exclusive
 	if err != nil {
-		ch, _ = conn.Channel()
-		defer ch.Close()
-		ch.QueueDelete(tapQueue, false, false, false)
 		return "", "", err
 	}
 
@@ -198,7 +193,7 @@ func (s *AmqpTap) createExchangeToExchangeBinding(conn *amqp.Connection,
 func (s *AmqpTap) cleanup(conn *amqp.Connection) error {
 
 	// delete exchanges manually, since auto delete seems to
-	// not work in all cases
+	// not work in all cases. TODO recheck & simplify
 	ch, err := conn.Channel()
 	if err != nil {
 		return err

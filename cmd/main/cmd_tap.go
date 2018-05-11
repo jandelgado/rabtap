@@ -14,6 +14,9 @@ import (
 func tapCmdShutdownFunc(taps []*rabtap.AmqpTap) {
 	log.Info("rabtap tap threads shutting down ...")
 	for _, tap := range taps {
+		if !tap.Connected() {
+			continue
+		}
 		if err := tap.Close(); err != nil {
 			log.Errorf("error closing tap: %v", err)
 		}

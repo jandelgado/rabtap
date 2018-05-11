@@ -56,12 +56,13 @@ func startCmdPublish(args CommandLineArgs) {
 		failOnError(err, "error opening "+*args.PubFile, os.Exit)
 	}
 	readerFunc := createMessageReaderFunc(args.JSONFormat, reader)
-	cmdPublish(CmdPublishArg{
+	err := cmdPublish(CmdPublishArg{
 		amqpURI:             args.AmqpURI,
 		exchange:            args.PubExchange,
 		routingKey:          args.PubRoutingKey,
 		tlsConfig:           getTLSConfig(args.InsecureTLS),
 		readNextMessageFunc: readerFunc})
+	failOnError(err, "error publishing message", os.Exit)
 }
 
 func startCmdSubscribe(args CommandLineArgs) {

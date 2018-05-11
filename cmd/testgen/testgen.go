@@ -120,12 +120,13 @@ func getQueueNameForExchange(exchangeName string, i int) string {
 }
 
 func generateTestMessages(ch *amqp.Channel, exchanges []string, numTestQueues int, delay time.Duration) {
+	count := 1
 	for {
 		for _, exchange := range exchanges {
 			for i := 0; i < numTestQueues; i++ {
 				routingKey, headers := getRoutingKeyForExchange(exchange, i)
-				log.Printf("publishing to exchange '%s' with routing key '%s' and headers %#+v",
-					exchange, routingKey, headers)
+				log.Printf("publishing msg #%d to exchange '%s' with routing key '%s' and headers %#+v",
+					count, exchange, routingKey, headers)
 				err := ch.Publish(
 					exchange,
 					routingKey,
@@ -133,8 +134,8 @@ func generateTestMessages(ch *amqp.Channel, exchanges []string, numTestQueues in
 					false, // immediate
 					amqp.Publishing{
 						Body: []byte(fmt.Sprintf(
-							"this test message was pushed to exchange '%s' with routing key '%s' and headers %#+v",
-							exchange, routingKey, headers)),
+							"test message #%d was pushed to exchange '%s' with routing key '%s' and headers %#+v",
+							count, exchange, routingKey, headers)),
 						ContentType:  "text/plain",
 						AppId:        "rabtap.testgen",
 						Timestamp:    time.Now(),
@@ -142,6 +143,7 @@ func generateTestMessages(ch *amqp.Channel, exchanges []string, numTestQueues in
 						Headers:      headers,
 					})
 				failOnError(err, "publish failed")
+				count++
 			}
 		}
 		time.Sleep(delay)

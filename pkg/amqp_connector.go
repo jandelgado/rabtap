@@ -56,6 +56,8 @@ const (
 	reconnectMessage
 )
 
+var errConnectionClosed = errors.New("connection closed")
+
 // IsReconnect returns true if the given control message is a reconnect message
 func (s ControlMessage) IsReconnect() bool {
 	return s == reconnectMessage
@@ -63,10 +65,12 @@ func (s ControlMessage) IsReconnect() bool {
 
 // AmqpConnector manages the connection to the amqp broker and automatically
 // reconnects after connections losses
+// TODO add amqp channel, would simplify code using AmqpConnector.
 type AmqpConnector struct {
 	logger         logrus.StdLogger
 	uri            string
 	tlsConfig      *tls.Config
+	firstTry       bool
 	connection     *amqp.Connection
 	connected      *atomic.Value
 	controlChan    chan ControlMessage // signal to worker to shutdown/reconnect
@@ -78,9 +82,10 @@ func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger logrus.StdLogger
 	connected := &atomic.Value{}
 	connected.Store(stateClosed)
 	return &AmqpConnector{
+		logger:         logger,
 		uri:            uri,
 		tlsConfig:      tlsConfig,
-		logger:         logger,
+		firstTry:       true,
 		connected:      connected,
 		controlChan:    make(chan ControlMessage),
 		workerFinished: make(chan error)}
@@ -93,7 +98,6 @@ func (s *AmqpConnector) Connected() bool {
 
 // Try to connect to the RabbitMQ server as  long as it takes to establish a
 // connection. Will be interrupted by any message on the control channel.
-// TODO fail on first errornous connection attempt, only re-connect later.
 func (s *AmqpConnector) redial() (*amqp.Connection, error) {
 	s.connection = nil
 	s.connected.Store(stateConnecting)
@@ -101,13 +105,16 @@ func (s *AmqpConnector) redial() (*amqp.Connection, error) {
 		// loop can be interrupted by call to Close()
 		select {
 		case <-s.controlChan:
-			return nil, errors.New("tap shutdown requested during connect")
+			s.connected.Store(stateClosed)
+			return nil, errConnectionClosed
 		default:
 		}
 
 		s.logger.Printf("(re-)connecting to %s\n", s.uri)
 		conn, err := amqp.DialTLS(s.uri, s.tlsConfig)
+
 		if err == nil {
+			s.firstTry = false
 			s.logger.Printf("connection established.")
 			s.connection = conn
 			s.connected.Store(stateConnected)
@@ -115,6 +122,13 @@ func (s *AmqpConnector) redial() (*amqp.Connection, error) {
 		}
 
 		s.logger.Printf("error connecting to broker %+v", err)
+
+		if err != nil && s.firstTry {
+			s.logger.Printf("failed on first connection attempt - not retrying")
+			s.connected.Store(stateClosed)
+			return nil, err
+		}
+
 		time.Sleep(reconnectDelayTime)
 	}
 }
@@ -141,15 +155,17 @@ func (s *AmqpConnector) Connect(worker AmqpWorkerFunc) error {
 		}()
 
 		rabbitConn, err := s.redial()
-		if err != nil {
-			// only returns with err set when interrupted by call to Close()
-			// end processing, but don't signal error.
-			s.workerFinished <- nil
+		if err == errConnectionClosed {
+			// graceful shutdown by call to Close()
+			s.workerFinished <- err
 			return nil
+		}
+		if err != nil {
+			// connection could not be established
+			return err
 		}
 
 		rabbitConn.NotifyClose(errorChan)
-
 		if !worker(rabbitConn, s.controlChan).shouldReconnect() {
 			break
 		}

@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"io"
-	"os"
 
 	"github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
@@ -87,29 +86,29 @@ func createMessageReaderFunc(jsonFormat bool, reader io.Reader) MessageReaderFun
 // publishes the messages to the given exchange.
 func publishMessageStream(publishChannel rabtap.PublishChannel,
 	exchange, routingKey string,
-	readNextMessageFunc MessageReaderFunc) {
+	readNextMessageFunc MessageReaderFunc) error {
 	for {
 		amqpMessage, err := readNextMessageFunc()
 		switch err {
 		case io.EOF:
-			return
+			return nil
 		case nil:
 			publishMessage(publishChannel, exchange, routingKey, amqpMessage)
 		default:
-			failOnError(err, "error reading message", os.Exit)
+			return err
 		}
 	}
 }
 
 // cmdPublish reads messages with the provied readNextMessageFunc and
 // publishes the messages to the given exchange.
-func cmdPublish(cmd CmdPublishArg) {
+func cmdPublish(cmd CmdPublishArg) error {
 	log.Debugf("publishing message(s) to exchange %s with routingkey %s",
 		cmd.exchange, cmd.routingKey)
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)
 	defer publisher.Close()
 	publishChannel := make(rabtap.PublishChannel)
 	go publisher.EstablishConnection(publishChannel)
-	publishMessageStream(publishChannel, cmd.exchange, cmd.routingKey,
+	return publishMessageStream(publishChannel, cmd.exchange, cmd.routingKey,
 		cmd.readNextMessageFunc)
 }

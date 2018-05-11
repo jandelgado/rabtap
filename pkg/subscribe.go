@@ -77,7 +77,6 @@ func (s *AmqpSubscriber) messageLoop(tapCh TapChannel,
 	for {
 		select {
 		case message := <-fanin.Ch:
-			//s.logger.Printf("AmqpSubscriber: received message %#v", message)
 			amqpMessage, _ := message.(amqp.Delivery)
 			tapCh <- &TapMessage{&amqpMessage, nil}
 

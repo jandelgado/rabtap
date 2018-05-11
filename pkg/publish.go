@@ -40,11 +40,8 @@ func (s *AmqpPublish) Connected() bool {
 	return s.connection.Connected()
 }
 
-// (re-)establish the connection to RabbitMQ in case the connection has died.
-// this function is run in a go-routine. after the connection is established
-// a channel is created and the list of provided exchanges is wire-tapped.
-// To start the first connection process,  send an amqp.ErrClosed message
-// through the errorChannel.
+// createWorkerFunc receives messages on the provides channel and publishes
+// the messages on an rabbitmq exchange
 func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorkerFunc {
 
 	return func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
@@ -62,8 +59,6 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					s.logger.Print("publishing channel closed.")
 					return doNotReconnect
 				}
-				//s.logger.Printf("publishing message %#v to %s/%s", message,
-				//	message.Exchange, message.RoutingKey)
 				err := channel.Publish(message.Exchange,
 					message.RoutingKey,
 					false, // not mandatory
@@ -73,18 +68,14 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 				if err != nil {
 					s.logger.Print(err)
 					// error publishing message
-					// TODO send error back to client using an error channel?
-					// TODO retry?
+					// TODO should we do something here, e.g. retry?
 				}
 
 			case controlMessage := <-controlChan:
-				s.logger.Printf("received message on control channel: %#v", controlMessage)
-				// true signals caller to re-connect, false to end processing
 				if controlMessage.IsReconnect() {
 					return doReconnect
 				}
 				return doNotReconnect
-				//				return controlMessage == ReconnectMessage
 			}
 		}
 	}
@@ -93,8 +84,8 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 // EstablishConnection sets up the connection to the broker and sets up
 // the tap, which is bound to the provided consumer function. Typically
 // started as go-routine.
-func (s *AmqpPublish) EstablishConnection(publishChannel PublishChannel) {
-	s.connection.Connect(s.createWorkerFunc(publishChannel))
+func (s *AmqpPublish) EstablishConnection(publishChannel PublishChannel) error {
+	return s.connection.Connect(s.createWorkerFunc(publishChannel))
 }
 
 // Close closes the connection to the broker and ends tapping.

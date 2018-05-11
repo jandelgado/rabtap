@@ -19,9 +19,8 @@ import (
 type MessageReceiveFunc func(*amqp.Delivery) error
 
 func messageReceiveLoop(messageChan rabtap.TapChannel,
-	messageReceiveFunc MessageReceiveFunc, signalChannel chan os.Signal) {
+	messageReceiveFunc MessageReceiveFunc, signalChannel chan os.Signal) error {
 
-ReceiveLoop:
 	for {
 		select {
 		case message := <-messageChan:
@@ -29,14 +28,14 @@ ReceiveLoop:
 			if message.Error != nil {
 				// unrecoverable error received -> log and exit
 				log.Error(message.Error)
-				break ReceiveLoop
+				return message.Error
 			}
 			// let the receiveFunc do the actual message processing
 			if err := messageReceiveFunc(message.AmqpMessage); err != nil {
 				log.Error(err)
 			}
 		case <-signalChannel:
-			break ReceiveLoop
+			return nil
 		}
 	}
 }

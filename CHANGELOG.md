@@ -1,5 +1,12 @@
 # Changelog for rabtap
 
+## unreleased
+
+* rabtap now terminates if the first connection attempt fails, instead
+  of retrying to connect. 
+* termination behaviour improved
+* tesgen tool add a message count to generated messages
+
 ## v1.8 (2018-05-06)
 
 ### Added

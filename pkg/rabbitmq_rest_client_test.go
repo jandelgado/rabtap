@@ -29,7 +29,6 @@ func TestGetAllResources(t *testing.T) {
 	assert.Equal(t, 8, len(all.Queues))
 	assert.Equal(t, 16, len(all.Bindings))
 	assert.Equal(t, 2, len(all.Consumers))
-
 }
 
 // test invalid resource passed to getResource()
@@ -59,7 +58,7 @@ func TestGetResourceStatusNot200(t *testing.T) {
 	defer ts.Close()
 
 	client := NewRabbitHTTPClient(ts.URL, &tls.Config{})
-	resCh := client.getResource(httpRequest{"uri", reflect.TypeOf(RabbitOverview{})})
+	resCh := client.getResource(httpRequest{ts.URL + "/overview", reflect.TypeOf(RabbitOverview{})})
 
 	select {
 	case res := <-resCh:
@@ -79,7 +78,7 @@ func TestGetResourceInvalidJSON(t *testing.T) {
 	defer ts.Close()
 
 	client := NewRabbitHTTPClient(ts.URL, &tls.Config{})
-	resCh := client.getResource(httpRequest{"uri", reflect.TypeOf(RabbitOverview{})})
+	resCh := client.getResource(httpRequest{ts.URL + "/overview", reflect.TypeOf(RabbitOverview{})})
 
 	select {
 	case res := <-resCh:

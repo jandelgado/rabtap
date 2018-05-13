@@ -7,52 +7,86 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/stretchr/testify/assert"
 )
 
-// test invalid resource passed to getResource()
-func TestGetResourceInvalidUri(t *testing.T) {
-
+func TestGetAllResources(t *testing.T) {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
 
-	err := client.getResource("xyz://abc", &RabbitOverview{})
-	assert.NotNil(t, err)
+	all, err := client.BrokerInfo()
+
+	assert.Nil(t, err)
+	assert.Equal(t, "3.6.9", all.Overview.ManagementVersion)
+	assert.Equal(t, 1, len(all.Connections))
+	assert.Equal(t, 12, len(all.Exchanges))
+	assert.Equal(t, 8, len(all.Queues))
+	assert.Equal(t, 16, len(all.Bindings))
+	assert.Equal(t, 2, len(all.Consumers))
+
 }
 
-// test non 200 status returned in getResource()
+// test invalid resource passed to getResource()
+func TestGetResourceInvalidUri(t *testing.T) {
+	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
+	defer mock.Close()
+	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+
+	resCh := client.getResource(httpRequest{"invalid", reflect.TypeOf(RabbitOverview{})})
+
+	select {
+	case res := <-resCh:
+		assert.NotNil(t, res.err)
+	case <-time.After(time.Second * 1):
+		assert.Fail(t, "result not received in expected time frame")
+	}
+}
+
+// // test non 200 status returned in getResource()
 func TestGetResourceStatusNot200(t *testing.T) {
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "500 internal server error")
 	}
-
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
-	f := NewRabbitHTTPClient(ts.URL, &tls.Config{})
-	err := f.getResource(ts.URL, &RabbitOverview{})
-	assert.NotNil(t, err)
+	client := NewRabbitHTTPClient(ts.URL, &tls.Config{})
+	resCh := client.getResource(httpRequest{"uri", reflect.TypeOf(RabbitOverview{})})
+
+	select {
+	case res := <-resCh:
+		assert.NotNil(t, res.err) // TODO check error
+	case <-time.After(time.Second * 1):
+		assert.Fail(t, "result not received in expected time frame")
+	}
 }
 
-// test non invalid json returned
+// // test non invalid json returned
 func TestGetResourceInvalidJSON(t *testing.T) {
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "non json response")
 	}
-
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
-	f := NewRabbitHTTPClient(ts.URL, &tls.Config{})
-	err := f.getResource(ts.URL, &RabbitOverview{})
-	assert.NotNil(t, err)
+	client := NewRabbitHTTPClient(ts.URL, &tls.Config{})
+	resCh := client.getResource(httpRequest{"uri", reflect.TypeOf(RabbitOverview{})})
+
+	select {
+	case res := <-resCh:
+		assert.NotNil(t, res.err) // TODO check error
+	case <-time.After(time.Second * 1):
+		assert.Fail(t, "result not received in expected time frame")
+	}
 }
 
 // test of GET /api/exchanges endpoint
@@ -69,11 +103,6 @@ func TestRabbitClientGetExchanges(t *testing.T) {
 	assert.Equal(t, "/", (result)[0].Vhost)
 	assert.Equal(t, "direct", (result)[0].Type)
 	assert.Equal(t, "amq.direct", (result)[1].Name)
-	assert.Equal(t, "/", (result)[1].Vhost)
-	assert.Equal(t, "direct", (result)[1].Type)
-	assert.Equal(t, "amq.fanout", (result)[2].Name)
-	assert.Equal(t, "/", (result)[2].Vhost)
-	assert.Equal(t, "fanout", (result)[2].Type)
 	// etc ...
 }
 
@@ -102,7 +131,6 @@ func TestRabbitClientGetOverview(t *testing.T) {
 	result, err := client.Overview()
 	assert.Nil(t, err)
 	assert.Equal(t, "3.6.9", result.ManagementVersion)
-
 }
 
 // test of GET /api/bindings endpoint

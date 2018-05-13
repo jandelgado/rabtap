@@ -45,7 +45,7 @@ func TestFailOnError(t *testing.T) {
 
 }
 
-func ExamplestartCmdInfo() {
+func Example_startCmdInfo() {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeEmpty)
 	defer mock.Close()
 
@@ -53,5 +53,5 @@ func ExamplestartCmdInfo() {
 	startCmdInfo(args, "http://rootnode")
 
 	// Output:
-	// http://rootnode (broker ver=3.6.9, mgmt ver=3.6.9, cluster=rabbit@08f57d1fe8ab)
+	// http://rootnode (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 }

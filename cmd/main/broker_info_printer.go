@@ -63,7 +63,6 @@ type BrokerInfoPrinterConfig struct {
 // BrokerInfoPrinter prints nicely treeish infos desribing a brokers
 // topology
 type BrokerInfoPrinter struct {
-	//brokerInfo BrokerInfo
 	config    BrokerInfoPrinterConfig
 	colorizer ColorPrinter
 }
@@ -242,7 +241,7 @@ func (s BrokerInfoPrinter) renderExchangeElementAsString(exchange *rabtap.Rabbit
 
 // TODO remove exchange, use queue.Vhost
 func (s BrokerInfoPrinter) addConsumerNodes(node *TreeNode,
-	queue *rabtap.RabbitQueue, brokerInfo BrokerInfo) {
+	queue *rabtap.RabbitQueue, brokerInfo rabtap.BrokerInfo) {
 
 	vhost := queue.Vhost
 	for _, consumer := range brokerInfo.Consumers {
@@ -255,14 +254,14 @@ func (s BrokerInfoPrinter) addConsumerNodes(node *TreeNode,
 }
 
 func (s BrokerInfoPrinter) addConnectionNode(node *TreeNode,
-	vhost string, connName string, brokerInfo BrokerInfo) {
+	vhost string, connName string, brokerInfo rabtap.BrokerInfo) {
 	connInfo := findConnectionByName(brokerInfo.Connections, vhost, connName)
 	if connInfo != nil {
 		node.AddChild(s.renderConnectionElementAsString(connInfo))
 	}
 }
 
-func (s BrokerInfoPrinter) addQueue(node *TreeNode, binding *rabtap.RabbitBinding, exchange *rabtap.RabbitExchange, brokerInfo BrokerInfo) *TreeNode {
+func (s BrokerInfoPrinter) addQueue(node *TreeNode, binding *rabtap.RabbitBinding, exchange *rabtap.RabbitExchange, brokerInfo rabtap.BrokerInfo) *TreeNode {
 	// standard binding of queue to exchange
 	queue := findQueueByName(brokerInfo.Queues,
 		binding.Vhost,
@@ -284,7 +283,7 @@ func (s BrokerInfoPrinter) addQueue(node *TreeNode, binding *rabtap.RabbitBindin
 // addExchange recursively (in case of exchange-exchange binding) an exchange to the
 // given node.
 func (s BrokerInfoPrinter) addExchange(node *TreeNode,
-	exchange *rabtap.RabbitExchange, brokerInfo BrokerInfo) {
+	exchange *rabtap.RabbitExchange, brokerInfo rabtap.BrokerInfo) {
 
 	exchangeNodeText := s.renderExchangeElementAsString(exchange)
 	exchangeNode := node.AddChild(exchangeNodeText)
@@ -331,7 +330,7 @@ func (s BrokerInfoPrinter) getExchangesToDisplay(
 //           +--Consumer  (optional)
 //              +--Connection
 //
-func (s BrokerInfoPrinter) Print(brokerInfo BrokerInfo,
+func (s BrokerInfoPrinter) Print(brokerInfo rabtap.BrokerInfo,
 	rootNode string, out io.Writer) error {
 
 	// root of node is URL of rabtap.RabbitMQ broker.

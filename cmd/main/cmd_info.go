@@ -20,7 +20,7 @@ type CmdInfoArg struct {
 // cmdInfo queries the rabbitMQ brokers REST api and dispays infos
 // on exchanges, queues, bindings etc in a human readably fashion.
 func cmdInfo(cmd CmdInfoArg) {
-	brokerInfo, err := NewBrokerInfo(cmd.client)
+	brokerInfo, err := cmd.client.BrokerInfo()
 	failOnError(err, "failed retrieving info from rabbitmq REST api", os.Exit)
 	brokerInfoPrinter := NewBrokerInfoPrinter(cmd.printConfig)
 	brokerInfoPrinter.Print(brokerInfo, cmd.rootNode, cmd.out)

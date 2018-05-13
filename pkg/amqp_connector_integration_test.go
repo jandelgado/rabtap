@@ -5,6 +5,7 @@ package rabtap
 
 // integration test. assumes running rabbitmq broker on address
 // defined by AMQP_URL environment variables.
+// TODO add reconnection test (using toxiproxy)
 
 import (
 	"crypto/tls"
@@ -18,6 +19,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
+
+	log := log.New(os.Stdout, "ampq_connector_inttest: ", log.Lshortfile)
+
+	conn := NewAmqpConnector("amqp://localhost:1", &tls.Config{}, log)
+
+	worker := func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
+		assert.Fail(t, "worker unexpectedly called during test")
+		return doNotReconnect
+	}
+
+	err := conn.Connect(worker)
+	assert.NotNil(t, err)
+}
 
 func XTestAbortConnectionPhase(t *testing.T) {
 

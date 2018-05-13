@@ -90,7 +90,11 @@ func TestFindConnectionByName(t *testing.T) {
 	assert.Equal(t, "vhost", conn.Vhost)
 }
 
-func TestFindConsumerByName(t *testing.T) {
+func TestFindConnectionByNameNotFoundReturnsNil(t *testing.T) {
+	assert.Nil(t, findConnectionByName([]rabtap.RabbitConnection{}, "vhost", "c2"))
+}
+
+func TestFindConsumerByQueue(t *testing.T) {
 	con := rabtap.RabbitConsumer{}
 	con.Queue.Name = "q1"
 	con.Queue.Vhost = "vhost"
@@ -98,6 +102,10 @@ func TestFindConsumerByName(t *testing.T) {
 	foundCon := findConsumerByQueue(cons, "vhost", "q1")
 	assert.Equal(t, "q1", foundCon.Queue.Name)
 	assert.Equal(t, "vhost", foundCon.Queue.Vhost)
+}
+
+func TestFindConsumerByQueueNotFoundReturnsNil(t *testing.T) {
+	assert.Nil(t, findConsumerByQueue([]rabtap.RabbitConsumer{}, "vhost", "q1"))
 }
 
 func ExampleBrokerInfoPrinter_Print() {
@@ -112,7 +120,7 @@ func ExampleBrokerInfoPrinter_Print() {
 			ShowConsumers:       true,
 			ShowDefaultExchange: false,
 			NoColor:             true})
-	brokerInfo, err := NewBrokerInfo(client)
+	brokerInfo, err := client.BrokerInfo()
 	if err != nil {
 		log.Fatal(err)
 	}

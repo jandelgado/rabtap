@@ -46,7 +46,7 @@ Examples:
 
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
-  raptap info
+  rabtap info
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
 
 Options:

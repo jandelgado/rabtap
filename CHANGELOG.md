@@ -1,6 +1,6 @@
 # Changelog for rabtap
 
-## v1.9 (2018-05-06)
+## v1.9 (2018-05-15)
 
 ### Added
 

@@ -108,7 +108,7 @@ Examples:
 
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
-  raptap info
+  rabtap info
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 
 Options:
@@ -265,7 +265,7 @@ The following example connects to multiple exchanges:
 Rabtap allows you also to connect simultaneously to multiple brokers and
 exchanges:
 
-* `$ raptap tap --uri amqp://broker1 amq.topic:# tap --uri amqp://broker2 amq.fanout:`
+* `$ rabtap tap --uri amqp://broker1 amq.topic:# tap --uri amqp://broker2 amq.fanout:`
 
 The example connects to `broker1` and taps to the `amq.topic` exchange and to 
 the `amq.fanout` exchange on `broker2`.

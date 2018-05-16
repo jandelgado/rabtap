@@ -1,13 +1,13 @@
 # Changelog for rabtap
 
-## unreleased
+## v1.9 (2018-05-06)
 
+* info command accelerated by doing parallel REST requests to the RabbitMQ
+  API endpoint
 * rabtap now terminates if the first connection attempt fails, instead
   of retrying to connect. 
 * termination behaviour improved
-* testgen tool add a message count to generated messages
-* info command accelerated by doing parallel REST requests to the RabbitMQ
-  API endpoint
+* testgen tool adds a message count to generated messages
 
 ## v1.8 (2018-05-06)
 

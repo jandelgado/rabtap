@@ -31,8 +31,14 @@ func TestGetAllResources(t *testing.T) {
 	assert.Equal(t, 2, len(all.Consumers))
 }
 
+func TestGetAllResourcesOnInvalidHostReturnErr(t *testing.T) {
+	client := NewRabbitHTTPClient("localhost:1", &tls.Config{})
+	_, err := client.BrokerInfo()
+	assert.NotNil(t, err)
+}
+
 // test invalid resource passed to getResource()
-func TestGetResourceInvalidUri(t *testing.T) {
+func TestGetResourceInvalidUriReturnsError(t *testing.T) {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
@@ -47,7 +53,7 @@ func TestGetResourceInvalidUri(t *testing.T) {
 	}
 }
 
-// // test non 200 status returned in getResource()
+// test non 200 status returned in getResource()
 func TestGetResourceStatusNot200(t *testing.T) {
 
 	handler := func(w http.ResponseWriter, r *http.Request) {

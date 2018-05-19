@@ -42,15 +42,16 @@ type httpResponse struct {
 func (s RabbitHTTPClient) getResource(request httpRequest) chan httpResponse {
 	res := make(chan httpResponse)
 	go func() {
+		r := reflect.New(request.t).Interface()
 		resp, err := s.client.Get(request.uri)
 		if err != nil {
-			res <- httpResponse{result: nil, err: err}
+			res <- httpResponse{result: r, err: err}
 			return
 		}
 
 		if resp.StatusCode != 200 {
-			err := errors.New(request.uri + " : " + resp.Status)
-			res <- httpResponse{result: nil, err: err}
+			err := errors.New(resp.Status)
+			res <- httpResponse{result: r, err: err}
 			return
 		}
 
@@ -58,10 +59,9 @@ func (s RabbitHTTPClient) getResource(request httpRequest) chan httpResponse {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(resp.Body)
 
-		r := reflect.New(request.t).Interface()
 		err = json.Unmarshal(buf.Bytes(), r)
 		if err != nil {
-			res <- httpResponse{result: nil, err: err}
+			res <- httpResponse{result: r, err: err}
 			return
 		}
 		res <- httpResponse{result: r, err: nil}
@@ -80,7 +80,7 @@ func (s RabbitHTTPClient) delResource(uri string) error {
 		return err
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return errors.New(uri + " : " + resp.Status)
+		return errors.New(resp.Status)
 	}
 	defer resp.Body.Close()
 	return nil
@@ -121,12 +121,13 @@ func (s RabbitHTTPClient) getBindings() chan httpResponse {
 }
 
 // BrokerInfo gets all resources of the broker at a time, in parallel
-func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
-	var r BrokerInfo
+// TODO reduce complexity
+func (s RabbitHTTPClient) BrokerInfo() (r BrokerInfo, err error) {
 	const numExpectedResources = 6
 	count := 0
 
 	// get...() returns channel which will provide result when available
+	// TODO use Context
 	overview := s.getOverview()
 	connections := s.getConnections()
 	exchanges := s.getExchanges()
@@ -136,37 +137,30 @@ func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
 
 	for {
 		var res httpResponse
-		var err error
 		select {
 		case res := <-overview:
-			err = res.err
 			r.Overview = *(res.result.(*RabbitOverview))
 		case res = <-connections:
-			err = res.err
 			r.Connections = *(res.result.(*[]RabbitConnection))
 		case res = <-exchanges:
-			err = res.err
 			r.Exchanges = *(res.result.(*[]RabbitExchange))
 		case res = <-queues:
-			err = res.err
 			r.Queues = *(res.result.(*[]RabbitQueue))
 		case res = <-consumers:
-			err = res.err
 			r.Consumers = *(res.result.(*[]RabbitConsumer))
 		case res = <-bindings:
-			err = res.err
 			r.Bindings = *(res.result.(*[]RabbitBinding))
 			// TODO add timeout
 		}
-		if err != nil {
-			return r, res.err // fail as soon we get an error
+		if res.err != nil {
+			err = res.err
+			return
 		}
 		count++
 		if count == numExpectedResources {
-			break
+			return
 		}
 	}
-	return r, nil
 }
 
 // Connections returns the /connections resource of the broker

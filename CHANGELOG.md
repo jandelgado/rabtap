@@ -1,5 +1,9 @@
 # Changelog for rabtap
 
+## Unreleased
+
+* fix: bug in REST-client panicing when endpoint not available
+
 ## v1.9 (2018-05-15)
 
 ### Added

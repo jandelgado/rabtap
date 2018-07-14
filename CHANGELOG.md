@@ -2,7 +2,15 @@
 
 ## Unreleased
 
-* fix: bug in REST-client panicing when endpoint not available
+### Added
+
+* new options `--qfilter FILTER` and `--efilter FILTER` to filter output
+  of `info` command. 
+
+### Changed
+
+* fix: bug in REST-client panicking when endpoint not available
+
 
 ## v1.9 (2018-05-15)
 

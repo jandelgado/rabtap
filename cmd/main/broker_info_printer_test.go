@@ -22,10 +22,8 @@ func TestResolveTemplate(t *testing.T) {
 
 	brokerInfoPrinter := NewBrokerInfoPrinter(
 		BrokerInfoPrinterConfig{
-			ShowStats:           false,
-			ShowConsumers:       false,
-			ShowDefaultExchange: false,
-			NoColor:             true})
+			NoColor: true},
+	)
 
 	result := brokerInfoPrinter.resolveTemplate("test", tpl, args)
 	assert.Equal(t, "hello Jan", result)
@@ -108,6 +106,13 @@ func TestFindConsumerByQueueNotFoundReturnsNil(t *testing.T) {
 	assert.Nil(t, findConsumerByQueue([]rabtap.RabbitConsumer{}, "vhost", "q1"))
 }
 
+func TestBrokerInfoPrintFailsOnInvalidUri(t *testing.T) {
+	brokerInfoPrinter := NewBrokerInfoPrinter(BrokerInfoPrinterConfig{})
+	err := brokerInfoPrinter.Print(rabtap.BrokerInfo{}, "//:xxx::invalid uri", os.Stdout)
+	assert.NotNil(t, err)
+
+}
+
 func ExampleBrokerInfoPrinter_Print() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
@@ -119,7 +124,10 @@ func ExampleBrokerInfoPrinter_Print() {
 			ShowStats:           false,
 			ShowConsumers:       true,
 			ShowDefaultExchange: false,
-			NoColor:             true})
+			QueueFilter:         TruePredicate,
+			OmitEmptyExchanges:  false,
+			NoColor:             true},
+	)
 	brokerInfo, err := client.BrokerInfo()
 	if err != nil {
 		log.Fatal(err)
@@ -154,5 +162,42 @@ func ExampleBrokerInfoPrinter_Print() {
 	//     └── test-topic (exchange, type 'topic', [D])
 	//         ├── topic-q1 (queue, key='topic-q1', idle since 2017-05-25 19:14:17, [D|AD|EX])
 	//         └── topic-q2 (queue, key='topic-q2', idle since 2017-05-25 19:14:21, [D])
+
+}
+
+func ExampleBrokerInfoPrinter_printWithQueueFilter() {
+
+	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
+	defer mock.Close()
+	client := rabtap.NewRabbitHTTPClient(mock.URL, &tls.Config{})
+
+	queueFilter, err := NewPredicateExpression("queue.Name == 'fanout-q2'")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	brokerInfoPrinter := NewBrokerInfoPrinter(
+		BrokerInfoPrinterConfig{
+			ShowStats:           false,
+			ShowConsumers:       true,
+			ShowDefaultExchange: false,
+			QueueFilter:         queueFilter,
+			OmitEmptyExchanges:  true,
+			NoColor:             true},
+	)
+	brokerInfo, err := client.BrokerInfo()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := brokerInfoPrinter.Print(brokerInfo, "http://rabbitmq/api", os.Stdout); err != nil {
+		log.Fatal(err)
+	}
+
+	// Output:
+	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
+	// └── Vhost /
+	//     └── test-fanout (exchange, type 'fanout', [D])
+	//         └── fanout-q2 (queue, idle since 2017-05-25 19:14:32, [D])
 
 }

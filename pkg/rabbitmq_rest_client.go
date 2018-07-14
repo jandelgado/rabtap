@@ -454,6 +454,7 @@ type RabbitQueue struct {
 	//	ExclusiveConsumerTag interface{} `json:"exclusive_consumer_tag"`
 	//	Policy               interface{} `json:"policy"`
 	//	ConsumerUtilisation  interface{} `json:"consumer_utilisation"`
+	// TODO use cusom marshaller and parese into time.Time
 	IdleSince string `json:"idle_since"`
 	Memory    int    `json:"memory"`
 }

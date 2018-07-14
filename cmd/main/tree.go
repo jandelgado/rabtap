@@ -16,18 +16,28 @@ type TreeNode struct {
 	Children []*TreeNode
 }
 
-// NewInfoTree returns a new Info treee with just an root element
-func NewInfoTree(text string) *TreeNode {
+// NewTreeNode returns a single node tree
+func NewTreeNode(text string) *TreeNode {
 	return &TreeNode{Text: text}
 }
 
-// AddChild adds a child node to the given node and returns the newly
-// created node.
-func (s *TreeNode) AddChild(text string) *TreeNode {
-	node := &TreeNode{Text: text}
+// HasChildren returns true if the node has children, otherwise false
+func (s *TreeNode) HasChildren() bool {
+	return len(s.Children) > 0
+}
+
+// Add adds a child node to the given node
+func (s *TreeNode) Add(node *TreeNode) *TreeNode {
 	node.Parent = s
 	s.Children = append(s.Children, node)
 	return node
+}
+
+// AddList adds a list of child node to the given node
+func (s *TreeNode) AddList(nodes []*TreeNode) {
+	for _, node := range nodes {
+		s.Add(node)
+	}
 }
 
 // IsLastChild returns true if the node is the last child node of it's parent

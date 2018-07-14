@@ -7,6 +7,9 @@ import (
 	"os"
 	"os/signal"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"
 )
@@ -36,7 +39,16 @@ func getTLSConfig(insecureTLS bool) *tls.Config {
 	return &tls.Config{InsecureSkipVerify: insecureTLS}
 }
 
+func createFilterPredicate(expr *string) (Predicate, error) {
+	if expr != nil {
+		return NewPredicateExpression(*expr)
+	}
+	return NewPredicateExpression("true")
+}
+
 func startCmdInfo(args CommandLineArgs, title string) {
+	queueFilter, err := createFilterPredicate(args.QueueFilter)
+	failOnError(err, "invalid queue filter predicate", os.Exit)
 	cmdInfo(CmdInfoArg{
 		rootNode: title,
 		client:   rabtap.NewRabbitHTTPClient(args.APIURI, getTLSConfig(args.InsecureTLS)),
@@ -44,6 +56,8 @@ func startCmdInfo(args CommandLineArgs, title string) {
 			ShowStats:           args.ShowStats,
 			ShowConsumers:       args.ShowConsumers,
 			ShowDefaultExchange: args.ShowDefaultExchange,
+			QueueFilter:         queueFilter,
+			OmitEmptyExchanges:  args.OmitEmptyExchanges,
 			NoColor:             args.NoColor},
 		out: NewColorableWriter(os.Stdout)})
 }
@@ -91,8 +105,14 @@ func startCmdTap(args CommandLineArgs) {
 	cmdTap(args.TapConfig, getTLSConfig(args.InsecureTLS),
 		messageReceiveFunc, signalChannel)
 }
+func hiHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("hi"))
+}
 
 func main() {
+	http.HandleFunc("/", hiHandler)
+	go http.ListenAndServe(":8080", nil)
+
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)

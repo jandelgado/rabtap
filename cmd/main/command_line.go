@@ -15,13 +15,16 @@ import (
 var RabtapAppVersion = "(version not specified)"
 
 const (
-	usage = `rabtap - RabbitMQ message tap.
+	// note: usage is interpreted by docopt - this is code.
+	usage = `rabtap - RabbitMQ wire tap.
 
 Usage:
   rabtap -h|--help
   rabtap tap EXCHANGES [--uri URI] [--saveto=DIR] [-jknv]
   rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jknv]
-  rabtap info [--api APIURI] [--consumers] [--stats] [--show-default] [-knv]
+  rabtap info [--api APIURI] [--consumers] [--stats] 
+              [--filter EXPR] 
+              [--omit-empty] [--show-default] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
@@ -47,6 +50,7 @@ Examples:
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
+  rabtap info --filter "binding.Exchange == 'amq.topic'"
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
 
 Options:
@@ -63,12 +67,14 @@ Options:
  -b, --bindingkey KEY binding key to use in bind queue command.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
+ --filter EXPR        Filter for info command to filter queues (see README.md)
  -h, --help           print this help.
  -j, --json           print/save/publish message metadata and body to a
                       single JSON file. JSON body is base64 encoded. Otherwise
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
+ -o, --omit-empty     don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed 
                       [default: closed by rabtap].
  -r, --routingkey KEY routing key to use in publish mode.
@@ -135,6 +141,8 @@ type CommandLineArgs struct {
 	ExchangeType        string  // exchange type create, remove or queue bind
 	ShowConsumers       bool    // info mode: also show consumer
 	ShowStats           bool    // info mode: also show statistics
+	QueueFilter         *string // info mode: optional filter for queues
+	OmitEmptyExchanges  bool    // info mode: do not show exchanges wo/ bindings
 	Durable             bool    // queue create, exchange create
 	Autodelete          bool    // queue create, exchange create
 	SaveDir             *string // save mode: optional directory to stores files to
@@ -192,10 +200,15 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:                 InfoCmd,
 		commonArgs:          parseCommonArgs(args),
+		OmitEmptyExchanges:  args["--omit-empty"].(bool),
 		ShowConsumers:       args["--consumers"].(bool),
 		ShowStats:           args["--stats"].(bool),
 		ShowDefaultExchange: args["--show-default"].(bool)}
 
+	if args["--filter"] != nil {
+		filter := args["--filter"].(string)
+		result.QueueFilter = &filter
+	}
 	var err error
 	if result.APIURI, err = parseAPIURI(args); err != nil {
 		return result, err

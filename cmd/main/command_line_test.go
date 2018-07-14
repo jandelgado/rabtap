@@ -36,6 +36,7 @@ func TestParseAmqpURIUseEnvironment(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "URI", uri)
 }
+
 func TestCliTapSingleUri(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=broker1", "exchange1:binding1"})
@@ -119,22 +120,6 @@ func TestCliInsecureLongOpt(t *testing.T) {
 	assert.True(t, args.InsecureTLS)
 }
 
-func TestCliInsecureOpt(t *testing.T) {
-	args, err := ParseCommandLineArgs(
-		[]string{"tap", "--uri=broker", "exchange:binding", "--insecure"})
-
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(args.TapConfig))
-	assert.Equal(t, TapCmd, args.Cmd)
-	assert.Equal(t, "broker", args.TapConfig[0].AmqpURI)
-	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
-	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
-	assert.Equal(t, "binding", args.TapConfig[0].Exchanges[0].BindingKey)
-	assert.Nil(t, args.SaveDir)
-	assert.False(t, args.JSONFormat)
-	assert.True(t, args.InsecureTLS)
-}
-
 func TestCliVerboseOpt(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=broker", "exchange:binding", "-v", "--json"})
@@ -165,6 +150,8 @@ func TestCliInfoCmd(t *testing.T) {
 	assert.False(t, args.ShowConsumers)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
+	assert.Nil(t, args.QueueFilter)
+	assert.False(t, args.OmitEmptyExchanges)
 }
 
 func TestCliInfoCmdMissingApi(t *testing.T) {
@@ -174,6 +161,7 @@ func TestCliInfoCmdMissingApi(t *testing.T) {
 		[]string{"info"})
 	assert.NotNil(t, err)
 }
+
 func TestCliInfoCmdApiFromEnv(t *testing.T) {
 	const key = "RABTAP_APIURI"
 	os.Setenv(key, "APIURI")
@@ -192,9 +180,11 @@ func TestCliInfoCmdApiFromEnv(t *testing.T) {
 	assert.False(t, args.NoColor)
 }
 
-func TestCliInfoCmdShowConsumersWithoutColor(t *testing.T) {
+func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"info", "--api=APIURI", "--stats", "--consumers", "--no-color"})
+		[]string{"info", "--api=APIURI", "--stats", "--consumers",
+			"--filter=EXPR", "--omit-empty",
+			"--no-color", "-k", "--show-default"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(args.TapConfig))
@@ -202,25 +192,13 @@ func TestCliInfoCmdShowConsumersWithoutColor(t *testing.T) {
 	assert.Equal(t, "APIURI", args.APIURI)
 	assert.Nil(t, args.SaveDir)
 	assert.False(t, args.Verbose)
+	assert.Equal(t, "EXPR", *args.QueueFilter)
 	assert.True(t, args.ShowStats)
 	assert.True(t, args.ShowConsumers)
-	assert.False(t, args.ShowDefaultExchange)
-	assert.True(t, args.NoColor)
-	assert.False(t, args.InsecureTLS)
-}
-
-func TestCliInfoCmdShowDefault(t *testing.T) {
-	args, err := ParseCommandLineArgs(
-		[]string{"info", "--api=APIURI", "--show-default"})
-
-	assert.Nil(t, err)
-	assert.Equal(t, 0, len(args.TapConfig))
-	assert.Equal(t, InfoCmd, args.Cmd)
-	assert.Equal(t, "APIURI", args.APIURI)
-	assert.False(t, args.Verbose)
-	assert.False(t, args.ShowConsumers)
 	assert.True(t, args.ShowDefaultExchange)
-	assert.False(t, args.InsecureTLS)
+	assert.True(t, args.NoColor)
+	assert.True(t, args.InsecureTLS)
+	assert.True(t, args.OmitEmptyExchanges)
 }
 
 func TestCliPubCmdFromFile(t *testing.T) {

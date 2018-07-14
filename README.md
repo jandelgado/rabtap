@@ -31,6 +31,14 @@ and exchanges, inspect broker.
         * [Poor mans shovel](#poor-mans-shovel)
         * [Close connection](#close-connection)
 * [JSON message format](#json-message-format)
+* [Filtering output of info command](#filtering-output-of-info-command)
+    * [Filtering expressions](#filtering-expressions)
+        * [Evaluation context](#evaluation-context)
+        * [Examples](#examples-1)
+    * [Type reference](#type-reference)
+        * [Exchange type](#exchange-type)
+        * [Queue type](#queue-type)
+        * [Binding type](#binding-type)
 * [Build from source](#build-from-source)
 * [Test data generator](#test-data-generator)
 * [Author](#author)
@@ -77,13 +85,15 @@ See [below](#build-from-source) if you prefer to compile from source.
 ## Usage
 
 ```
-rabtap - RabbitMQ message tap.
+rabtap - RabbitMQ wire tap.
 
 Usage:
   rabtap -h|--help
   rabtap tap EXCHANGES [--uri URI] [--saveto=DIR] [-jknv]
   rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jknv]
-  rabtap info [--api APIURI] [--consumers] [--stats] [--show-default] [-knv]
+  rabtap info [--api APIURI] [--consumers] [--stats] 
+              [--filter EXPR] 
+              [--omit-empty] [--show-default] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
@@ -109,7 +119,8 @@ Examples:
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
-  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
+  rabtap info --filter "binding.Exchange == 'amq.topic'"
+  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
 
 Options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
@@ -125,13 +136,15 @@ Options:
  -b, --bindingkey KEY binding key to use in bind queue command.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
+ --filter EXPR        Filter for info command to filter queues (see README.md)
  -h, --help           print this help.
  -j, --json           print/save/publish message metadata and body to a
                       single JSON file. JSON body is base64 encoded. Otherwise
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
- --reason=REASON      reason why the connection was closed
+ -o, --omit-empty     don't show echanges without bindings in info command.
+ --reason=REASON      reason why the connection was closed 
                       [default: closed by rabtap].
  -r, --routingkey KEY routing key to use in publish mode.
  --saveto DIR         also save messages and metadata to DIR.
@@ -159,8 +172,8 @@ Rabtap understand the following commands:
    `AD` (auto delete) and `I` (internal). The features of a queue are displayed
    in square brackets with `D` (durable), `AD` (auto delete) and `EX`
    (exclusive). If `--statistics` option is enabled, basic statistics are
-   included in the output.
-
+   included in the output. The `--filter` option allows to filter output. See
+   [filtering](#filtering-output-of-info-command) section for details.
 * `queue` - create/bind/remove queue
 * `exchange` - create/remove exhange
 * `connection` - close connections
@@ -376,6 +389,154 @@ messages in the following format:
 ```
 
 Note that in JSON mode, the `Body` is base64 encoded.
+
+## Filtering output of info command
+
+When your brokers topology is complex, the output of the `info` command can
+become very bloated. The `--filter` helps you to narrow output to 
+the desired information.
+
+### Filtering expressions
+
+A filtering expression is a function that evaluates to `true` or `false` (i.e.
+a *predicate*). Rabtap allows the specification of predicates to be applied
+when printing queues using the `info` command. The output will only proceed
+if the predicate evaluates to `true`.
+
+Rabtap uses the [govalute](https://github.com/Knetic/govaluate) to evaluate the
+predicate. This allows or complex expressions.
+
+See [official govaluate
+documentation](https://github.com/Knetic/govaluate/blob/master/MANUAL.md) for
+further information.
+
+#### Evaluation context
+
+During evaluation the context (i.e. the current exchange, queue and binding) is
+available in the expression as variables:
+
+* the current exchange is bound to the variable [exchange](#exchange-type) 
+* the current queue is bound to the variable [queue](#queue-type) 
+* the curren binding is bound to the variable [binding](#binding-type)
+
+#### Examples
+
+The examples assume that `RABTAP_APIURI` environment variable points to the 
+broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
+
+* `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty`: Print
+  only queues bound to exchange `amq.direct` and skip all empty exchanges.
+* `rabtap info --filter "queue.Name =~ '.*test.*'" --omit-empty`: Print all
+  queues with `test` in their name.
+* `rabtap info --filter "queue.Name =~ '.*test.*' && exchange.Type == 'topic'" --omit-empty`: Like
+  before, but consider only exchanges of type `topic`.
+
+### Type reference
+
+The types reflect more or less the JSON API objects of the [REST API of
+RabbitMQ](https://rawcdn.githack.com/rabbitmq/rabbitmq-management/v3.7.7/priv/www/api/index.html)
+transformed to golang types.
+
+#### Exchange type
+
+```
+type Exchange struct {
+	Name       string
+	Vhost      string
+	Type       string
+	Durable    bool
+	AutoDelete bool
+	Internal   bool
+	MessageStats struct {
+		PublishOut
+		PublishOutDetails struct {
+			Rate float64
+		}
+		PublishIn        int
+		PublishInDetails struct {
+			Rate float64
+		}
+	}
+}
+```
+
+#### Queue type
+
+```
+type Queue struct {
+	MessagesDetails struct {
+		Rate float64 
+	} 
+	Messages 
+	MessagesUnacknowledgedDetails struct {
+		Rate float64 
+	} 
+	MessagesUnacknowledged int 
+	MessagesReadyDetails   struct {
+		Rate float64 
+	} 
+	MessagesReady     int 
+	ReductionsDetails struct {
+		Rate float64 
+	} 
+	Reductions int    
+	Node       string 
+	Exclusive            bool   
+	AutoDelete           bool   
+	Durable              bool   
+	Vhost                string 
+	Name                 string 
+	MessageBytesPagedOut int    
+	MessagesPagedOut     int    
+	BackingQueueStatus   struct {
+		Mode string 
+		Q1   int    
+		Q2   int    
+		Q3  int 
+		Q4  int 
+		Len int 
+		NextSeqID         int     
+		AvgIngressRate    float64 
+		AvgEgressRate     float64 
+		AvgAckIngressRate float64 
+		AvgAckEgressRate  float64 
+	} 
+	MessageBytesPersistent     int 
+	MessageBytesRAM            int 
+	MessageBytesUnacknowledged int 
+	MessageBytesReady          int 
+	MessageBytes               int 
+	MessagesPersistent         int 
+	MessagesUnacknowledgedRAM  int 
+	MessagesReadyRAM           int 
+	MessagesRAM                int 
+	GarbageCollection          struct {
+		MinorGcs        int 
+		FullsweepAfter  int 
+		MinHeapSize     int 
+		MinBinVheapSize int 
+		MaxHeapSize     int 
+	} 
+	State string 
+	Consumers int 
+	IdleSince string 
+	Memory    int    
+}
+
+```
+
+#### Binding type
+
+```
+type Binding struct {
+	Source          string
+	Vhost           string
+	Destination     string
+	DestinationType string
+	RoutingKey      string
+	PropertiesKey string
+}
+```
 
 ## Build from source
 

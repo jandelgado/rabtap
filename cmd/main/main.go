@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/signal"
 
-	"net/http"
-	_ "net/http/pprof"
+	//"net/http"
+	//_ "net/http/pprof"
 
 	"github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"

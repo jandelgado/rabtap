@@ -105,13 +105,14 @@ func startCmdTap(args CommandLineArgs) {
 	cmdTap(args.TapConfig, getTLSConfig(args.InsecureTLS),
 		messageReceiveFunc, signalChannel)
 }
-func hiHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("hi"))
-}
+
+//func profHandler(w http.ResponseWriter, r *http.Request) {
+//	w.Write([]byte("hi"))
+//}
 
 func main() {
-	http.HandleFunc("/", hiHandler)
-	go http.ListenAndServe(":8080", nil)
+	// http.HandleFunc("/", profHandler)
+	// go http.ListenAndServe(":8080", nil)
 
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {

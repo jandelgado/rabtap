@@ -239,6 +239,10 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		QueueName:  args["QUEUE"].(string),
 	}
 	var err error
+	if args["--saveto"] != nil {
+		saveDir := args["--saveto"].(string)
+		result.SaveDir = &saveDir
+	}
 	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
 		return result, err
 	}

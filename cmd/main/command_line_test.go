@@ -251,14 +251,15 @@ func TestCliPubCmdFromStdinWithRoutingKey(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliSubCmd(t *testing.T) {
+func TestCliSubCmdSaveToDir(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"sub", "queuename", "--uri", "uri"})
+		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, SubCmd, args.Cmd)
 	assert.Equal(t, "queuename", args.QueueName)
 	assert.Equal(t, "uri", args.AmqpURI)
+	assert.Equal(t, "dir", *args.SaveDir)
 }
 
 func TestCliCreateQueue(t *testing.T) {

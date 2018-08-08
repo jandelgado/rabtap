@@ -1,16 +1,20 @@
 # Changelog for rabtap
 
-## Unreleased
+## v1.11 (2018-08-08)
+
+### Changed 
+
+* fix: `--saveto=DIR` option had no effect in `sub` command
+
+## v1.10 (2018-07-15)
 
 ### Added
 
-* new options `--qfilter FILTER` and `--efilter FILTER` to filter output
-  of `info` command. 
+* new options `--filter FILTER` to filter output of `info` command. 
 
-### Changed
+### Changed 
 
 * fix: bug in REST-client panicking when endpoint not available
-
 
 ## v1.9 (2018-05-15)
 

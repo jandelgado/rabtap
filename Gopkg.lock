@@ -2,97 +2,144 @@
 
 
 [[projects]]
+  digest = "1:b9660f5e3522b899d32b1f9bb98056203d6f76f673e1843eaa00869330103ba5"
   name = "github.com/Knetic/govaluate"
   packages = ["."]
+  pruneopts = ""
   revision = "9aa49832a739dcd78a5542ff189fb82c3e423116"
 
 [[projects]]
+  digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = ""
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:d741c40674d5d73ae7bfad6a4b5c920bcc2492ce776ea606d83c91a05a093e0a"
   name = "github.com/docopt/docopt-go"
   packages = ["."]
+  pruneopts = ""
   revision = "784ddc588536785e7299f7272f39101f7faccc3f"
   version = "0.6.2"
 
 [[projects]]
+  digest = "1:d7d69c103aba5ea229451115b28ca06d061e3861b2f44bcd0100cbc65659c4d9"
   name = "github.com/fatih/color"
   packages = ["."]
+  pruneopts = ""
   revision = "507f6050b8568533fb3f5504de8e5205fa62a114"
   version = "v1.6.0"
 
 [[projects]]
+  digest = "1:9ea83adf8e96d6304f394d40436f2eb44c1dc3250d223b74088cc253a6cd0a1c"
   name = "github.com/mattn/go-colorable"
   packages = ["."]
+  pruneopts = ""
   revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
   version = "v0.0.9"
 
 [[projects]]
+  digest = "1:78229b46ddb7434f881390029bd1af7661294af31f6802e0e1bedaad4ab0af3c"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
+  pruneopts = ""
   revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
   version = "v0.0.3"
 
 [[projects]]
+  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = ""
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:7f569d906bdd20d906b606415b7d794f798f91a62fcfb6a4daa6d50690fb7a3f"
   name = "github.com/satori/go.uuid"
   packages = ["."]
+  pruneopts = ""
   revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:8cf46b6c18a91068d446e26b67512cf16f1540b45d90b28b9533706a127f0ca6"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
+  pruneopts = ""
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
   version = "v1.0.5"
 
 [[projects]]
   branch = "master"
+  digest = "1:699b833c1cb6492979003ba49de4d4a6eecbe70c5a070e6382025efe142aa7a7"
   name = "github.com/streadway/amqp"
   packages = ["."]
+  pruneopts = ""
   revision = "8e4aba63da9fc5571e01c6a45dc809a58cbc5a68"
 
 [[projects]]
+  digest = "1:a30066593578732a356dc7e5d7f78d69184ca65aeeff5939241a3ab10559bb06"
   name = "github.com/stretchr/testify"
-  packages = ["assert","require"]
+  packages = [
+    "assert",
+    "require",
+  ]
+  pruneopts = ""
   revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
   version = "v1.2.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:8e68f35fec8ffd5ebb48e9f615b4ca5fa53aad5ee5f241a71210598f51634eb0"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
+  pruneopts = ""
   revision = "12892e8c234f4fe6f6803f052061de9057903bb2"
 
 [[projects]]
   branch = "master"
+  digest = "1:a2702fb9a1197a9d8dea2cdbc23f785d326563da44e261a8ecac9f1da5bad9cb"
   name = "golang.org/x/net"
   packages = ["context"]
+  pruneopts = ""
   revision = "b68f30494add4df6bd8ef5e82803f308e7f7c59c"
 
 [[projects]]
   branch = "master"
+  digest = "1:e80ec2e647548e8fd36bb104d39220f162b72f9222507f0fc1d5f0b7618a5e9f"
   name = "golang.org/x/sys"
-  packages = ["unix","windows"]
+  packages = [
+    "unix",
+    "windows",
+  ]
+  pruneopts = ""
   revision = "378d26f46672a356c46195c28f61bdb4c0a781dd"
 
 [[projects]]
   branch = "v2"
+  digest = "1:61a650a53e5e865a91ae9581f02990a4b6e3afcb8d280f19b1e67a3c284944e6"
   name = "gopkg.in/tomb.v2"
   packages = ["."]
+  pruneopts = ""
   revision = "d5d1b5820637886def9eef33e03a27a9f166942c"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "423cde30ca277c918ec2e7beb71db6dfa4d96a6440babdc1a73fc9e7922abb6d"
+  input-imports = [
+    "github.com/Knetic/govaluate",
+    "github.com/docopt/docopt-go",
+    "github.com/fatih/color",
+    "github.com/mattn/go-colorable",
+    "github.com/satori/go.uuid",
+    "github.com/sirupsen/logrus",
+    "github.com/streadway/amqp",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "gopkg.in/tomb.v2",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

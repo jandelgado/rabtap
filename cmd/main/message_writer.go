@@ -37,7 +37,7 @@ type RabtapPersistentMessage struct {
 	Exchange    string
 	RoutingKey  string
 
-	Body *[]byte `json:",omitempty"`
+	Body []byte
 }
 
 // CreateTimestampFilename returns a filename based on a RFC3339Nano
@@ -51,6 +51,11 @@ func CreateTimestampFilename(t time.Time) string {
 // from an amqp.Delivery
 func NewRabtapPersistentMessage(m amqp.Delivery,
 	includeBody bool) RabtapPersistentMessage {
+
+	body := []byte{}
+	if includeBody {
+		body = m.Body
+	}
 	message := RabtapPersistentMessage{
 		Headers:         m.Headers,
 		ContentType:     m.ContentType,
@@ -67,10 +72,7 @@ func NewRabtapPersistentMessage(m amqp.Delivery,
 		DeliveryTag:     m.DeliveryTag,
 		Exchange:        m.Exchange,
 		RoutingKey:      m.RoutingKey,
-		Body:            nil,
-	}
-	if includeBody {
-		message.Body = &m.Body
+		Body:            body,
 	}
 	return message
 }
@@ -90,7 +92,7 @@ func (s RabtapPersistentMessage) ToAmqpPublishing() amqp.Publishing {
 		Type:            s.Type,
 		UserId:          s.UserID,
 		AppId:           s.AppID,
-		Body:            *s.Body}
+		Body:            s.Body}
 }
 
 // WriteMessageBodyBlob writes the given message the provided stream.

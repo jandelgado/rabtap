@@ -97,7 +97,7 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 	assert.Equal(t, len(testMessage.Headers), len(jsonActual.Headers))
 	assert.Equal(t, testMessage.Headers["header"], jsonActual.Headers["header"])
 	assert.Equal(t, testMessage.Timestamp, jsonActual.Timestamp)
-	assert.Equal(t, []byte("simple test message."), *jsonActual.Body)
+	assert.Equal(t, []byte("simple test message."), jsonActual.Body)
 }
 
 func TestSaveMessageToFileToInvalidDir(t *testing.T) {
@@ -186,6 +186,7 @@ func ExampleWriteMessageJSON_withoutBody() {
 	//   "DeliveryTag": 0,
 	//   "Redelivered": false,
 	//   "Exchange": "exchange",
-	//   "RoutingKey": "routingkey"
+	//   "RoutingKey": "routingkey",
+	//   "Body": ""
 	// }
 }

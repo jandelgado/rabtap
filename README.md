@@ -86,7 +86,6 @@ See [below](#build-from-source) if you prefer to compile from source.
 ## Usage
 
 ```
-
 rabtap - RabbitMQ wire tap.
 
 Usage:
@@ -102,6 +101,7 @@ Usage:
   rabtap exchange rm EXCHANGE [--uri URI] [-kv]
   rabtap queue create QUEUE [--uri URI] [-adkv]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
+  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
   rabtap queue rm QUEUE [--uri URI] [-kv]
   rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
   rabtap --version
@@ -142,7 +142,7 @@ Options:
 
 Examples:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
-  rabtap tap --uri amqp://guest:guest@localhost/vhost amq.topic:#,amq.fanout:
+  rabtap tap --uri amqp://guest:guest@localhost/ amq.topic:#,amq.fanout:
   rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
   rabtap info --api http://guest:guest@localhost:15672/api
 

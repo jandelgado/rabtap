@@ -85,6 +85,7 @@ See [below](#build-from-source) if you prefer to compile from source.
 ## Usage
 
 ```
+
 rabtap - RabbitMQ wire tap.
 
 Usage:
@@ -103,24 +104,6 @@ Usage:
   rabtap queue rm QUEUE [--uri URI] [-kv]
   rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
   rabtap --version
-
-Examples:
-  rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
-  rabtap tap --uri amqp://guest:guest@localhost/ amq.topic:#,amq.fanout:
-  rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
-  rabtap info --api http://guest:guest@localhost:15672/api
-
-  # use RABTAP_AMQPURI environment variable to specify broker instead of --uri
-  export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
-  rabtap queue create JDQ
-  rabtap queue bind JDQ to amq.direct --bindingkey=key
-  rabtap queue rm JDQ
-
-  # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
-  export RABTAP_APIURI=http://guest:guest@localhost:15672/api
-  rabtap info
-  rabtap info --filter "binding.Exchange == 'amq.topic'"
-  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
 
 Options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
@@ -155,6 +138,24 @@ Options:
                       environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
  --version            show version information and exit.
+
+Examples:
+  rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
+  rabtap tap --uri amqp://guest:guest@localhost/vhost amq.topic:#,amq.fanout:
+  rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
+  rabtap info --api http://guest:guest@localhost:15672/api
+
+  # use RABTAP_AMQPURI environment variable to specify broker instead of --uri
+  export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
+  rabtap queue create JDQ
+  rabtap queue bind JDQ to amq.direct --bindingkey=key
+  rabtap queue rm JDQ
+
+  # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
+  export RABTAP_APIURI=http://guest:guest@localhost:15672/api
+  rabtap info
+  rabtap info --filter "binding.Exchange == 'amq.topic'"
+  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
 ```
 
 ### Basic commands
@@ -185,6 +186,11 @@ See the examples section for further information.
 The specification of the RabbitMQ broker URI follows the [AMQP URI
 specification](https://www.rabbitmq.com/uri-spec.html) as implemented by the
 [go RabbitMQ client library](https://github.com/streadway/amqp).
+
+Examples:
+* `amqp://guest:guest@localhost:5672/`
+* `amqps://guest:guest@my-broker.dev:5671/`
+* `amqps://guest:guest@my-broker.dev:5671/vhost`
 
 ### Environment variables
 

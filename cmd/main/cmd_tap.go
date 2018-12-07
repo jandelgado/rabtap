@@ -40,7 +40,6 @@ func cmdTap(tapConfig []rabtap.TapConfiguration, tlsConfig *tls.Config,
 // channel. Returns array of tabtap.AmqpTap objects and immeadiately starts
 // the processing.
 // TODO feature: discover bindings when no binding keys are given (-> discovery.go)
-// TODO fail early on inital connection error
 func establishTaps(tapMessageChannel rabtap.TapChannel,
 	tapConfigs []rabtap.TapConfiguration, tlsConfig *tls.Config) []*rabtap.AmqpTap {
 	taps := []*rabtap.AmqpTap{}

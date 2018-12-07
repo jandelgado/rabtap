@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
+	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,8 +55,10 @@ func TestCmdPublishRaw(t *testing.T) {
 
 func TestCmdPublishJSON(t *testing.T) {
 
+	// in the test we send a stream of 2 messages.
 	// note: base64dec("aGVsbG8=") == "hello"
-	message := `
+	//        base64dec("c2Vjb25kCg==") == "second\n"
+	testmessage := `
 	{
 	  "Headers": null,
 	  "ContentType": "text/plain",
@@ -75,7 +78,10 @@ func TestCmdPublishJSON(t *testing.T) {
 	  "Exchange": "amq.topic",
 	  "RoutingKey": "test-q-amq.topic-0",
 	  "Body": "aGVsbG8="
-    }`
+    }
+	{
+		"Body": "c2Vjb25kCg=="
+	}`
 	conn, ch := testcommon.IntegrationTestConnection(t, "exchange", "topic", 1, false)
 	defer conn.Close()
 
@@ -93,7 +99,7 @@ func TestCmdPublishJSON(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	reader := strings.NewReader(message)
+	reader := strings.NewReader(testmessage)
 	cmdPublish(CmdPublishArg{
 		amqpURI:             testcommon.IntegrationURIFromEnv(),
 		exchange:            "exchange",
@@ -101,12 +107,21 @@ func TestCmdPublishJSON(t *testing.T) {
 		tlsConfig:           &tls.Config{},
 		readNextMessageFunc: createMessageReaderFunc(true, reader)})
 
-	select {
-	case message := <-deliveries:
-		assert.Equal(t, "exchange", message.Exchange)
-		assert.Equal(t, routingKey, message.RoutingKey)
-		assert.Equal(t, "hello", string(message.Body))
-	case <-time.After(time.Second * 2):
-		assert.Fail(t, "did not receive message within expected time")
+	// we expect 2 messages to be sent
+	var message [2]amqp.Delivery
+	for i := 0; i < 2; i++ {
+		select {
+		case message[i] = <-deliveries:
+		case <-time.After(time.Second * 2):
+			assert.Fail(t, "did not receive message within expected time")
+		}
 	}
+
+	assert.Equal(t, "exchange", message[0].Exchange)
+	assert.Equal(t, routingKey, message[0].RoutingKey)
+	assert.Equal(t, "hello", string(message[0].Body))
+
+	assert.Equal(t, "exchange", message[1].Exchange)
+	assert.Equal(t, routingKey, message[1].RoutingKey)
+	assert.Equal(t, "second\n", string(message[1].Body))
 }

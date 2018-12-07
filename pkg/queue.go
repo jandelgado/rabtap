@@ -35,3 +35,10 @@ func BindQueueToExchange(channel *amqp.Channel,
 
 	return channel.QueueBind(queueName, key, exchangeName, false /* wait */, nil)
 }
+
+// UnbindQueueFromExchange unbinds a queue from an exchange
+func UnbindQueueFromExchange(channel *amqp.Channel,
+	queueName, key, exchangeName string) error {
+
+	return channel.QueueUnbind(queueName, key, exchangeName, nil)
+}

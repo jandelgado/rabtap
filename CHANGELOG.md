@@ -3,6 +3,12 @@
 
 ## v1.12 (2018-12-07)
 
+### Added
+
+* new command `queue unbind QUEUE from EXCHANGE` to unbind a queue from an
+  exchange
+
+### Fixes
 * fix: when publishing (`rabtap pub` messages from stdin, a single EOF (ctrl+d)
   ends now the piublishing process.
 * fix: `rabtap pub` fails with error message when publishing to unknown exchange

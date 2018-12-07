@@ -37,10 +37,10 @@ func findBinding(queue, exchange, key string, bindings []RabbitBinding) int {
 	return -1
 }
 
-func TestIntegrationAmqpQueueCreateBindRemove(t *testing.T) {
+func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 
-	// since in order to remove an queue we must create it first, we
-	// tests both functions together in one test case.
+	// since in order to remove and unbind a  queue we must create it first, we
+	// tests these functions together in one test case.
 
 	const queueTestName = "testqueue"
 	const exchangeTestName = "amq.direct"
@@ -71,6 +71,13 @@ func TestIntegrationAmqpQueueCreateBindRemove(t *testing.T) {
 	bindings, err := client.Bindings()
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
+
+	// unbind queue from exchange
+	err = UnbindQueueFromExchange(ch, queueTestName, keyTestName, exchangeTestName)
+	assert.Nil(t, err)
+	bindings, err = client.Bindings()
+	assert.Nil(t, err)
+	assert.Equal(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// finally remove queue
 	err = RemoveQueue(ch, queueTestName, false, false)

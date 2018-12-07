@@ -30,6 +30,7 @@ and exchanges, inspect broker.
         * [Messages consumer (subscribe)](#messages-consumer-subscribe)
         * [Poor mans shovel](#poor-mans-shovel)
         * [Close connection](#close-connection)
+        * [Queue commands](#queue-commands)
 * [JSON message format](#json-message-format)
 * [Filtering output of info command](#filtering-output-of-info-command)
     * [Filtering expressions](#filtering-expressions)
@@ -175,8 +176,8 @@ Rabtap understand the following commands:
    (exclusive). If `--statistics` option is enabled, basic statistics are
    included in the output. The `--filter` option allows to filter output. See
    [filtering](#filtering-output-of-info-command) section for details.
-* `queue` - create/bind/remove queue
-* `exchange` - create/remove exhange
+* `queue` - create/bind/unbind/remove queue
+* `exchange` - create/remove exchange
 * `connection` - close connections
 
 See the examples section for further information.
@@ -363,6 +364,43 @@ http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbi
         ├── test-q-test-topic-1 (queue, key='test-q-test-topic-1', running, [])
         :
 $ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672' 
+```
+#### Queue commands
+
+The `queue` command can be used to easily create, remove, bind or unbind queues:
+
+```
+$ rabtap queue create myqueue 
+$ rabtap info --show-default
+http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
+└── Vhost /
+    ├── (default) (exchange, type 'direct', [D])
+    │   └── myqueue (queue, key='myqueue', idle since 2018-12-07 20:46:15, [])
+    :
+    └── amq.topic (exchange, type 'topic', [D])
+$ rabtap queue bind myqueue to amq.topic --bindingkey hello
+http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
+└── Vhost /
+    ├── (default) (exchange, type 'direct', [D])
+    │   └── myqueue (queue, key='myqueue', idle since 2018-12-07 20:46:15, [])
+    :
+    └── amq.topic (exchange, type 'topic', [D])
+        └── myqueue (queue, key='hello', idle since 2018-12-07 20:46:15, [])
+$ rabtap queue unbind myqueue from amq.topic --bindingkey hello
+$ rabtap info --show-default
+http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
+└── Vhost /
+    ├── (default) (exchange, type 'direct', [D])
+    │   └── myqueue (queue, key='myqueue', idle since 2018-12-07 20:46:15, [])
+    :
+    └── amq.topic (exchange, type 'topic', [D])
+$ rabtap queue rm myqueue
+$ raptap info
+http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
+└── Vhost /
+    ├── (default) (exchange, type 'direct', [D])
+    :
+    └── amq.topic (exchange, type 'topic', [D])
 ```
 
 ## JSON message format

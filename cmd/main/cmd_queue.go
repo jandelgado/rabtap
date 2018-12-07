@@ -22,7 +22,6 @@ type CmdQueueCreateArg struct {
 }
 
 // cmdQueueCreate creates a new queue on the given broker
-// TODO(JD) add durable, autodelete, exclusive parameters
 func cmdQueueCreate(cmd CmdQueueCreateArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURI,
 		cmd.tlsConfig,
@@ -45,7 +44,7 @@ func cmdQueueRemove(amqpURI, queueName string, tlsConfig *tls.Config) {
 		}), "removing queue failed", os.Exit)
 }
 
-// cmdQueueBindToExchange removes an exchange on the given broker
+// cmdQueueBindToExchange binds a queue to an exchange
 // TODO(JD) add ifUnused, ifEmpty parameters
 func cmdQueueBindToExchange(amqpURI, queueName, key, exchangeName string,
 	tlsConfig *tls.Config) {
@@ -57,4 +56,18 @@ func cmdQueueBindToExchange(amqpURI, queueName, key, exchangeName string,
 				queueName, exchangeName, key)
 			return rabtap.BindQueueToExchange(chn, queueName, key, exchangeName)
 		}), "bind queue failed", os.Exit)
+}
+
+// cmdQueueUnbindFromExchange unbinds a queue from an exchange
+// TODO(JD) add ifUnused, ifEmpty parameters
+func cmdQueueUnbindFromExchange(amqpURI, queueName, key, exchangeName string,
+	tlsConfig *tls.Config) {
+
+	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
+		tlsConfig,
+		func(chn *amqp.Channel) error {
+			log.Debugf("unbinding queue %s from exchange %s w/ key %s",
+				queueName, exchangeName, key)
+			return rabtap.UnbindQueueFromExchange(chn, queueName, key, exchangeName)
+		}), "unbind queue failed", os.Exit)
 }

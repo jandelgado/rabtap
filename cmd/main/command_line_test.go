@@ -295,6 +295,19 @@ func TestCliRemoveQueue(t *testing.T) {
 	assert.Equal(t, "uri", args.AmqpURI)
 }
 
+func TestCliUnbindQueue(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"queue", "unbind", "queuename", "from", "exchangename",
+			"--bindingkey", "key", "--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, QueueUnbindCmd, args.Cmd)
+	assert.Equal(t, "queuename", args.QueueName)
+	assert.Equal(t, "exchangename", args.ExchangeName)
+	assert.Equal(t, "key", args.QueueBindingKey)
+	assert.Equal(t, "uri", args.AmqpURI)
+}
+
 func TestCliBindQueue(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"queue", "bind", "queuename", "to", "exchangename",

@@ -144,6 +144,9 @@ func main() {
 	case QueueBindCmd:
 		cmdQueueBindToExchange(args.AmqpURI, args.QueueName,
 			args.QueueBindingKey, args.ExchangeName, tlsConfig)
+	case QueueUnbindCmd:
+		cmdQueueUnbindFromExchange(args.AmqpURI, args.QueueName,
+			args.QueueBindingKey, args.ExchangeName, tlsConfig)
 	case ConnCloseCmd:
 		cmdConnClose(args.APIURI, args.ConnName,
 			args.CloseReason, tlsConfig)

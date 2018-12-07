@@ -31,6 +31,7 @@ Usage:
   rabtap exchange rm EXCHANGE [--uri URI] [-kv]
   rabtap queue create QUEUE [--uri URI] [-adkv]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
+  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
   rabtap queue rm QUEUE [--uri URI] [-kv]
   rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
   rabtap --version
@@ -112,6 +113,8 @@ const (
 	QueueRemoveCmd
 	// QueueBindCmd binds a queue to an exchange
 	QueueBindCmd
+	// QueueUnbindCmd unbinds a queue from an exchange
+	QueueUnbindCmd
 	// ConnCloseCmd closes a connection
 	ConnCloseCmd
 )
@@ -268,6 +271,11 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	} else if args["bind"].(bool) {
 		// bind QUEUE to EXCHANGE [--bindingkey key]
 		result.Cmd = QueueBindCmd
+		result.QueueBindingKey = args["--bindingkey"].(string)
+		result.ExchangeName = args["EXCHANGE"].(string)
+	} else if args["unbind"].(bool) {
+		// unbind QUEUE from EXCHANGE [--bindingkey key]
+		result.Cmd = QueueUnbindCmd
 		result.QueueBindingKey = args["--bindingkey"].(string)
 		result.ExchangeName = args["EXCHANGE"].(string)
 	}

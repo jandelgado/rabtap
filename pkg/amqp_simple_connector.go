@@ -29,5 +29,20 @@ func SimpleAmqpConnector(amqpURI string, tlsConfig *tls.Config,
 		return err
 	}
 	defer conn.Close()
-	return run(chn)
+	// Wait for channel close in case of errors,e.g. unbind of nonexistent
+	// queue. But seems to not produce an error. So leave it out for now.
+	// errCh := make(chan *amqp.Error)
+	// chn.NotifyClose(errCh)
+	run(chn)
+
+	if err != nil {
+		return err
+	}
+	// Wait for channel close in case of errors - see above
+	// select {
+	// case amqpErr := <-errCh:
+	//     return errors.New(amqpErr.Reason)
+	// case <-time.After(1 * time.Second):
+	// }
+	return nil
 }

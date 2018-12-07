@@ -37,7 +37,7 @@ func getTapQueueNameForExchange(exchange, postfix string) string {
 }
 
 // EstablishTap sets up the connection to the broker and sets up
-// the tap, which is bound to the provided consumer function. Typicall
+// the tap, which is bound to the provided consumer function. Typically
 // this function is run as a go-routine.
 func (s *AmqpTap) EstablishTap(exchangeConfigList []ExchangeConfiguration,
 	tapCh TapChannel) error {

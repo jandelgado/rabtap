@@ -26,7 +26,7 @@ type AmqpPublish struct {
 	connection *AmqpConnector
 }
 
-// NewAmqpPublish returns a new AmqpTap object associated with the RabbitMQ
+// NewAmqpPublish returns a new AmqpPublish object associated with the RabbitMQ
 // broker denoted by the uri parameter.
 func NewAmqpPublish(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpPublish {
 	return &AmqpPublish{
@@ -51,14 +51,21 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 			return doReconnect
 		}
 		defer channel.Close()
+		errChan := make(chan *amqp.Error)
+		channel.NotifyClose(errChan)
 
 		for {
 			select {
+			case err := <-errChan:
+				s.logger.Fatalf("publishing error %#+v", err)
+				return doReconnect
+
 			case message, more := <-publishChannel:
 				if !more {
 					s.logger.Print("publishing channel closed.")
 					return doNotReconnect
 				}
+				// TODO need to add notification hdlr to detect pub errors
 				err := channel.Publish(message.Exchange,
 					message.RoutingKey,
 					false, // not mandatory
@@ -66,9 +73,10 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					*message.Publishing)
 
 				if err != nil {
-					s.logger.Print(err)
+					s.logger.Print("publishing error %#+v", err)
 					// error publishing message
-					// TODO should we do something here, e.g. retry?
+					// channel is invalid now - re-connect
+					return doReconnect
 				}
 
 			case controlMessage := <-controlChan:

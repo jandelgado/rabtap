@@ -1,4 +1,13 @@
+
 # Changelog for rabtap
+
+## v1.12 (2018-12-07)
+
+* fix: when publishing (`rabtap pub` messages from stdin, a single EOF (ctrl+d)
+  ends now the piublishing process.
+* fix: `rabtap pub` fails with error message when publishing to unknown exchange
+* fix: pub, sub, and tap now fail early when there is a connection problem on
+  the initial connection to the broker
 
 ## v1.11 (2018-08-08)
 

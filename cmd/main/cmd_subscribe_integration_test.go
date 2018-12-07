@@ -19,6 +19,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
+
+	done := make(chan bool)
+	go func() {
+		cmdSubscribe(CmdSubscribeArg{
+			amqpURI:            "invalid uri",
+			queue:              "queue",
+			tlsConfig:          &tls.Config{},
+			messageReceiveFunc: func(*amqp.Delivery) error { return nil },
+			signalChannel:      make(chan os.Signal, 1)})
+		done <- true
+	}()
+
+	// test if our tap received the message
+	select {
+	case <-done:
+	case <-time.After(time.Second * 2):
+		assert.Fail(t, "cmdSubscribe did not fail on initial connection error")
+	}
+}
+
 func TestCmdSub(t *testing.T) {
 	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"
@@ -66,17 +87,17 @@ func TestCmdSub(t *testing.T) {
 		exchange:   testExchange,
 		routingKey: testKey,
 		tlsConfig:  tlsConfig,
-		readNextMessageFunc: func() (amqp.Publishing, error) {
+		readNextMessageFunc: func() (amqp.Publishing, bool, error) {
 			// provide exactly one message
 			if messageCount > 0 {
-				return amqp.Publishing{}, io.EOF
+				return amqp.Publishing{}, false, io.EOF
 			}
 			messageCount++
 			return amqp.Publishing{
 				Body:         []byte(testMessage),
 				ContentType:  "text/plain",
 				DeliveryMode: amqp.Transient,
-			}, nil
+			}, true, nil
 		}})
 
 	// test if our tap received the message

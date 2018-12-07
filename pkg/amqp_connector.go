@@ -87,8 +87,8 @@ func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger logrus.StdLogger
 		tlsConfig:      tlsConfig,
 		firstTry:       true,
 		connected:      connected,
-		controlChan:    make(chan ControlMessage),
-		workerFinished: make(chan error)}
+		controlChan:    make(chan ControlMessage, 5),
+		workerFinished: make(chan error, 5)}
 }
 
 // Connected returns true if the connection is established, else false.
@@ -110,7 +110,7 @@ func (s *AmqpConnector) redial() (*amqp.Connection, error) {
 		default:
 		}
 
-		s.logger.Printf("(re-)connecting to %s\n", s.uri)
+		s.logger.Printf("(re-)connecting to %s", s.uri)
 		conn, err := amqp.DialTLS(s.uri, s.tlsConfig)
 
 		if err == nil {

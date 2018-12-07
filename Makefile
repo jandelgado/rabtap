@@ -5,6 +5,7 @@ BINARY_DARWIN64=rabtap-darwin-amd64
 BINARY_LINUX64=rabtap-linux-amd64
 SOURCE=$(shell find . -name "*go" -a -not -path "./vendor/*" -not -path "./cmd/testgen/*" )
 VERSION=$(shell git describe --tags)
+TOXICMD:=docker-compose exec toxiproxy /go/bin/toxiproxy-cli
 
 .PHONY:test-app test-lib build build-all tags short-test test run-server clean \
 	   $(BINARY_LINUX64) $(BINARY_WIN64) $(BINARY_DARWIN64)
@@ -44,6 +45,12 @@ test-lib:
 test: test-app test-lib
 	grep -v "^mode:" coverage_app.out >> coverage.out
 	go tool cover -func=coverage.out
+
+toxiproxy-setup:
+	$(TOXICMD) c amqp --listen :55672 --upstream rabbitmq:5672 || true
+
+toxiproxy-cmd:
+	$(TOXCMD) $(TOXARGS)
 
 # run rabbitmq server for integration test using docker container.
 run-broker:

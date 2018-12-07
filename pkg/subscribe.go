@@ -49,8 +49,8 @@ func (s *AmqpSubscriber) Connected() bool {
 // EstablishSubscription sets up the connection to the broker and sets up
 // the tap, which is bound to the provided consumer function. Typically
 // this function is run as a go-routine.
-func (s *AmqpSubscriber) EstablishSubscription(queueName string, tapCh TapChannel) {
-	s.connection.Connect(s.createWorkerFunc(queueName, tapCh))
+func (s *AmqpSubscriber) EstablishSubscription(queueName string, tapCh TapChannel) error {
+	return s.connection.Connect(s.createWorkerFunc(queueName, tapCh))
 }
 
 func (s *AmqpSubscriber) createWorkerFunc(
@@ -60,7 +60,7 @@ func (s *AmqpSubscriber) createWorkerFunc(
 		ch, err := s.consumeMessages(rabbitConn, queueName)
 		if err != nil {
 			tapCh <- &TapMessage{nil, err}
-			return doReconnect
+			return doNotReconnect
 		}
 		// messageloop expects Fanin object, which expects array of channels.
 		var channels []interface{}

@@ -18,7 +18,9 @@ var log = logrus.New()
 
 func initLogging(verbose bool) {
 	log.Formatter = &logrus.TextFormatter{
-		ForceColors: true,
+		ForceColors:            true,
+		DisableLevelTruncation: true,
+		FullTimestamp:          false,
 	}
 	log.Out = NewColorableWriter(os.Stderr)
 	if verbose {
@@ -81,19 +83,20 @@ func startCmdPublish(args CommandLineArgs) {
 
 func startCmdSubscribe(args CommandLineArgs) {
 	// signalChannel receives ctrl+C/interrput signal
-	signalChannel := make(chan os.Signal, 1)
+	signalChannel := make(chan os.Signal, 5)
 	signal.Notify(signalChannel, os.Interrupt)
 	// messageReceiveFunc receives the tapped messages, prints
 	// and optionally saves them.
 	messageReceiveFunc := createMessageReceiveFunc(
 		NewColorableWriter(os.Stdout), args.JSONFormat,
 		args.SaveDir, args.NoColor)
-	cmdSubscribe(CmdSubscribeArg{
+	err := cmdSubscribe(CmdSubscribeArg{
 		amqpURI:            args.AmqpURI,
 		queue:              args.QueueName,
 		tlsConfig:          getTLSConfig(args.InsecureTLS),
 		messageReceiveFunc: messageReceiveFunc,
 		signalChannel:      signalChannel})
+	failOnError(err, "error subscribing messages", os.Exit)
 }
 
 func startCmdTap(args CommandLineArgs) {
@@ -106,14 +109,7 @@ func startCmdTap(args CommandLineArgs) {
 		messageReceiveFunc, signalChannel)
 }
 
-//func profHandler(w http.ResponseWriter, r *http.Request) {
-//	w.Write([]byte("hi"))
-//}
-
 func main() {
-	// http.HandleFunc("/", profHandler)
-	// go http.ListenAndServe(":8080", nil)
-
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)

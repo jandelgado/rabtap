@@ -21,15 +21,13 @@ type CmdSubscribeArg struct {
 }
 
 // cmdSub subscribes to messages from the given queue
-func cmdSubscribe(cmd CmdSubscribeArg) {
+func cmdSubscribe(cmd CmdSubscribeArg) error {
 	log.Debugf("cmdSub: subscribing to queue %s", cmd.queue)
 	// this channel is used to decouple message receiving threads
 	// with the main thread, which does the actual message processing
 	messageChannel := make(rabtap.TapChannel)
 	subscriber := rabtap.NewAmqpSubscriber(cmd.amqpURI, cmd.tlsConfig, log)
 	defer subscriber.Close()
-	go subscriber.EstablishSubscription(cmd.queue, messageChannel)
-
-	messageReceiveLoop(messageChannel, cmd.messageReceiveFunc, cmd.signalChannel)
-	log.Debug("cmdSub: cmd_subscribe ending")
+	go messageReceiveLoop(messageChannel, cmd.messageReceiveFunc, cmd.signalChannel)
+	return subscriber.EstablishSubscription(cmd.queue, messageChannel)
 }

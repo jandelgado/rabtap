@@ -15,6 +15,7 @@ type PublishMessage struct {
 	Exchange   string
 	RoutingKey string
 	Publishing *amqp.Publishing
+	Error      *error
 }
 
 // PublishChannel is a channel for PublishMessage message objects
@@ -40,18 +41,17 @@ func (s *AmqpPublish) Connected() bool {
 	return s.connection.Connected()
 }
 
-// createWorkerFunc receives messages on the provides channel and publishes
+// createWorkerFunc receives messages on the provided channel and publishes
 // the messages on an rabbitmq exchange
 func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorkerFunc {
 
 	return func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
-
 		channel, err := rabbitConn.Channel()
 		if err != nil {
 			return doReconnect
 		}
 		defer channel.Close()
-		errChan := make(chan *amqp.Error)
+		errChan := make(chan *amqp.Error, 10)
 		channel.NotifyClose(errChan)
 
 		for {
@@ -89,14 +89,13 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 	}
 }
 
-// EstablishConnection sets up the connection to the broker and sets up
-// the tap, which is bound to the provided consumer function. Typically
-// started as go-routine.
+// EstablishConnection sets up the connection to the broker
 func (s *AmqpPublish) EstablishConnection(publishChannel PublishChannel) error {
-	return s.connection.Connect(s.createWorkerFunc(publishChannel))
+	err := s.connection.Connect(s.createWorkerFunc(publishChannel))
+	return err
 }
 
-// Close closes the connection to the broker and ends tapping.
+// Close closes the connection to the broker
 func (s *AmqpPublish) Close() error {
 	return s.connection.Close()
 }

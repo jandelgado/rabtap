@@ -50,7 +50,11 @@ func (s *AmqpSubscriber) Connected() bool {
 // the tap, which is bound to the provided consumer function. Typically
 // this function is run as a go-routine.
 func (s *AmqpSubscriber) EstablishSubscription(queueName string, tapCh TapChannel) error {
-	return s.connection.Connect(s.createWorkerFunc(queueName, tapCh))
+	err := s.connection.Connect(s.createWorkerFunc(queueName, tapCh))
+	if err != nil {
+		tapCh <- &TapMessage{nil, err}
+	}
+	return err
 }
 
 func (s *AmqpSubscriber) createWorkerFunc(

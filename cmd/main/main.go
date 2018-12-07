@@ -85,8 +85,6 @@ func startCmdSubscribe(args CommandLineArgs) {
 	// signalChannel receives ctrl+C/interrput signal
 	signalChannel := make(chan os.Signal, 5)
 	signal.Notify(signalChannel, os.Interrupt)
-	// messageReceiveFunc receives the tapped messages, prints
-	// and optionally saves them.
 	messageReceiveFunc := createMessageReceiveFunc(
 		NewColorableWriter(os.Stdout), args.JSONFormat,
 		args.SaveDir, args.NoColor)

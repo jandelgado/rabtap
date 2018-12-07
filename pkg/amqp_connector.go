@@ -138,7 +138,7 @@ func (s *AmqpConnector) Connect(worker AmqpWorkerFunc) error {
 	for {
 		// the error channel is used to detect when (re-)connect is needed will
 		// be closed by amqp lib when connection is gracefully shut down.
-		errorChan := make(chan *amqp.Error)
+		errorChan := make(chan *amqp.Error, 10)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel() // to prevent go-routine leaking
 
@@ -162,6 +162,7 @@ func (s *AmqpConnector) Connect(worker AmqpWorkerFunc) error {
 		}
 		if err != nil {
 			// connection could not be established
+			s.workerFinished <- err
 			return err
 		}
 
@@ -188,5 +189,6 @@ func (s *AmqpConnector) Close() error {
 		return errors.New("already closed")
 	}
 	s.controlChan <- shutdownMessage
-	return <-s.workerFinished
+	err := <-s.workerFinished
+	return err
 }

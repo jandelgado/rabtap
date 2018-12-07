@@ -82,7 +82,6 @@ func createMessageReaderFunc(jsonFormat bool, reader io.Reader) MessageReaderFun
 func publishMessageStream(publishChannel rabtap.PublishChannel,
 	exchange, routingKey string,
 	readNextMessageFunc MessageReaderFunc) error {
-
 	for {
 		msg, more, err := readNextMessageFunc()
 		switch err {

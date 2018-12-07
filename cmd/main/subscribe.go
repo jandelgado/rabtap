@@ -23,7 +23,11 @@ func messageReceiveLoop(messageChan rabtap.TapChannel,
 
 	for {
 		select {
-		case message := <-messageChan:
+		case message, more := <-messageChan:
+			if !more {
+				log.Debug("subscribe: messageReceiveLoop: channel closed.")
+				return nil
+			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %#+v", message)
 			if message.Error != nil {
 				// unrecoverable error received -> log and exit
@@ -35,6 +39,7 @@ func messageReceiveLoop(messageChan rabtap.TapChannel,
 				log.Error(err)
 			}
 		case <-signalChannel:
+			log.Debugf("subscribe: caught signal!")
 			return nil
 		}
 	}

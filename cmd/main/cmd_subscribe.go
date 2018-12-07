@@ -28,6 +28,6 @@ func cmdSubscribe(cmd CmdSubscribeArg) error {
 	messageChannel := make(rabtap.TapChannel)
 	subscriber := rabtap.NewAmqpSubscriber(cmd.amqpURI, cmd.tlsConfig, log)
 	defer subscriber.Close()
-	go messageReceiveLoop(messageChannel, cmd.messageReceiveFunc, cmd.signalChannel)
-	return subscriber.EstablishSubscription(cmd.queue, messageChannel)
+	go subscriber.EstablishSubscription(cmd.queue, messageChannel)
+	return messageReceiveLoop(messageChannel, cmd.messageReceiveFunc, cmd.signalChannel)
 }

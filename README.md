@@ -379,6 +379,7 @@ http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbi
     :
     └── amq.topic (exchange, type 'topic', [D])
 $ rabtap queue bind myqueue to amq.topic --bindingkey hello
+$ rabtap info --show-default
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
 └── Vhost /
     ├── (default) (exchange, type 'direct', [D])
@@ -398,7 +399,6 @@ $ rabtap queue rm myqueue
 $ raptap info
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
 └── Vhost /
-    ├── (default) (exchange, type 'direct', [D])
     :
     └── amq.topic (exchange, type 'topic', [D])
 ```

@@ -111,7 +111,7 @@ func (s *AmqpSubscriber) consumeMessages(conn *amqp.Connection,
 		queueName,
 		"__rabtap-consumer-"+uuid.NewV4().String()[:8], // TODO param
 		true,  // auto-ack
-		true,  // exclusive
+		false,  // exclusive
 		false, // no-local - unsupported
 		false, // wait
 		nil,   // args

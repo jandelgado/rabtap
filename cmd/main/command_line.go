@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/docopt/docopt-go"
+	docopt "github.com/docopt/docopt-go"
 	"github.com/jandelgado/rabtap/pkg"
 )
 
@@ -87,7 +87,7 @@ Examples:
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
-  rabtap info --filter "binding.Exchange == 'amq.topic'"
+  rabtap info --filter "binding.Source == 'amq.topic'" -o
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
 
 `

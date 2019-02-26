@@ -1,9 +1,11 @@
 tags
 *~
+bin/
 vendor/
 *exe
 rabtap-*linux*
 rabtap-*darwin*
 cmd/testgen/testgen
+cmd/main/main
 *.out
 

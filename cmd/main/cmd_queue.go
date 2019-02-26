@@ -26,7 +26,7 @@ func cmdQueueCreate(cmd CmdQueueCreateArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURI,
 		cmd.tlsConfig,
 		func(chn *amqp.Channel) error {
-			log.Debugf("creating queue %s (ad=%d, durable=%d)",
+			log.Debugf("creating queue %s (ad=%t, durable=%t)",
 				cmd.queue, cmd.autodelete, cmd.durable)
 			return rabtap.CreateQueue(chn, cmd.queue,
 				cmd.durable, cmd.autodelete, false)

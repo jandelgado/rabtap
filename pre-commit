@@ -31,8 +31,8 @@ if [ -n "${GOLINT_ERRORS}" ]; then
   exit 1
 fi
 
-GOVET_ERRORS=$(go tool vet --all pkg/*go 2>&1; go tool vet --all cmd/main/*go 2>&1)
-if [ -n "${GOVET_ERRORS}" ]; then
+GOVET_ERRORS=$(go vet pkg/*go 2>&1 && go vet cmd/main/*go 2>&1)
+if [ $? -ne 0 ]; then
   printf >&2 'go vet failed for the following reasons:\n%s\n\nplease run "go tool vet *.go" on your changes before committing.\n' "${GOVET_ERRORS}"
   exit 1
 fi

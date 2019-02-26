@@ -1,6 +1,11 @@
 
 # Changelog for rabtap
 
+## v1.13 (2019-02-26)
+
+* updated go version to 1.12, dropping `dep` module manager
+* fixed documentation
+
 ## v1.12 (2018-12-07)
 
 ### Added

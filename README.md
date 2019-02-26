@@ -611,6 +611,6 @@ Jan Delgado (jdelgado at gmx dot net)
 
 ## Copyright and license
 
-Copyright (c) 2017 Jan Delgado.
+Copyright (c) 2017-2019 Jan Delgado.
 rabtap is licensed under the GPLv3 license.
 

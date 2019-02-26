@@ -14,15 +14,15 @@ build:	$(BINARY_LINUX64)
 build-all:	build $(BINARY_WIN64)  $(BINARY_DARWIN64)
 
 $(BINARY_DARWIN64): 
-	cd cmd/main && CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
+	cd cmd/main && GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_DARWIN64) 
 
 $(BINARY_LINUX64): 
-	cd cmd/main && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
+	cd cmd/main && GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_LINUX64) 
 
 $(BINARY_WIN64): 
-	cd cmd/main && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
+	cd cmd/main && GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_WIN64) 
 
 tags: $(SOURCE)

@@ -17,4 +17,4 @@ exchanges, queues and publishes messages.
 
 ## Build
 
-Just run `make` to build testgen.
+run `go build` to build `testgen`.

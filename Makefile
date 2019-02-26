@@ -1,30 +1,29 @@
 # rabtap makefile
 
-BINARY_WIN64=rabtap-win-amd64.exe
-BINARY_DARWIN64=rabtap-darwin-amd64
-BINARY_LINUX64=rabtap-linux-amd64
+BINARY_WIN64=bin/rabtap-win-amd64.exe
+BINARY_DARWIN64=bin/rabtap-darwin-amd64
+BINARY_LINUX64=bin/rabtap-linux-amd64
 SOURCE=$(shell find . -name "*go" -a -not -path "./vendor/*" -not -path "./cmd/testgen/*" )
 VERSION=$(shell git describe --tags)
 TOXICMD:=docker-compose exec toxiproxy /go/bin/toxiproxy-cli
 
 .PHONY:test-app test-lib build build-all tags short-test test run-server clean \
-	   $(BINARY_LINUX64) $(BINARY_WIN64) $(BINARY_DARWIN64)
 
 build:	$(BINARY_LINUX64)
 
 build-all:	build $(BINARY_WIN64)  $(BINARY_DARWIN64)
 
 $(BINARY_DARWIN64): 
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
-				"-X main.RabtapAppVersion=$(VERSION)" -o $(BINARY_DARWIN64) cmd/main/*.go 
+	cd cmd/main && CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
+				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_DARWIN64) 
 
 $(BINARY_LINUX64): 
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
-				"-X main.RabtapAppVersion=$(VERSION)" -o $(BINARY_LINUX64) cmd/main/*.go
+	cd cmd/main && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
+				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_LINUX64) 
 
 $(BINARY_WIN64): 
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
-				"-X main.RabtapAppVersion=$(VERSION)" -o $(BINARY_WIN64) cmd/main/*.go 
+	cd cmd/main && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
+				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_WIN64) 
 
 tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)
@@ -61,5 +60,6 @@ dist-clean: clean
 	rm -f *.out $(BINARY_WIN64) $(BINARY_LINUX64) $(BINARY_DARWIN64)
 
 clean:
-	go clean -r
+	cd cmd/main && go clean -r
+	cd cmd/testgen && go clean -r
 

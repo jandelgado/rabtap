@@ -589,7 +589,6 @@ following tools installed:
 
 Build dependencies:
 
-* [dep](https://github.com/golang/dep)
 * [ineffassign](https://github.com/gordonklaus/ineffassign)
 * [misspell](https://github.com/client9/misspell/cmd/misspell)
 * [golint](https://github.com/golang/lint/golint)
@@ -598,8 +597,7 @@ Build dependencies:
 ```
 $ go get github.com/jandelgado/rabtap
 $ cd $GOPATH/src/github.com/jandelgado/rabtap
-$ dep ensure
-$ make build-all
+$ GO111MODULE=on make build-all
 ```
 
 ## Test data generator

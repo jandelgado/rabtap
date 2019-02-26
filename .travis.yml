@@ -31,9 +31,9 @@ deploy:
   api_key:
     secure: qIDo4H+XPu7xQ/Ga/IT7+SKgqaaUOIMGrp2qtyyMlIR6a98Wm7eseUbiN0ROfx+MhL/3Qt+n3DvtU2qSOy4+jdtBJoOlFaCpb1ARl/xoMQK/DYe28woIBB0uWGBPZeWegPvlf5V2CX5NRoLil6M1SvO7C712Ozjo+8kbAc2yCtHs5/4y4XW21XsAbYBqYEU0f/Rw792RCnQbBIVcrkleQFIn2/PyWKczyLNhzbA5057b7P1YXahGVqW8K2t0ZKnOVXKpjn+nNAeiN+/plHW8MH+021hwTroZtMgKUKfnqbNfkeHQwlgLBbBAh39GDIHF7ItG1tY/Fh49cDSd4Ar2y+qN7e5nf94JxAc8ut6klUyHaa4MD/ggeVLq++3d30EbFdsNblvTddHmhnqC5OHR5VyXmV3s3Y7W3C8nFqLbqHncQWyCfbkPqpT//H3Y4JzWWLFOeqopfHDOIuJ6Js8tQFFT7/AU9iMu0O/yujTgyn+K2oL0B24htncyHB8BFLQvRbIFaosILWNNjG7wotlFpaOTuiu6IizSUOpYmgySD1gk1pVPy279IiGI0r/2sQgLY/CmdB0NkBkz/FuTBUzOY6yPC0HJnwzBFlYYZWHEd6Zmyp5hpvUXWyYIfLaDIdHb4P6jXbstbyNGgToyAwOhUk3nmWNXhc014ffzwiPPV/o=
   file: 
-  - bin/rabtap-${TRAVIS_TAG}-windows-amd64.zip
-  - bin/rabtap-${TRAVIS_TAG}-linux-amd64.zip
-  - bin/rabtap-${TRAVIS_TAG}-darwin-amd64.zip
+  - rabtap-${TRAVIS_TAG}-windows-amd64.zip
+  - rabtap-${TRAVIS_TAG}-linux-amd64.zip
+  - rabtap-${TRAVIS_TAG}-darwin-amd64.zip
   - SHASUMS256.txt
   skip_cleanup: true
   on:

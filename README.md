@@ -468,12 +468,14 @@ available in the expression as variables:
 The examples assume that `RABTAP_APIURI` environment variable points to the 
 broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
 
-* `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty`: Print
+* `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty`: print
   only queues bound to exchange `amq.direct` and skip all empty exchanges.
-* `rabtap info --filter "queue.Name =~ '.*test.*'" --omit-empty`: Print all
+* `rabtap info --filter "queue.Name =~ '.*test.*'" --omit-empty`: print all
   queues with `test` in their name.
-* `rabtap info --filter "queue.Name =~ '.*test.*' && exchange.Type == 'topic'" --omit-empty`: Like
+* `rabtap info --filter "queue.Name =~ '.*test.*' && exchange.Type == 'topic'" --omit-empty`: like
   before, but consider only exchanges of type `topic`.
+* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers`: print all queues with at 
+  one consumer
 
 ### Type reference
 

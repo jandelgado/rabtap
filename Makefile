@@ -14,15 +14,15 @@ build:	$(BINARY_LINUX64)
 build-all:	build $(BINARY_WIN64)  $(BINARY_DARWIN64)
 
 $(BINARY_DARWIN64): 
-	cd cmd/main && GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
+	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_DARWIN64) 
 
 $(BINARY_LINUX64): 
-	cd cmd/main && GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
+	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_LINUX64) 
 
 $(BINARY_WIN64): 
-	cd cmd/main && GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
+	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_WIN64) 
 
 tags: $(SOURCE)
@@ -32,11 +32,11 @@ lint:
 	@./pre-commit
 
 short-test: 
-	go test -v -race  github.com/jandelgado/rabtap/cmd/main
+	go test -v -race  github.com/jandelgado/rabtap/cmd/rabtap
 	go test -v -race  github.com/jandelgado/rabtap/pkg
 
 test-app:
-	go test -race -v -tags "integration" -cover -coverprofile=coverage_app.out github.com/jandelgado/rabtap/cmd/main
+	go test -race -v -tags "integration" -cover -coverprofile=coverage_app.out github.com/jandelgado/rabtap/cmd/rabtap
 
 test-lib:
 	go test -race -v -tags "integration" -cover -coverprofile=coverage.out github.com/jandelgado/rabtap/pkg
@@ -60,6 +60,6 @@ dist-clean: clean
 	rm -f *.out $(BINARY_WIN64) $(BINARY_LINUX64) $(BINARY_DARWIN64)
 
 clean:
-	cd cmd/main && go clean -r
+	cd cmd/rabtap && go clean -r
 	cd cmd/testgen && go clean -r
 

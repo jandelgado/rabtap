@@ -41,6 +41,8 @@ and exchanges, inspect broker.
         * [Queue type](#queue-type)
         * [Binding type](#binding-type)
 * [Build from source](#build-from-source)
+    * [Download and build using go get](#download-and-build-using-go-get)
+    * [Build using Makefile](#build-using-makefile)
 * [Test data generator](#test-data-generator)
 * [Author](#author)
 * [Copyright and license](#copyright-and-license)
@@ -586,10 +588,15 @@ type Binding struct {
 
 ## Build from source
 
-To build rabtap from source, you need [go](https://golang.org/) and the
-following tools installed:
+### Download and build using go get
+```
+$ GO111MODULE=on go get github.com/jandelgado/rabtap/cmd/rabtap
+```
 
-Build dependencies:
+### Build using Makefile
+
+To build rabtap from source, you need [go](https://golang.org/) (version >= 12)
+and the following tools installed:
 
 * [ineffassign](https://github.com/gordonklaus/ineffassign)
 * [misspell](https://github.com/client9/misspell/cmd/misspell)
@@ -597,15 +604,16 @@ Build dependencies:
 * [gocyclo](https://github.com/fzipp/gocyclo)
 
 ```
-$ go get github.com/jandelgado/rabtap
-$ cd $GOPATH/src/github.com/jandelgado/rabtap
-$ GO111MODULE=on make build-all
+$ export GO111MODULE=on
+$ git clone https://github.com/jandelgado/rabtap && cd rabtap
+$ make test
+$ make
 ```
 
 ## Test data generator
 
 A simple [test data generator tool](cmd/testgen/README.md) for manual tests is
-included in the `app/testgen` directory.
+included in the `cmd/testgen` directory.
 
 ## Author
 

@@ -105,6 +105,7 @@ Usage:
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
   rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
   rabtap queue rm QUEUE [--uri URI] [-kv]
+  rabtap queue purge QUEUE [--uri URI] [-kv]
   rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
   rabtap --version
 
@@ -150,6 +151,8 @@ Examples:
 
   # use RABTAP_AMQPURI environment variable to specify broker instead of --uri
   export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
+  echo "Hello" | rabtap pub amq.topic -r "some.key"
+  rabtap sub JDQ
   rabtap queue create JDQ
   rabtap queue bind JDQ to amq.direct --bindingkey=key
   rabtap queue rm JDQ
@@ -163,7 +166,7 @@ Examples:
 
 ### Basic commands
 
-Rabtap understand the following commands:
+Rabtap understands the following commands:
 
 * `tap` - taps to an exchange and transparently receives messages sent to the
    exchange, without affecting actual message delivery (using exchange-to-exchange
@@ -178,7 +181,7 @@ Rabtap understand the following commands:
    (exclusive). If `--statistics` option is enabled, basic statistics are
    included in the output. The `--filter` option allows to filter output. See
    [filtering](#filtering-output-of-info-command) section for details.
-* `queue` - create/bind/unbind/remove queue
+* `queue` - create/bind/unbind/remove/purge queue
 * `exchange` - create/remove exchange
 * `connection` - close connections
 
@@ -403,6 +406,12 @@ http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbi
 └── Vhost /
     :
     └── amq.topic (exchange, type 'topic', [D])
+```
+
+Additionally use the `purge` command to remove all elements from a queue, e.g.
+
+```
+$ rabtap queue purge myqueue
 ```
 
 ## JSON message format

@@ -7,7 +7,7 @@ import (
 	"os"
 
 	docopt "github.com/docopt/docopt-go"
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // RabtapAppVersion hold the application version and is set during link
@@ -33,6 +33,7 @@ Usage:
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
   rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
   rabtap queue rm QUEUE [--uri URI] [-kv]
+  rabtap queue purge QUEUE [--uri URI] [-kv]
   rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
   rabtap --version
 
@@ -117,6 +118,8 @@ const (
 	QueueBindCmd
 	// QueueUnbindCmd unbinds a queue from an exchange
 	QueueUnbindCmd
+	// QueuePurgeCmd purges a queue
+	QueuePurgeCmd
 	// ConnCloseCmd closes a connection
 	ConnCloseCmd
 )
@@ -280,6 +283,8 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.Cmd = QueueUnbindCmd
 		result.QueueBindingKey = args["--bindingkey"].(string)
 		result.ExchangeName = args["EXCHANGE"].(string)
+	} else if args["purge"].(bool) {
+		result.Cmd = QueuePurgeCmd
 	}
 	return result, nil
 }

@@ -37,6 +37,30 @@ func findBinding(queue, exchange, key string, bindings []RabbitBinding) int {
 	return -1
 }
 
+func TestIntegrationAmqpPurgeQueue(t *testing.T) {
+
+	const queueTestName = "purgetestqueue"
+	const exchangeTestName = "" // default exchange
+
+	// TODO empty queue before test in case it exisits
+
+	// create queue
+	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
+	defer conn.Close()
+	err := CreateQueue(ch, queueTestName, false, false, false)
+	assert.Nil(t, err)
+
+	// publish & purge 10 messages
+	const numMessages = 10
+	testcommon.PublishTestMessages(t, ch, numMessages, exchangeTestName, queueTestName, nil)
+	num, err := PurgeQueue(ch, queueTestName)
+	assert.Nil(t, err)
+	assert.Equal(t, numMessages, num)
+	// TODO additionally verifiy that queue is empty
+
+	// TODO remove queue
+}
+
 func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 
 	// since in order to remove and unbind a  queue we must create it first, we

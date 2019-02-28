@@ -30,7 +30,7 @@ func TestSubscribe(t *testing.T) {
 
 	finishChan := make(chan int)
 
-	subscriber := NewAmqpSubscriber(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log.New(os.Stderr, "", log.LstdFlags))
+	subscriber := NewAmqpSubscriber(testcommon.IntegrationURIFromEnv(), false, &tls.Config{}, log.New(os.Stderr, "", log.LstdFlags))
 	defer subscriber.Close()
 	resultChannel := make(TapChannel)
 	go subscriber.EstablishSubscription(queueName, resultChannel)

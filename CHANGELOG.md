@@ -1,6 +1,11 @@
 
 # Changelog for rabtap
 
+## v1.14 (2019-02-28)
+
+* change: in subscribe mode, the consumer will use non-exclusive mode,
+          allowing multiple consumers on the same queue. 
+
 ## v1.13 (2019-02-26)
 
 * updated go version to 1.12, dropping `dep` module manager

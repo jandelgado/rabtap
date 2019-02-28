@@ -25,7 +25,7 @@ type AmqpTap struct {
 // broker denoted by the uri parameter.
 func NewAmqpTap(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpTap {
 	return &AmqpTap{
-		AmqpSubscriber: NewAmqpSubscriber(uri, tlsConfig, logger)}
+		AmqpSubscriber: NewAmqpSubscriber(uri, true /* exclusive */, tlsConfig, logger)}
 }
 
 func getTapExchangeNameForExchange(exchange, postfix string) string {

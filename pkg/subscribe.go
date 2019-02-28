@@ -14,13 +14,15 @@ import (
 type AmqpSubscriber struct {
 	connection *AmqpConnector
 	logger     logrus.StdLogger
+	exclusive  bool
 }
 
 // NewAmqpSubscriber returns a new AmqpSubscriber object associated with the
 // RabbitMQ broker denoted by the uri parameter.
-func NewAmqpSubscriber(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpSubscriber {
+func NewAmqpSubscriber(uri string, exclusive bool, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpSubscriber {
 	return &AmqpSubscriber{
 		connection: NewAmqpConnector(uri, tlsConfig, logger),
+		exclusive:  exclusive,
 		logger:     logger}
 }
 
@@ -110,8 +112,8 @@ func (s *AmqpSubscriber) consumeMessages(conn *amqp.Connection,
 	msgs, err := ch.Consume(
 		queueName,
 		"__rabtap-consumer-"+uuid.NewV4().String()[:8], // TODO param
-		true,  // auto-ack
-		true,  // exclusive
+		true, // auto-ack
+		s.exclusive,
 		false, // no-local - unsupported
 		false, // wait
 		nil,   // args

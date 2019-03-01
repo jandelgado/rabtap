@@ -357,7 +357,7 @@ be closed is expected as parameter. Use the `info` command with the
 `--consumers` option to find the connection associated with a queue. Example:
 
 ```
-$ rabtap info
+$ rabtap info --consumers
 http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@ae1ad1477419')
 └── Vhost /
     ├── amq.direct (exchange, type 'direct', [D])

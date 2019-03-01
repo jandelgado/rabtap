@@ -44,6 +44,7 @@ and exchanges, inspect broker.
     * [Download and build using go get](#download-and-build-using-go-get)
     * [Build using Makefile](#build-using-makefile)
 * [Test data generator](#test-data-generator)
+* [Contributing](#contributing)
 * [Author](#author)
 * [Copyright and license](#copyright-and-license)
 
@@ -623,6 +624,17 @@ $ make
 
 A simple [test data generator tool](cmd/testgen/README.md) for manual tests is
 included in the `cmd/testgen` directory.
+
+## Contributing
+
+* fork this repository
+* create your feature branch
+* add code
+* add tests and make sure test coverage does not fall
+* make sure pre-commit hook does not fail
+* add [documentation](README.md)
+* commit changes
+* submit a PR
 
 ## Author
 

@@ -76,60 +76,6 @@ func NewBrokerInfoPrinter(config BrokerInfoPrinterConfig) *BrokerInfoPrinter {
 	return &s
 }
 
-// findQueueByName searches in the queues array for a queue with the given
-// name and vhost. RabbitQueue element is returned on succes, otherwise nil.
-func findQueueByName(queues []rabtap.RabbitQueue,
-	vhost, queueName string) *rabtap.RabbitQueue {
-	for _, queue := range queues {
-		if queue.Name == queueName && queue.Vhost == vhost {
-			return &queue
-		}
-	}
-	return nil
-}
-
-func findExchangeByName(exchanges []rabtap.RabbitExchange,
-	vhost, exchangeName string) *rabtap.RabbitExchange {
-	for _, exchange := range exchanges {
-		if exchange.Name == exchangeName && exchange.Vhost == vhost {
-			return &exchange
-		}
-	}
-	return nil
-}
-
-// currently not used.
-// func findChannelByName(channels []rabtap.RabbitChannel,
-//     vhost, channelName string) *rabtap.RabbitChannel {
-//     for _, channel := range channels {
-//         if channel.Name == channelName && channel.Vhost == vhost {
-//             return &channel
-//         }
-//     }
-//     return nil
-// }
-
-func findConnectionByName(conns []rabtap.RabbitConnection,
-	vhost, connName string) *rabtap.RabbitConnection {
-	for _, conn := range conns {
-		if conn.Name == connName && conn.Vhost == vhost {
-			return &conn
-		}
-	}
-	return nil
-}
-
-func findConsumerByQueue(consumers []rabtap.RabbitConsumer,
-	vhost, queueName string) *rabtap.RabbitConsumer {
-	for _, consumer := range consumers {
-		if consumer.Queue.Vhost == vhost &&
-			consumer.Queue.Name == queueName {
-			return &consumer
-		}
-	}
-	return nil
-}
-
 // uniqueVhosts returns the set of unique vhosts in the array of exchanges
 func uniqueVhosts(exchanges []rabtap.RabbitExchange) (vhosts map[string]bool) {
 	vhosts = make(map[string]bool)
@@ -259,7 +205,7 @@ func (s BrokerInfoPrinter) createConsumerNodes(
 func (s BrokerInfoPrinter) createConnectionNodes(
 	vhost string, connName string, brokerInfo *rabtap.BrokerInfo) []*TreeNode {
 	var conns []*TreeNode
-	connInfo := findConnectionByName(brokerInfo.Connections, vhost, connName)
+	connInfo := rabtap.FindConnectionByName(brokerInfo.Connections, vhost, connName)
 	if connInfo != nil {
 		conns = append(conns, NewTreeNode(s.renderConnectionElementAsString(connInfo)))
 	}
@@ -289,7 +235,7 @@ func (s BrokerInfoPrinter) createQueueNodeFromBinding(
 	brokerInfo *rabtap.BrokerInfo) []*TreeNode {
 
 	// standard binding of queue to exchange
-	queue := findQueueByName(brokerInfo.Queues,
+	queue := rabtap.FindQueueByName(brokerInfo.Queues,
 		binding.Vhost,
 		binding.Destination)
 	if queue == nil {
@@ -327,7 +273,7 @@ func (s BrokerInfoPrinter) createExchangeNode(
 			// exchange to exchange binding
 			exchangeNode.Add(
 				s.createExchangeNode(
-					findExchangeByName(
+					rabtap.FindExchangeByName(
 						brokerInfo.Exchanges,
 						binding.Vhost,
 						binding.Destination),

@@ -8,7 +8,7 @@ import (
 	"crypto/tls"
 	"os"
 
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
 )
 
@@ -44,8 +44,21 @@ func cmdQueueRemove(amqpURI, queueName string, tlsConfig *tls.Config) {
 		}), "removing queue failed", os.Exit)
 }
 
+// cmdQueuePurge purges a queue, i.e. removes all queued elements
+func cmdQueuePurge(amqpURI, queueName string, tlsConfig *tls.Config) {
+	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
+		tlsConfig,
+		func(chn *amqp.Channel) error {
+			log.Debugf("purging queue %s", queueName)
+			num, err := rabtap.PurgeQueue(chn, queueName)
+			if err == nil {
+				log.Infof("purged %d elements from queue %s", num, queueName)
+			}
+			return err
+		}), "purge queue failed", os.Exit)
+}
+
 // cmdQueueBindToExchange binds a queue to an exchange
-// TODO(JD) add ifUnused, ifEmpty parameters
 func cmdQueueBindToExchange(amqpURI, queueName, key, exchangeName string,
 	tlsConfig *tls.Config) {
 
@@ -59,7 +72,6 @@ func cmdQueueBindToExchange(amqpURI, queueName, key, exchangeName string,
 }
 
 // cmdQueueUnbindFromExchange unbinds a queue from an exchange
-// TODO(JD) add ifUnused, ifEmpty parameters
 func cmdQueueUnbindFromExchange(amqpURI, queueName, key, exchangeName string,
 	tlsConfig *tls.Config) {
 

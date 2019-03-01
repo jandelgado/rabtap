@@ -10,7 +10,7 @@ import (
 	//"net/http"
 	//_ "net/http/pprof"
 
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"
 )
 
@@ -139,6 +139,8 @@ func main() {
 			autodelete: args.Autodelete, tlsConfig: tlsConfig})
 	case QueueRemoveCmd:
 		cmdQueueRemove(args.AmqpURI, args.QueueName, tlsConfig)
+	case QueuePurgeCmd:
+		cmdQueuePurge(args.AmqpURI, args.QueueName, tlsConfig)
 	case QueueBindCmd:
 		cmdQueueBindToExchange(args.AmqpURI, args.QueueName,
 			args.QueueBindingKey, args.ExchangeName, tlsConfig)

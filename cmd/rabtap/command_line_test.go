@@ -295,6 +295,16 @@ func TestCliRemoveQueue(t *testing.T) {
 	assert.Equal(t, "uri", args.AmqpURI)
 }
 
+func TestCliPurgeQueue(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"queue", "purge", "name", "--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, QueuePurgeCmd, args.Cmd)
+	assert.Equal(t, "name", args.QueueName)
+	assert.Equal(t, "uri", args.AmqpURI)
+}
+
 func TestCliUnbindQueue(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"queue", "unbind", "queuename", "from", "exchangename",

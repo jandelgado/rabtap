@@ -210,6 +210,66 @@ func (s RabbitHTTPClient) CloseConnection(conn, reason string) error {
 	return s.delResource(s.uri + "/connections/" + conn)
 }
 
+// FindQueueByName searches in the queues array for a queue with the given
+// name and vhost. RabbitQueue element is returned on succes, otherwise nil.
+func FindQueueByName(queues []RabbitQueue,
+	vhost, queueName string) *RabbitQueue {
+	for _, queue := range queues {
+		if queue.Name == queueName && queue.Vhost == vhost {
+			return &queue
+		}
+	}
+	return nil
+}
+
+// FindExchangeByName searches in the exchanges array for an exchange with the given
+// name and vhost. RabbitExchange element is returned on succes, otherwise nil.
+func FindExchangeByName(exchanges []RabbitExchange,
+	vhost, exchangeName string) *RabbitExchange {
+	for _, exchange := range exchanges {
+		if exchange.Name == exchangeName && exchange.Vhost == vhost {
+			return &exchange
+		}
+	}
+	return nil
+}
+
+// currently not used.
+// func FindChannelByName(channels []RabbitChannel,
+//     vhost, channelName string) *RabbitChannel {
+//     for _, channel := range channels {
+//         if channel.Name == channelName && channel.Vhost == vhost {
+//             return &channel
+//         }
+//     }
+//     return nil
+// }
+
+// FindConnectionByName searches in the connections array for a connection with the given
+// name and vhost. RabbitConnection element is returned on succes, otherwise nil.
+func FindConnectionByName(conns []RabbitConnection,
+	vhost, connName string) *RabbitConnection {
+	for _, conn := range conns {
+		if conn.Name == connName && conn.Vhost == vhost {
+			return &conn
+		}
+	}
+	return nil
+}
+
+// FindConsumerByQueue searches in the connections array for a connection with the given
+// name and vhost. RabbitConsumer element is returned on succes, otherwise nil.
+func FindConsumerByQueue(consumers []RabbitConsumer,
+	vhost, queueName string) *RabbitConsumer {
+	for _, consumer := range consumers {
+		if consumer.Queue.Vhost == vhost &&
+			consumer.Queue.Name == queueName {
+			return &consumer
+		}
+	}
+	return nil
+}
+
 // RabbitConnection models the /connections resource of the rabbitmq http api
 type RabbitConnection struct {
 	ReductionsDetails struct {

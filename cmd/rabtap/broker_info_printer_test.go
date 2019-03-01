@@ -12,6 +12,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFilterStringListOfEmptyLists(t *testing.T) {
+	flags := []bool{}
+	strs := []string{}
+	assert.Equal(t, []string{}, filterStringList(flags, strs))
+}
+
+func TestFilterStringListOneElementKeptInList(t *testing.T) {
+	flags := []bool{false, true, false}
+	strs := []string{"A", "B", "C"}
+	assert.Equal(t, []string{"B"}, filterStringList(flags, strs))
+}
+
 func TestResolveTemplate(t *testing.T) {
 	type Info struct {
 		Name string
@@ -27,83 +39,6 @@ func TestResolveTemplate(t *testing.T) {
 
 	result := brokerInfoPrinter.resolveTemplate("test", tpl, args)
 	assert.Equal(t, "hello Jan", result)
-}
-
-func TestFindExchangeByName(t *testing.T) {
-	exchanges := []rabtap.RabbitExchange{
-		{Name: "exchange1", Vhost: "vhost"},
-		{Name: "exchange2", Vhost: "vhost"},
-	}
-	exchange := findExchangeByName(exchanges, "vhost", "exchange2")
-	assert.NotNil(t, exchange)
-	assert.Equal(t, "exchange2", exchange.Name)
-}
-
-func TestFindExchangeByNameNotFound(t *testing.T) {
-	exchanges := []rabtap.RabbitExchange{
-		{Name: "exchange1", Vhost: "vhost"},
-	}
-	exchange := findExchangeByName(exchanges, "/", "not-available")
-	assert.Nil(t, exchange)
-}
-
-func TestFindQueueByName(t *testing.T) {
-	queues := []rabtap.RabbitQueue{
-		{Name: "q1", Vhost: "vhost"},
-		{Name: "q2", Vhost: "vhost"},
-	}
-	queue := findQueueByName(queues, "vhost", "q2")
-	assert.Equal(t, "q2", queue.Name)
-	assert.Equal(t, "vhost", queue.Vhost)
-}
-
-func TestFindQueueByNameNotFound(t *testing.T) {
-	queues := []rabtap.RabbitQueue{
-		{Name: "q1", Vhost: "vhost"},
-		{Name: "q2", Vhost: "vhost"},
-	}
-	queue := findQueueByName(queues, "/", "not-available")
-	assert.Nil(t, queue)
-}
-
-func TestFilterStringListOfEmptyLists(t *testing.T) {
-	flags := []bool{}
-	strs := []string{}
-	assert.Equal(t, []string{}, filterStringList(flags, strs))
-}
-
-func TestFilterStringListOneElementKeptInList(t *testing.T) {
-	flags := []bool{false, true, false}
-	strs := []string{"A", "B", "C"}
-	assert.Equal(t, []string{"B"}, filterStringList(flags, strs))
-}
-
-func TestFindConnectionByName(t *testing.T) {
-	conns := []rabtap.RabbitConnection{
-		{Name: "c1", Vhost: "vhost"},
-		{Name: "c2", Vhost: "vhost"},
-	}
-	conn := findConnectionByName(conns, "vhost", "c2")
-	assert.Equal(t, "c2", conn.Name)
-	assert.Equal(t, "vhost", conn.Vhost)
-}
-
-func TestFindConnectionByNameNotFoundReturnsNil(t *testing.T) {
-	assert.Nil(t, findConnectionByName([]rabtap.RabbitConnection{}, "vhost", "c2"))
-}
-
-func TestFindConsumerByQueue(t *testing.T) {
-	con := rabtap.RabbitConsumer{}
-	con.Queue.Name = "q1"
-	con.Queue.Vhost = "vhost"
-	cons := []rabtap.RabbitConsumer{con}
-	foundCon := findConsumerByQueue(cons, "vhost", "q1")
-	assert.Equal(t, "q1", foundCon.Queue.Name)
-	assert.Equal(t, "vhost", foundCon.Queue.Vhost)
-}
-
-func TestFindConsumerByQueueNotFoundReturnsNil(t *testing.T) {
-	assert.Nil(t, findConsumerByQueue([]rabtap.RabbitConsumer{}, "vhost", "q1"))
 }
 
 func TestBrokerInfoPrintFailsOnInvalidUri(t *testing.T) {

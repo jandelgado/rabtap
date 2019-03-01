@@ -107,4 +107,7 @@ func TestCmdSub(t *testing.T) {
 		assert.Fail(t, "did not receive message within expected time")
 	}
 	signalChannel <- os.Interrupt
+
+	cmdQueueUnbindFromExchange(amqpURI, testQueue, testKey, testExchange, tlsConfig)
+	// TODO check that queue is unbound
 }

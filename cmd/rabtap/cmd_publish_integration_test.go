@@ -5,8 +5,8 @@
 package main
 
 import (
-	"crypto/tls"
-	"strings"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -17,6 +17,13 @@ import (
 )
 
 func TestCmdPublishRaw(t *testing.T) {
+
+	tmpfile, err := ioutil.TempFile("", "rabtap")
+	require.Nil(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.Write([]byte("hello"))
+	require.Nil(t, err)
 
 	conn, ch := testcommon.IntegrationTestConnection(t, "exchange", "topic", 1, false)
 	defer conn.Close()
@@ -35,13 +42,15 @@ func TestCmdPublishRaw(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	reader := strings.NewReader("hello")
-	cmdPublish(CmdPublishArg{
-		amqpURI:             testcommon.IntegrationURIFromEnv(),
-		exchange:            "exchange",
-		routingKey:          routingKey,
-		tlsConfig:           &tls.Config{},
-		readNextMessageFunc: createMessageReaderFunc(false, reader)})
+	// execution: run publish command through call of main(), the actual
+	// message is in tmpfile.Name()
+	os.Args = []string{"rabtap", "pub",
+		"--uri", testcommon.IntegrationURIFromEnv(),
+		"exchange",
+		tmpfile.Name(),
+		"--routingkey", routingKey}
+
+	main()
 
 	select {
 	case message := <-deliveries:
@@ -82,6 +91,14 @@ func TestCmdPublishJSON(t *testing.T) {
 	{
 		"Body": "c2Vjb25kCg=="
 	}`
+
+	tmpfile, err := ioutil.TempFile("", "rabtap")
+	require.Nil(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.Write([]byte(testmessage))
+	require.Nil(t, err)
+
 	conn, ch := testcommon.IntegrationTestConnection(t, "exchange", "topic", 1, false)
 	defer conn.Close()
 
@@ -99,15 +116,20 @@ func TestCmdPublishJSON(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	reader := strings.NewReader(testmessage)
-	cmdPublish(CmdPublishArg{
-		amqpURI:             testcommon.IntegrationURIFromEnv(),
-		exchange:            "exchange",
-		routingKey:          routingKey,
-		tlsConfig:           &tls.Config{},
-		readNextMessageFunc: createMessageReaderFunc(true, reader)})
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
 
-	// we expect 2 messages to be sent
+	// execution: run publish command through call of main(), the actual
+	// message is in tmpfile.Name()
+	os.Args = []string{"rabtap", "pub",
+		"--uri", testcommon.IntegrationURIFromEnv(),
+		"exchange",
+		tmpfile.Name(),
+		"--routingkey", routingKey,
+		"--json"}
+	main()
+
+	// verification: we expect 2 messages to be sent by above call
 	var message [2]amqp.Delivery
 	for i := 0; i < 2; i++ {
 		select {

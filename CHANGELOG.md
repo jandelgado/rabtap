@@ -1,5 +1,8 @@
-
 # Changelog for rabtap
+
+## v1.15 (2019-03-01)
+
+* new command `queue purge QUEUE` added
 
 ## v1.14 (2019-02-28)
 

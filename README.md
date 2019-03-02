@@ -610,7 +610,7 @@ and the following tools installed:
 
 * [ineffassign](https://github.com/gordonklaus/ineffassign)
 * [misspell](https://github.com/client9/misspell/cmd/misspell)
-* [golint](https://github.com/golang/lint/golint)
+* [golint](https://github.com/golang/lint)
 * [gocyclo](https://github.com/fzipp/gocyclo)
 
 ```

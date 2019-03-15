@@ -9,19 +9,19 @@ TOXICMD:=docker-compose exec toxiproxy /go/bin/toxiproxy-cli
 
 .PHONY:test-app test-lib build build-all tags short-test test run-server clean \
 
-build:	$(BINARY_LINUX64)
+build: build-linux
 
-build-all:	build $(BINARY_WIN64)  $(BINARY_DARWIN64)
+build-all:	build build-mac build-win
 
-$(BINARY_DARWIN64): 
+build-mac:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_DARWIN64) 
 
-$(BINARY_LINUX64): 
+build-linux:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_LINUX64) 
 
-$(BINARY_WIN64): 
+build-win:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
 				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_WIN64) 
 

@@ -148,6 +148,7 @@ func TestCliInfoCmd(t *testing.T) {
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowStats)
 	assert.False(t, args.ShowConsumers)
+	assert.False(t, args.ShowByConnection)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
 	assert.Nil(t, args.QueueFilter)

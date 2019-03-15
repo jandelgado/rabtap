@@ -24,7 +24,7 @@ Usage:
   rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jknv]
   rabtap info [--api APIURI] [--consumers] [--stats] 
               [--filter EXPR] 
-              [--omit-empty] [--show-default] [-knv]
+              [--omit-empty] [--show-default] [--by-connection] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
@@ -49,6 +49,7 @@ Options:
  --api APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey KEY binding key to use in bind queue command.
+ --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
  --filter EXPR        Filter for info command to filter queues (see README.md)
@@ -90,7 +91,6 @@ Examples:
   rabtap info
   rabtap info --filter "binding.Source == 'amq.topic'" -o
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
-
 `
 )
 
@@ -149,6 +149,7 @@ type CommandLineArgs struct {
 	ExchangeName        string  // exchange name  create, remove or queue bind
 	ExchangeType        string  // exchange type create, remove or queue bind
 	ShowConsumers       bool    // info mode: also show consumer
+	ShowByConnection    bool    // info mode: show by connection
 	ShowStats           bool    // info mode: also show statistics
 	QueueFilter         *string // info mode: optional filter for queues
 	OmitEmptyExchanges  bool    // info mode: do not show exchanges wo/ bindings
@@ -212,7 +213,8 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		OmitEmptyExchanges:  args["--omit-empty"].(bool),
 		ShowConsumers:       args["--consumers"].(bool),
 		ShowStats:           args["--stats"].(bool),
-		ShowDefaultExchange: args["--show-default"].(bool)}
+		ShowDefaultExchange: args["--show-default"].(bool),
+		ShowByConnection:    args["--by-connection"].(bool)}
 
 	if args["--filter"] != nil {
 		filter := args["--filter"].(string)

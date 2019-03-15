@@ -10,7 +10,7 @@ import (
 
 	"text/template"
 
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 const (
@@ -23,7 +23,8 @@ const (
 	    {{- printf "Vhost %s" .Vhost | VHostColor }}`
 	tplConsumer = `
 		{{- ConsumerColor .Consumer.ConsumerTag }} (consumer 
-		{{- ""}} user='{{ .Consumer.ChannelDetails.User }}', chan='
+		{{- ""}} user='{{ .Consumer.ChannelDetails.User }}', 
+		{{- ""}} prefetch={{ .Consumer.PrefetchCount }}, chan='
 		{{- .Consumer.ChannelDetails.Name }}')`
 	tplConnection = ` 
 	    {{- ""}}'{{ ConnectionColor .Connection.Name }}' (connection 
@@ -38,6 +39,15 @@ const (
 		{{- .Exchange.MessageStats.PublishOut }}, {{printf "%.1f" .Exchange.MessageStats.PublishOutDetails.Rate}}/s) msg
 		{{- end }}, {{ .ExchangeFlags  }})`
 	tplQueue = `
+	    {{- QueueColor .Queue.Name }} (queue,
+		{{- if .Config.ShowStats }}
+		{{- .Queue.Consumers  }} cons, (
+		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
+		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
+		{{- end }}
+		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
+		{{- ""}}, {{ .QueueFlags}})`
+	tplBoundQueue = `
 	    {{- QueueColor .Binding.Destination }} (queue,
 		{{- with .Binding.RoutingKey }} key='{{ KeyColor .}}',{{end}}
 		{{- with .Binding.Arguments}} args='{{ KeyColor .}}',{{end}}
@@ -55,6 +65,7 @@ type BrokerInfoPrinterConfig struct {
 	ShowDefaultExchange bool
 	ShowConsumers       bool
 	ShowStats           bool
+	ShowByConnection    bool
 	QueueFilter         Predicate
 	OmitEmptyExchanges  bool
 	NoColor             bool
@@ -157,7 +168,17 @@ func (s BrokerInfoPrinter) renderConnectionElementAsString(conn *rabtap.RabbitCo
 	return s.resolveTemplate("connnection-tpl", tplConnection, args)
 }
 
-func (s BrokerInfoPrinter) renderQueueElementAsString(queue *rabtap.RabbitQueue, binding *rabtap.RabbitBinding) string {
+func (s BrokerInfoPrinter) renderQueueElementAsString(queue *rabtap.RabbitQueue) string {
+	queueFlags := s.renderQueueFlagsAsString(queue)
+	var args = struct {
+		Config     BrokerInfoPrinterConfig
+		Queue      *rabtap.RabbitQueue
+		QueueFlags string
+	}{s.config, queue, queueFlags}
+	return s.resolveTemplate("queue-tpl", tplQueue, args)
+}
+
+func (s BrokerInfoPrinter) renderBoundQueueElementAsString(queue *rabtap.RabbitQueue, binding *rabtap.RabbitBinding) string {
 	queueFlags := s.renderQueueFlagsAsString(queue)
 	var args = struct {
 		Config     BrokerInfoPrinterConfig
@@ -165,7 +186,7 @@ func (s BrokerInfoPrinter) renderQueueElementAsString(queue *rabtap.RabbitQueue,
 		Queue      *rabtap.RabbitQueue
 		QueueFlags string
 	}{s.config, binding, queue, queueFlags}
-	return s.resolveTemplate("queue-tpl", tplQueue, args)
+	return s.resolveTemplate("bound-queue-tpl", tplBoundQueue, args)
 }
 
 func (s BrokerInfoPrinter) renderRootNodeAsString(rabbitURL url.URL, overview rabtap.RabbitOverview) string {
@@ -248,7 +269,7 @@ func (s BrokerInfoPrinter) createQueueNodeFromBinding(
 		return []*TreeNode{}
 	}
 
-	queueText := s.renderQueueElementAsString(queue, binding)
+	queueText := s.renderBoundQueueElementAsString(queue, binding)
 	queueNode := NewTreeNode(queueText)
 
 	if s.config.ShowConsumers {
@@ -335,11 +356,54 @@ func (s BrokerInfoPrinter) buildTree(brokerInfo *rabtap.BrokerInfo,
 	return root, nil
 }
 
+// buildTreeByConnection renders given brokerInfo into a tree:
+//  RabbitMQ-Host
+//  +--VHost
+//     +--Connection
+//        +--Consumer
+//           +--Queue
+//
+func (s BrokerInfoPrinter) buildTreeByConnection(brokerInfo *rabtap.BrokerInfo,
+	rootNode string) (*TreeNode, error) {
+
+	// root of node is URL of rabtap.RabbitMQ broker.
+	// parse broker URL to filter out credentials for display.
+	url, err := url.Parse(rootNode)
+	if err != nil {
+		return nil, err
+	}
+	root := NewTreeNode(s.renderRootNodeAsString(*url, brokerInfo.Overview))
+
+	// non-recursive setup of tree
+	for vhost := range uniqueVhosts(brokerInfo.Exchanges) {
+		vhostNode := NewTreeNode(s.renderVhostAsString(vhost))
+		root.Add(vhostNode)
+		for _, conn := range brokerInfo.Connections {
+			connNode := NewTreeNode(s.renderConnectionElementAsString(&conn))
+			for _, consumer := range brokerInfo.Consumers {
+				if consumer.ChannelDetails.ConnectionName == conn.Name {
+					consNode := NewTreeNode(s.renderConsumerElementAsString(&consumer))
+					for _, queue := range brokerInfo.Queues {
+						if consumer.Queue.Vhost == vhost && consumer.Queue.Name == queue.Name {
+							queueNode := NewTreeNode(s.renderQueueElementAsString(&queue))
+							consNode.Add(queueNode)
+						}
+					}
+					connNode.Add(consNode)
+				}
+			}
+			vhostNode.Add(connNode)
+		}
+	}
+	return root, nil
+}
+
 // Print renders given brokerInfo into a tree-view
 func (s BrokerInfoPrinter) Print(brokerInfo rabtap.BrokerInfo,
 	rootNode string, out io.Writer) error {
 
-	root, err := s.buildTree(&brokerInfo, rootNode)
+	//	root, err := s.buildTree(&brokerInfo, rootNode)
+	root, err := s.buildTreeByConnection(&brokerInfo, rootNode)
 	if err != nil {
 		return err
 	}

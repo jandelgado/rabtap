@@ -170,7 +170,11 @@ func (s *AmqpConnector) Connect(worker AmqpWorkerFunc) error {
 		if !worker(rabbitConn, s.controlChan).shouldReconnect() {
 			break
 		}
-		s.shutdown()
+		err = s.shutdown()
+		if err != nil {
+			s.workerFinished <- err
+			return err
+		}
 	}
 	err := s.shutdown()
 	s.workerFinished <- err

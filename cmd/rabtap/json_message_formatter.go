@@ -12,9 +12,12 @@ import (
 // JSONMessageFormatter pretty prints JSON formatted messages.
 type JSONMessageFormatter struct{}
 
-func init() {
-	RegisterMessageFormatter("application/json", JSONMessageFormatter{})
-}
+var (
+	_ = func() struct{} {
+		RegisterMessageFormatter("application/json", JSONMessageFormatter{})
+		return struct{}{}
+	}()
+)
 
 // Format validates and formats a message in JSON format. The body can be a
 // simple JSON object or an array of JSON objecs. If the message is not valid

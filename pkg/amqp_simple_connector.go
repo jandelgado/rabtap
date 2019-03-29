@@ -33,7 +33,7 @@ func SimpleAmqpConnector(amqpURI string, tlsConfig *tls.Config,
 	// queue. But seems to not produce an error. So leave it out for now.
 	// errCh := make(chan *amqp.Error)
 	// chn.NotifyClose(errCh)
-	run(chn)
+	err = run(chn)
 
 	if err != nil {
 		return err

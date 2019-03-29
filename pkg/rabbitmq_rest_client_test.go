@@ -223,17 +223,14 @@ func TestFindExchangeByName(t *testing.T) {
 		{Name: "exchange1", Vhost: "vhost"},
 		{Name: "exchange2", Vhost: "vhost"},
 	}
-	exchange := FindExchangeByName(exchanges, "vhost", "exchange2")
-	assert.NotNil(t, exchange)
-	assert.Equal(t, "exchange2", exchange.Name)
+	assert.Equal(t, 1, FindExchangeByName(exchanges, "vhost", "exchange2"))
 }
 
 func TestFindExchangeByNameNotFound(t *testing.T) {
 	exchanges := []RabbitExchange{
 		{Name: "exchange1", Vhost: "vhost"},
 	}
-	exchange := FindExchangeByName(exchanges, "/", "not-available")
-	assert.Nil(t, exchange)
+	assert.Equal(t, -1, FindExchangeByName(exchanges, "/", "not-available"))
 }
 
 func TestFindQueueByName(t *testing.T) {
@@ -241,9 +238,7 @@ func TestFindQueueByName(t *testing.T) {
 		{Name: "q1", Vhost: "vhost"},
 		{Name: "q2", Vhost: "vhost"},
 	}
-	queue := FindQueueByName(queues, "vhost", "q2")
-	assert.Equal(t, "q2", queue.Name)
-	assert.Equal(t, "vhost", queue.Vhost)
+	assert.Equal(t, 1, FindQueueByName(queues, "vhost", "q2"))
 }
 
 func TestFindQueueByNameNotFound(t *testing.T) {
@@ -251,8 +246,7 @@ func TestFindQueueByNameNotFound(t *testing.T) {
 		{Name: "q1", Vhost: "vhost"},
 		{Name: "q2", Vhost: "vhost"},
 	}
-	queue := FindQueueByName(queues, "/", "not-available")
-	assert.Nil(t, queue)
+	assert.Equal(t, -1, FindQueueByName(queues, "/", "not-available"))
 }
 
 func TestFindConnectionByName(t *testing.T) {
@@ -260,25 +254,25 @@ func TestFindConnectionByName(t *testing.T) {
 		{Name: "c1", Vhost: "vhost"},
 		{Name: "c2", Vhost: "vhost"},
 	}
-	conn := FindConnectionByName(conns, "vhost", "c2")
-	assert.Equal(t, "c2", conn.Name)
-	assert.Equal(t, "vhost", conn.Vhost)
+	assert.Equal(t, 1, FindConnectionByName(conns, "vhost", "c2"))
 }
 
-func TestFindConnectionByNameNotFoundReturnsNil(t *testing.T) {
-	assert.Nil(t, FindConnectionByName([]RabbitConnection{}, "vhost", "c2"))
+func TestFindConnectionByNameNotFoundReturnsCorrectValue(t *testing.T) {
+	assert.Equal(t, -1, FindConnectionByName([]RabbitConnection{}, "vhost", "c2"))
 }
 
 func TestFindConsumerByQueue(t *testing.T) {
-	con := RabbitConsumer{}
-	con.Queue.Name = "q1"
-	con.Queue.Vhost = "vhost"
-	cons := []RabbitConsumer{con}
-	foundCon := FindConsumerByQueue(cons, "vhost", "q1")
-	assert.Equal(t, "q1", foundCon.Queue.Name)
-	assert.Equal(t, "vhost", foundCon.Queue.Vhost)
+	var con1, con2, con3 RabbitConsumer
+	con1.Queue.Name = "q1"
+	con1.Queue.Vhost = "vhost"
+	con2.Queue.Name = "q2"
+	con2.Queue.Vhost = "vhost"
+	con3.Queue.Name = "q3"
+	con3.Queue.Vhost = "vhost"
+	cons := []RabbitConsumer{con1, con2, con3}
+	assert.Equal(t, 1, FindConsumerByQueue(cons, "vhost", "q2"))
 }
 
-func TestFindConsumerByQueueNotFoundReturnsNil(t *testing.T) {
-	assert.Nil(t, FindConsumerByQueue([]RabbitConsumer{}, "vhost", "q1"))
+func TestFindConsumerByQueueNotFoundReturnsCorrectValue(t *testing.T) {
+	assert.Equal(t, -1, FindConsumerByQueue([]RabbitConsumer{}, "vhost", "q1"))
 }

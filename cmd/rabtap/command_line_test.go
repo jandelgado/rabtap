@@ -204,14 +204,14 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 
 func TestCliPubCmdFromFile(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker", "exchange", "file"})
+		[]string{"pub", "--uri=broker", "exchange", "file", "--routingkey", "key"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker", args.AmqpURI)
 	assert.Equal(t, "exchange", args.PubExchange)
 	assert.Equal(t, "file", *args.PubFile)
-	assert.Equal(t, "", args.PubRoutingKey)
+	assert.Equal(t, "key", args.PubRoutingKey)
 	assert.False(t, args.JSONFormat)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)

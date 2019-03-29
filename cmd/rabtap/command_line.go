@@ -269,23 +269,24 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
 		return result, err
 	}
-	if args["create"].(bool) {
+	switch {
+	case args["create"].(bool):
 		result.Cmd = QueueCreateCmd
 		result.Durable = args["--durable"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)
-	} else if args["rm"].(bool) {
+	case args["rm"].(bool):
 		result.Cmd = QueueRemoveCmd
-	} else if args["bind"].(bool) {
+	case args["bind"].(bool):
 		// bind QUEUE to EXCHANGE [--bindingkey key]
 		result.Cmd = QueueBindCmd
 		result.QueueBindingKey = args["--bindingkey"].(string)
 		result.ExchangeName = args["EXCHANGE"].(string)
-	} else if args["unbind"].(bool) {
+	case args["unbind"].(bool):
 		// unbind QUEUE from EXCHANGE [--bindingkey key]
 		result.Cmd = QueueUnbindCmd
 		result.QueueBindingKey = args["--bindingkey"].(string)
 		result.ExchangeName = args["EXCHANGE"].(string)
-	} else if args["purge"].(bool) {
+	case args["purge"].(bool):
 		result.Cmd = QueuePurgeCmd
 	}
 	return result, nil
@@ -301,11 +302,12 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
 		return result, err
 	}
-	if args["create"].(bool) {
+	switch {
+	case args["create"].(bool):
 		result.Cmd = ExchangeCreateCmd
 		result.Durable = args["--durable"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)
-	} else if args["rm"].(bool) {
+	case args["rm"].(bool):
 		result.Cmd = ExchangeRemoveCmd
 	}
 	return result, nil
@@ -362,24 +364,24 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 // ParseCommandLineArgs parses command line arguments into an object of
 // type CommandLineArgs.
 func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
-	args, err := docopt.Parse(usage, cliArgs, true, RabtapAppVersion, false)
-	//fmt.Printf("%#+v", args)
+	args, err := docopt.ParseArgs(usage, cliArgs, RabtapAppVersion)
 	if err != nil {
 		return CommandLineArgs{}, err
 	}
-	if args["tap"].(int) > 0 {
+	switch {
+	case args["tap"].(int) > 0:
 		return parseTapCmdArgs(args)
-	} else if args["info"].(bool) {
+	case args["info"].(bool):
 		return parseInfoCmdArgs(args)
-	} else if args["pub"].(bool) {
+	case args["pub"].(bool):
 		return parsePublishCmdArgs(args)
-	} else if args["sub"].(bool) {
+	case args["sub"].(bool):
 		return parseSubCmdArgs(args)
-	} else if args["queue"].(bool) {
+	case args["queue"].(bool):
 		return parseQueueCmdArgs(args)
-	} else if args["exchange"].(bool) {
+	case args["exchange"].(bool):
 		return parseExchangeCmdArgs(args)
-	} else if args["conn"].(bool) {
+	case args["conn"].(bool):
 		return parseConnCmdArgs(args)
 	}
 	return CommandLineArgs{}, fmt.Errorf("command missing")

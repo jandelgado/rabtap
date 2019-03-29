@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // CmdInfoArg contains arguments for the info command

@@ -100,7 +100,7 @@ func ExampleBrokerInfoPrinter_Print() {
 
 }
 
-func ExampleBrokerInfoPrinterByConnection_Print() {
+func ExampleBrokerInfoPrinter_printByConnection() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()

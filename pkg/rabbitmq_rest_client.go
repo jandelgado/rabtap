@@ -57,7 +57,11 @@ func (s RabbitHTTPClient) getResource(request httpRequest) chan httpResponse {
 
 		defer resp.Body.Close()
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
+		_, err = buf.ReadFrom(resp.Body)
+		if err != nil {
+			res <- httpResponse{result: r, err: err}
+			return
+		}
 
 		err = json.Unmarshal(buf.Bytes(), r)
 		if err != nil {
@@ -211,63 +215,63 @@ func (s RabbitHTTPClient) CloseConnection(conn, reason string) error {
 }
 
 // FindQueueByName searches in the queues array for a queue with the given
-// name and vhost. RabbitQueue element is returned on succes, otherwise nil.
+// name and vhost. index is returned or -1 when nothing found.
 func FindQueueByName(queues []RabbitQueue,
-	vhost, queueName string) *RabbitQueue {
-	for _, queue := range queues {
+	vhost, queueName string) int {
+	for i, queue := range queues {
 		if queue.Name == queueName && queue.Vhost == vhost {
-			return &queue
+			return i
 		}
 	}
-	return nil
+	return -1
 }
 
 // FindExchangeByName searches in the exchanges array for an exchange with the given
-// name and vhost. RabbitExchange element is returned on succes, otherwise nil.
+// name and vhost. index is returned or -1 when nothing found.
 func FindExchangeByName(exchanges []RabbitExchange,
-	vhost, exchangeName string) *RabbitExchange {
-	for _, exchange := range exchanges {
+	vhost, exchangeName string) int {
+	for i, exchange := range exchanges {
 		if exchange.Name == exchangeName && exchange.Vhost == vhost {
-			return &exchange
+			return i
 		}
 	}
-	return nil
+	return -1
 }
 
 // currently not used.
 // func FindChannelByName(channels []RabbitChannel,
-//     vhost, channelName string) *RabbitChannel {
-//     for _, channel := range channels {
+//     vhost, channelName string) int {
+//     for i, channel := range channels {
 //         if channel.Name == channelName && channel.Vhost == vhost {
-//             return &channel
+//             return i
 //         }
 //     }
-//     return nil
+//     return -1
 // }
 
 // FindConnectionByName searches in the connections array for a connection with the given
-// name and vhost. RabbitConnection element is returned on succes, otherwise nil.
+// name and vhost. index is returned or -1 if nothing is found.
 func FindConnectionByName(conns []RabbitConnection,
-	vhost, connName string) *RabbitConnection {
-	for _, conn := range conns {
+	vhost, connName string) int {
+	for i, conn := range conns {
 		if conn.Name == connName && conn.Vhost == vhost {
-			return &conn
+			return i
 		}
 	}
-	return nil
+	return -1
 }
 
 // FindConsumerByQueue searches in the connections array for a connection with the given
-// name and vhost. RabbitConsumer element is returned on succes, otherwise nil.
+// name and vhost.  index is returned or -1 if nothing is found.
 func FindConsumerByQueue(consumers []RabbitConsumer,
-	vhost, queueName string) *RabbitConsumer {
-	for _, consumer := range consumers {
+	vhost, queueName string) int {
+	for i, consumer := range consumers {
 		if consumer.Queue.Vhost == vhost &&
 			consumer.Queue.Name == queueName {
-			return &consumer
+			return i
 		}
 	}
-	return nil
+	return -1
 }
 
 // RabbitConnection models the /connections resource of the rabbitmq http api

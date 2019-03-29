@@ -8,7 +8,7 @@ import (
 	"crypto/tls"
 	"os"
 
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // CmdSubscribeArg contains arguments for the subscribe command

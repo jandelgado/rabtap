@@ -64,9 +64,7 @@ func NewColorableWriter(file *os.File) io.Writer {
 // output. If noColor is set to true, a no-op color printer is returned.
 func NewColorPrinter(noColor bool) ColorPrinter {
 	if noColor {
-		nullPrinter := func(a ...interface{}) string {
-			return fmt.Sprint(a...)
-		}
+		nullPrinter := fmt.Sprint
 		return ColorPrinter{nullPrinter,
 			nullPrinter,
 			nullPrinter,

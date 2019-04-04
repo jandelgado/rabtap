@@ -1,8 +1,7 @@
 
 # Changelog for rabtap
 
-
-## v1.16 (2019-03-15)
+## v1.16 (2019-04-03)
 
 * new option `--by-connection` for info command added, making `info` show
   connection > 

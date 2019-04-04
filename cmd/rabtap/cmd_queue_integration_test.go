@@ -55,9 +55,10 @@ func TestCmdPurgeQueue(t *testing.T) {
 	client := rabtap.NewRabbitHTTPClient(apiURI, &tls.Config{})
 	queues, err := client.Queues()
 	assert.Nil(t, err)
-	queue := rabtap.FindQueueByName(queues, "/", testQueue)
-	require.NotNil(t, queue)
+	i := rabtap.FindQueueByName(queues, "/", testQueue)
+	require.True(t, i != -1)
 
 	// TODO
+	queue := queues[i]
 	assert.Equal(t, 0, queue.Messages)
 }

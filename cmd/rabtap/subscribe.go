@@ -11,7 +11,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
 )
 

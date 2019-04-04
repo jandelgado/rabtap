@@ -24,7 +24,7 @@ Usage:
   rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jknv]
   rabtap info [--api APIURI] [--consumers] [--stats] 
               [--filter EXPR] 
-              [--omit-empty] [--show-default] [-knv]
+              [--omit-empty] [--show-default] [--by-connection] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
@@ -49,6 +49,7 @@ Options:
  --api APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey KEY binding key to use in bind queue command.
+ --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
  --filter EXPR        Filter for info command to filter queues (see README.md)
@@ -90,7 +91,6 @@ Examples:
   rabtap info
   rabtap info --filter "binding.Source == 'amq.topic'" -o
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
-
 `
 )
 
@@ -149,6 +149,7 @@ type CommandLineArgs struct {
 	ExchangeName        string  // exchange name  create, remove or queue bind
 	ExchangeType        string  // exchange type create, remove or queue bind
 	ShowConsumers       bool    // info mode: also show consumer
+	ShowByConnection    bool    // info mode: show by connection
 	ShowStats           bool    // info mode: also show statistics
 	QueueFilter         *string // info mode: optional filter for queues
 	OmitEmptyExchanges  bool    // info mode: do not show exchanges wo/ bindings
@@ -212,7 +213,8 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		OmitEmptyExchanges:  args["--omit-empty"].(bool),
 		ShowConsumers:       args["--consumers"].(bool),
 		ShowStats:           args["--stats"].(bool),
-		ShowDefaultExchange: args["--show-default"].(bool)}
+		ShowDefaultExchange: args["--show-default"].(bool),
+		ShowByConnection:    args["--by-connection"].(bool)}
 
 	if args["--filter"] != nil {
 		filter := args["--filter"].(string)
@@ -267,23 +269,24 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
 		return result, err
 	}
-	if args["create"].(bool) {
+	switch {
+	case args["create"].(bool):
 		result.Cmd = QueueCreateCmd
 		result.Durable = args["--durable"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)
-	} else if args["rm"].(bool) {
+	case args["rm"].(bool):
 		result.Cmd = QueueRemoveCmd
-	} else if args["bind"].(bool) {
+	case args["bind"].(bool):
 		// bind QUEUE to EXCHANGE [--bindingkey key]
 		result.Cmd = QueueBindCmd
 		result.QueueBindingKey = args["--bindingkey"].(string)
 		result.ExchangeName = args["EXCHANGE"].(string)
-	} else if args["unbind"].(bool) {
+	case args["unbind"].(bool):
 		// unbind QUEUE from EXCHANGE [--bindingkey key]
 		result.Cmd = QueueUnbindCmd
 		result.QueueBindingKey = args["--bindingkey"].(string)
 		result.ExchangeName = args["EXCHANGE"].(string)
-	} else if args["purge"].(bool) {
+	case args["purge"].(bool):
 		result.Cmd = QueuePurgeCmd
 	}
 	return result, nil
@@ -299,11 +302,12 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
 		return result, err
 	}
-	if args["create"].(bool) {
+	switch {
+	case args["create"].(bool):
 		result.Cmd = ExchangeCreateCmd
 		result.Durable = args["--durable"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)
-	} else if args["rm"].(bool) {
+	case args["rm"].(bool):
 		result.Cmd = ExchangeRemoveCmd
 	}
 	return result, nil
@@ -360,24 +364,24 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 // ParseCommandLineArgs parses command line arguments into an object of
 // type CommandLineArgs.
 func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
-	args, err := docopt.Parse(usage, cliArgs, true, RabtapAppVersion, false)
-	//fmt.Printf("%#+v", args)
+	args, err := docopt.ParseArgs(usage, cliArgs, RabtapAppVersion)
 	if err != nil {
 		return CommandLineArgs{}, err
 	}
-	if args["tap"].(int) > 0 {
+	switch {
+	case args["tap"].(int) > 0:
 		return parseTapCmdArgs(args)
-	} else if args["info"].(bool) {
+	case args["info"].(bool):
 		return parseInfoCmdArgs(args)
-	} else if args["pub"].(bool) {
+	case args["pub"].(bool):
 		return parsePublishCmdArgs(args)
-	} else if args["sub"].(bool) {
+	case args["sub"].(bool):
 		return parseSubCmdArgs(args)
-	} else if args["queue"].(bool) {
+	case args["queue"].(bool):
 		return parseQueueCmdArgs(args)
-	} else if args["exchange"].(bool) {
+	case args["exchange"].(bool):
 		return parseExchangeCmdArgs(args)
-	} else if args["conn"].(bool) {
+	case args["conn"].(bool):
 		return parseConnCmdArgs(args)
 	}
 	return CommandLineArgs{}, fmt.Errorf("command missing")

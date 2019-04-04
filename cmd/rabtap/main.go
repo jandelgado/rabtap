@@ -58,6 +58,7 @@ func startCmdInfo(args CommandLineArgs, title string) {
 			ShowStats:           args.ShowStats,
 			ShowConsumers:       args.ShowConsumers,
 			ShowDefaultExchange: args.ShowDefaultExchange,
+			ShowByConnection:    args.ShowByConnection,
 			QueueFilter:         queueFilter,
 			OmitEmptyExchanges:  args.OmitEmptyExchanges,
 			NoColor:             args.NoColor},

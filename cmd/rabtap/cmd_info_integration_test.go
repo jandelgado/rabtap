@@ -23,5 +23,5 @@ func TestCmdInfoRootNodeOnly(t *testing.T) {
 		"--api", apiMock.URL,
 		"--no-color"}
 	out := testcommon.CaptureOutput(main)
-	assert.Regexp(t, regexp.MustCompile("http://(.*) \\(broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab'\\)"), out)
+	assert.Regexp(t, regexp.MustCompile(`http://(.*) \(broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab'\)`), out)
 }

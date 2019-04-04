@@ -43,8 +43,10 @@ func CaptureOutput(f func()) string {
 	go func() {
 		var buf bytes.Buffer
 		wg.Done()
-		io.Copy(&buf, reader)
-		out <- buf.String()
+		_, err := io.Copy(&buf, reader)
+		if err == nil {
+			out <- buf.String()
+		}
 	}()
 	wg.Wait()
 	f()
@@ -107,11 +109,11 @@ func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
 	for i := 0; i < numQueues; i++ {
 		queue, err := ch.QueueDeclare(
 			IntegrationQueueName(i), // name of the queue
-			false, // non durable
-			false, // delete when unused
-			true,  // exclusive
-			false, // wait for response
-			nil)   // arguments
+			false,                   // non durable
+			false,                   // delete when unused
+			true,                    // exclusive
+			false,                   // wait for response
+			nil)                     // arguments
 		require.Nil(t, err)
 
 		// set routing header if requested (used by headers testcase)

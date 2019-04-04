@@ -11,7 +11,7 @@ import (
 )
 
 // messageTemplate is the default template to print a message
-var messageTemplate = `------ {{ .Title }} ------
+const messageTemplate = `------ {{ .Title }} ------
 exchange.......: {{ ExchangeColor .Message.Exchange }}
 {{with .Message.RoutingKey}}routingkey.....: {{ KeyColor .}}
 {{end}}{{with .Message.Priority}}priority.......: {{.}}

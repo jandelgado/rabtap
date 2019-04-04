@@ -57,21 +57,23 @@ func (s *TreeNode) IsLastChild() bool {
 func PrintTree(node *TreeNode, buffer io.Writer) {
 	treeLines := ""
 	for parent := node.Parent; parent != nil; parent = parent.Parent {
-		if parent.Parent == nil {
-
-		} else if parent.IsLastChild() {
+		switch {
+		case parent.Parent == nil:
+			// nop
+		case parent.IsLastChild():
 			treeLines = "    " + treeLines
-		} else {
+		default:
 			treeLines = "│   " + treeLines
 		}
 	}
 
-	if node.Parent == nil {
+	switch {
+	case node.Parent == nil:
 		// no treeLine for root element
-	} else if node.IsLastChild() {
-		treeLines = treeLines + "└── "
-	} else {
-		treeLines = treeLines + "├── "
+	case node.IsLastChild():
+		treeLines += "└── "
+	default:
+		treeLines += "├── "
 	}
 	fmt.Fprintf(buffer, "%s%s\n", treeLines, node.Text)
 

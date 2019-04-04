@@ -36,7 +36,7 @@ func ExamplePrettyPrintMessage() {
 		Body:            []byte("simple test message"),
 	}
 
-	PrettyPrintMessage(os.Stdout, &message, "title", true)
+	_ = PrettyPrintMessage(os.Stdout, &message, "title", true)
 
 	// Output:
 	// ------ title ------
@@ -62,7 +62,7 @@ func ExamplePrettyPrintMessage_withFilteredAtributes() {
 		Body:     []byte("simple test message"),
 	}
 
-	PrettyPrintMessage(os.Stdout, &message, "title", true)
+	_ = PrettyPrintMessage(os.Stdout, &message, "title", true)
 
 	// Output:
 	// ------ title ------

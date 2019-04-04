@@ -97,7 +97,7 @@ Usage:
   rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jknv]
   rabtap info [--api APIURI] [--consumers] [--stats] 
               [--filter EXPR] 
-              [--omit-empty] [--show-default] [-knv]
+              [--omit-empty] [--show-default] [--by-connection] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
@@ -122,6 +122,7 @@ Options:
  --api APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey KEY binding key to use in bind queue command.
+ --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
  --filter EXPR        Filter for info command to filter queues (see README.md)
@@ -181,7 +182,8 @@ Rabtap understands the following commands:
    in square brackets with `D` (durable), `AD` (auto delete) and `EX`
    (exclusive). If `--statistics` option is enabled, basic statistics are
    included in the output. The `--filter` option allows to filter output. See
-   [filtering](#filtering-output-of-info-command) section for details.
+   [filtering](#filtering-output-of-info-command) section for details. Use
+   the `--by-connection` to sort output by connection (implies `--consumers`)
 * `queue` - create/bind/unbind/remove/purge queue
 * `exchange` - create/remove exchange
 * `connection` - close connections
@@ -209,7 +211,7 @@ In cases where the URI argument is optional, e.g. `rabtap tap [-uri
 URI] exchange ...`, the URI of the RabbitMQ broker can be set with the
 environment variable `RABTAP_AMQPURI`.  Example:
 
-```
+```console
 $ export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
 $ rabtap tap amq.fanout:
 ...
@@ -220,7 +222,7 @@ $ rabtap tap amq.fanout:
 The default RabbitMQ management API URI can be set using the `RABTAP_APIURI`
 environment variable. Example:
 
-```
+```console
 $ export RABTAP_APIURI=http://guest:guest@localhost:15672/
 $ rabtap info
 ...
@@ -243,11 +245,13 @@ The `info` command uses the REST API of RabbitMQ to gather and display
 topolgy related information from the broker. Example:
 
 * `$ rabtap info --api http://guest:guest@localhost:15672/api --consumers` -
-  shows exchanges, queues and consumers of given broker in an tree view (see
-  [screenshot](#screenshots)).
+  shows virtual hosts exchanges, queues and consumers of given broker in an
+  tree view (see [screenshot](#screenshots)). Note that if `RABTAP_APIURI`
+  environment variable is set, the command reduces to `$ rabtap info
+  --consumers`
+* `$ rabtap info  --by-connection` - shows virtual hosts, connections, 
+  consumers and queues of given broker in an tree view.
 
-If `RABTAP_APIURI` environment variable is set, the command reduces to `$
-rabtap info --consumers`
 
 #### Wire-tapping messages
 
@@ -346,7 +350,7 @@ encapsulated in JSON messages.
 The example taps messages on `broker1` and publishes the messages to the
 `amq.direct` exchange on `broker2`
 
-```
+```console
 $ rabtap tap --uri amqp://broker1 my-topic-exchange:# --json | \
   rabtap pub --uri amqp://broker2 amq.direct -r routingKey --json
 ```
@@ -357,7 +361,7 @@ The `conn` command allows to close a connection. The name of the connection to
 be closed is expected as parameter. Use the `info` command with the
 `--consumers` option to find the connection associated with a queue. Example:
 
-```
+```console
 $ rabtap info --consumers
 http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@ae1ad1477419')
 └── Vhost /
@@ -371,11 +375,12 @@ http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbi
         :
 $ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672' 
 ```
+
 #### Queue commands
 
 The `queue` command can be used to easily create, remove, bind or unbind queues:
 
-```
+```console
 $ rabtap queue create myqueue 
 $ rabtap info --show-default
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
@@ -420,7 +425,7 @@ $ rabtap queue purge myqueue
 When using the `--json` option, messages are print/read as a stream of JSON
 messages in the following format:
 
-```
+```json
 ...
 {
   "ContentType": "text/plain",
@@ -466,6 +471,9 @@ See [official govaluate
 documentation](https://github.com/Knetic/govaluate/blob/master/MANUAL.md) for
 further information.
 
+Note: currently the filter is ignored when used in conjunction with
+`--by-connection`.
+
 #### Evaluation context
 
 During evaluation the context (i.e. the current exchange, queue and binding) is
@@ -497,7 +505,7 @@ transformed to golang types.
 
 #### Exchange type
 
-```
+```go
 type Exchange struct {
 	Name       string
 	Vhost      string
@@ -520,7 +528,7 @@ type Exchange struct {
 
 #### Queue type
 
-```
+```go
 type Queue struct {
 	MessagesDetails struct {
 		Rate float64 
@@ -580,12 +588,11 @@ type Queue struct {
 	IdleSince string 
 	Memory    int    
 }
-
 ```
 
 #### Binding type
 
-```
+```go
 type Binding struct {
 	Source          string
 	Vhost           string

@@ -92,7 +92,8 @@ func mockStdDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "")
 }
 
-var bindingResult = `
+const (
+	bindingResult = `
 [
     {
         "source": "",
@@ -272,7 +273,7 @@ var bindingResult = `
     }
 ]`
 
-var exchangeResult = `
+	exchangeResult = `
 [
     {
         "name": "",
@@ -409,8 +410,8 @@ var exchangeResult = `
 ]
 `
 
-// result of GET /api/queues
-var queueResult = `
+	// result of GET /api/queues
+	queueResult = `
 [
     {
         "messages_details": {
@@ -1013,7 +1014,7 @@ var queueResult = `
 ]
 `
 
-var overviewResult = `
+	overviewResult = `
 {
     "management_version": "3.6.9",
     "rates_mode": "basic",
@@ -1163,7 +1164,7 @@ var overviewResult = `
     ]
 }`
 
-var consumerResult = ` 
+	consumerResult = ` 
 [
     {
         "arguments": [
@@ -1203,7 +1204,7 @@ var consumerResult = `
     }
 ]`
 
-var channelResult = `
+	channelResult = `
 
 [
    {
@@ -1256,7 +1257,7 @@ var channelResult = `
 ]
 `
 
-var connectionResult = `
+	connectionResult = `
 [
    {
       "host" : "172.17.0.2",
@@ -1315,3 +1316,4 @@ var connectionResult = `
          "rate" : 5928.2
       }
    }]`
+)

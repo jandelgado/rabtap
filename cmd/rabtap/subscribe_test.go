@@ -50,7 +50,7 @@ func TestMessageReceiveLoop(t *testing.T) {
 	received := 0
 
 	receiveFunc := func(*amqp.Delivery) error {
-		received = received + 1
+		received++
 		done <- true
 		return nil
 	}

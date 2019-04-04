@@ -8,7 +8,7 @@ import (
 	"crypto/tls"
 	"os"
 
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 func tapCmdShutdownFunc(taps []*rabtap.AmqpTap) {
@@ -32,7 +32,11 @@ func cmdTap(tapConfig []rabtap.TapConfiguration, tlsConfig *tls.Config,
 	tapMessageChannel := make(rabtap.TapChannel)
 	taps := establishTaps(tapMessageChannel, tapConfig, tlsConfig)
 	defer tapCmdShutdownFunc(taps)
-	messageReceiveLoop(tapMessageChannel, messageReceiveFunc, signalChannel)
+	err := messageReceiveLoop(tapMessageChannel, messageReceiveFunc, signalChannel)
+	if err != nil {
+		log.Errorf("tap failed with %v", err)
+	}
+
 }
 
 // establishTaps establishes all message taps as specified by tapConfiguration

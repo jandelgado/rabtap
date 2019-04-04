@@ -9,7 +9,7 @@ package rabtap
 import (
 	"crypto/tls"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
@@ -55,7 +55,7 @@ func (s *AmqpTap) createWorkerFunc(
 	return func(rabbitConn *amqp.Connection, controlCh chan ControlMessage) ReconnectAction {
 		amqpChs := s.setupTapsForExchanges(rabbitConn, exchangeConfigList, tapCh)
 		fanin := NewFanin(amqpChs)
-		defer func() { fanin.Stop() }()
+		defer func() { _ = fanin.Stop() }()
 
 		action := s.messageLoop(tapCh, fanin, controlCh)
 
@@ -75,7 +75,7 @@ func (s *AmqpTap) setupTapsForExchanges(
 	tapCh TapChannel) []interface{} {
 
 	// cleanup left-overs in case of re-connect
-	s.cleanup(rabbitConn)
+	_ = s.cleanup(rabbitConn)
 
 	var channels []interface{}
 
@@ -184,7 +184,7 @@ func (s *AmqpTap) createExchangeToExchangeBinding(conn *amqp.Connection,
 		// bind failed, so we can also delete our tap-exchange
 		ch, _ = conn.Channel()
 		defer ch.Close()
-		RemoveExchange(ch, tapExchangeName, false)
+		_ = RemoveExchange(ch, tapExchangeName, false)
 		return err
 	}
 	return nil

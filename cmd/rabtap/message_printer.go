@@ -3,26 +3,25 @@
 package main
 
 import (
-	"encoding/json"
 	"io"
 	"text/template"
 
-	"github.com/streadway/amqp"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // messageTemplate is the default template to print a message
 const messageTemplate = `------ {{ .Title }} ------
-exchange.......: {{ ExchangeColor .Message.Exchange }}
-{{with .Message.RoutingKey}}routingkey.....: {{ KeyColor .}}
-{{end}}{{with .Message.Priority}}priority.......: {{.}}
-{{end}}{{with .Message.Expiration}}expiration.....: {{.}}
-{{end}}{{with .Message.ContentType}}content-type...: {{.}}
-{{end}}{{with .Message.ContentEncoding}}content-enc....: {{.}}
-{{end}}{{with .Message.MessageId}}app-message-id.: {{.}}
-{{end}}{{if not .Message.Timestamp.IsZero}}app-timestamp..: {{ .Message.Timestamp }}
-{{end}}{{with .Message.Type}}app-type.......: {{.}}
-{{end}}{{with .Message.CorrelationId}}app-corr-id....: {{.}}
-{{end}}{{with .Message.Headers}}app-headers....: {{.}}
+exchange.......: {{ ExchangeColor .Message.AmqpMessage.Exchange }}
+{{with .Message.AmqpMessage.RoutingKey}}routingkey.....: {{ KeyColor .}}
+{{end}}{{with .Message.AmqpMessage.Priority}}priority.......: {{.}}
+{{end}}{{with .Message.AmqpMessage.Expiration}}expiration.....: {{.}}
+{{end}}{{with .Message.AmqpMessage.ContentType}}content-type...: {{.}}
+{{end}}{{with .Message.AmqpMessage.ContentEncoding}}content-enc....: {{.}}
+{{end}}{{with .Message.AmqpMessage.MessageId}}app-message-id.: {{.}}
+{{end}}{{if not .Message.AmqpMessage.Timestamp.IsZero}}app-timestamp..: {{ .Message.AmqpMessage.Timestamp }}
+{{end}}{{with .Message.AmqpMessage.Type}}app-type.......: {{.}}
+{{end}}{{with .Message.AmqpMessage.CorrelationId}}app-corr-id....: {{.}}
+{{end}}{{with .Message.AmqpMessage.Headers}}app-headers....: {{.}}
 {{end -}}
 {{ MessageColor .Body }}
 
@@ -33,17 +32,14 @@ type PrintMessageInfo struct {
 	// Title to print
 	Title string
 	// Message receveived
-	Message amqp.Delivery
+	Message rabtap.TapMessage
 	// formatted body
 	Body string
-	// formatted headers
-	Headers string
 }
 
-// MessageFormatter formats the body of ampq.Delivery objects according to its
-// type
+// MessageFormatter formats the body of tapped message
 type MessageFormatter interface {
-	Format(message *amqp.Delivery) string
+	Format(message rabtap.TapMessage) string
 }
 
 // Registry of available message formatters. Key is contentType
@@ -55,36 +51,27 @@ func RegisterMessageFormatter(contentType string, formatter MessageFormatter) {
 	messageFormatters[contentType] = formatter
 }
 
-// NewMessageFormatter return a message formatter suitable for the given
-// message type, determined by the message headers content type.
-func NewMessageFormatter(message *amqp.Delivery) MessageFormatter {
-	if formatter, ok := messageFormatters[message.ContentType]; ok {
+// NewMessageFormatter return a message formatter suitable the given
+// contentType.
+func NewMessageFormatter(contentType string) MessageFormatter {
+	if formatter, ok := messageFormatters[contentType]; ok {
 		return formatter
 	}
 	return DefaultMessageFormatter{}
 }
 
-// PrettyPrintMessage formats and prints a amqp.Delivery message
-func PrettyPrintMessage(out io.Writer, message *amqp.Delivery,
+// PrettyPrintMessage formats and prints a tapped message
+func PrettyPrintMessage(out io.Writer, message rabtap.TapMessage,
 	title string, noColor bool) error {
 
 	colorizer := NewColorPrinter(noColor)
 
-	// get mesagge formatter according to message type
-	formatter := NewMessageFormatter(message)
+	formatter := NewMessageFormatter(message.AmqpMessage.ContentType)
 
-	// nicely print headers as JSON for better readability
-	headers, err := json.Marshal(message.Headers)
-	if err != nil {
-		return err
-	}
-
-	body := formatter.Format(message)
 	printStruct := PrintMessageInfo{
 		Title:   title,
-		Message: *message,
-		Body:    body,
-		Headers: string(headers),
+		Message: message,
+		Body:    formatter.Format(message),
 	}
 	t := template.Must(template.New("message").
 		Funcs(colorizer.GetFuncMap()).Parse(messageTemplate))

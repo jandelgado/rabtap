@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,9 +15,9 @@ import (
 func TestNewMessageFormatter(t *testing.T) {
 
 	assert.Equal(t, JSONMessageFormatter{},
-		NewMessageFormatter(&amqp.Delivery{ContentType: "application/json"}))
+		NewMessageFormatter("application/json"))
 	assert.Equal(t, DefaultMessageFormatter{},
-		NewMessageFormatter(&amqp.Delivery{ContentType: "unknown"}))
+		NewMessageFormatter("unknown"))
 }
 
 func ExamplePrettyPrintMessage() {
@@ -36,7 +37,8 @@ func ExamplePrettyPrintMessage() {
 		Body:            []byte("simple test message"),
 	}
 
-	_ = PrettyPrintMessage(os.Stdout, &message, "title", true)
+	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
+	_ = PrettyPrintMessage(os.Stdout, rabtap.TapMessage{&message, nil, ts}, "title", true)
 
 	// Output:
 	// ------ title ------
@@ -62,7 +64,8 @@ func ExamplePrettyPrintMessage_withFilteredAtributes() {
 		Body:     []byte("simple test message"),
 	}
 
-	_ = PrettyPrintMessage(os.Stdout, &message, "title", true)
+	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
+	_ = PrettyPrintMessage(os.Stdout, rabtap.TapMessage{&message, nil, ts}, "title", true)
 
 	// Output:
 	// ------ title ------

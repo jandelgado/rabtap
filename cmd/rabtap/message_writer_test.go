@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,7 @@ func TestSaveMessageToRawFile(t *testing.T) {
 	// SaveMessagesToFiles() will create files "test.dat" and "test.json" in
 	// testdir.
 	basename := filepath.Join(testdir, "test")
-	err = SaveMessageToRawFile(basename, testMessage)
+	err = SaveMessageToRawFile(basename, rabtap.TapMessage{testMessage, nil, time.Now()})
 	assert.Nil(t, err)
 
 	// check contents of message body .dat file
@@ -71,7 +72,7 @@ func TestSaveMessageToRawFile(t *testing.T) {
 func TestSaveMessageToFilesToInvalidDir(t *testing.T) {
 	// use nonexisting path
 	filename := filepath.Join("/thispathshouldnotexist", "test")
-	err := SaveMessageToRawFile(filename, testMessage)
+	err := SaveMessageToRawFile(filename, rabtap.TapMessage{testMessage, nil, time.Now()})
 	assert.NotNil(t, err)
 }
 
@@ -83,7 +84,7 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 	defer os.RemoveAll(testdir)
 
 	filename := filepath.Join(testdir, "test")
-	err = SaveMessageToJSONFile(filename, testMessage)
+	err = SaveMessageToJSONFile(filename, rabtap.TapMessage{testMessage, nil, time.Now()})
 	assert.Nil(t, err)
 
 	contents, err := ioutil.ReadFile(filename)
@@ -103,7 +104,7 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 func TestSaveMessageToFileToInvalidDir(t *testing.T) {
 	// use nonexisting path
 	filename := filepath.Join("/thispathshouldnotexist", "test")
-	err := SaveMessageToJSONFile(filename, testMessage)
+	err := SaveMessageToJSONFile(filename, rabtap.TapMessage{testMessage, nil, time.Now()})
 	assert.NotNil(t, err)
 }
 
@@ -114,10 +115,8 @@ func TestCreateTimestampFilename(t *testing.T) {
 }
 
 func ExampleWriteMessageBodyBlob() {
-	var testMessage = &amqp.Delivery{
-		Body: []byte("simple test message."),
-	}
-	err := WriteMessageBodyBlob(os.Stdout, testMessage)
+	body := []byte("simple test message.")
+	err := WriteMessageBodyBlob(os.Stdout, body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -130,7 +129,7 @@ func ExampleWriteMessageBodyBlob() {
 func ExampleWriteMessageJSON_withBody() {
 
 	// serialize with message body, Body will be base64 encoded.
-	err := WriteMessageJSON(os.Stdout, true /* w/ body*/, testMessage)
+	err := WriteMessageJSON(os.Stdout, true /* w/ body*/, rabtap.TapMessage{testMessage, nil, time.Now()})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -161,7 +160,7 @@ func ExampleWriteMessageJSON_withBody() {
 }
 
 func ExampleWriteMessageJSON_withoutBody() {
-	err := WriteMessageJSON(os.Stdout, false /*w/o body*/, testMessage)
+	err := WriteMessageJSON(os.Stdout, false /*w/o body*/, rabtap.TapMessage{testMessage, nil, time.Now()})
 	if err != nil {
 		log.Fatal(err)
 	}

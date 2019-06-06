@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
@@ -22,7 +23,9 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 
 	var b bytes.Buffer
 	rcvFunc := createMessageReceiveFunc(&b, false, &testDir, false)
-	_ = rcvFunc(&amqp.Delivery{Body: []byte("Testmessage")})
+	message := rabtap.TapMessage{&amqp.Delivery{Body: []byte("Testmessage")}, nil, time.Now()}
+
+	_ = rcvFunc(message)
 
 	assert.True(t, strings.Contains(b.String(), "Testmessage"))
 
@@ -36,7 +39,9 @@ func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
 
 	var b bytes.Buffer
 	rcvFunc := createMessageReceiveFunc(&b, true, &testDir, false)
-	_ = rcvFunc(&amqp.Delivery{Body: []byte("Testmessage")})
+	message := rabtap.TapMessage{&amqp.Delivery{Body: []byte("Testmessage")}, nil, time.Now()}
+
+	_ = rcvFunc(message)
 
 	assert.True(t, strings.Contains(b.String(), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))
 
@@ -49,7 +54,7 @@ func TestMessageReceiveLoop(t *testing.T) {
 	done := make(chan bool)
 	received := 0
 
-	receiveFunc := func(*amqp.Delivery) error {
+	receiveFunc := func(rabtap.TapMessage) error {
 		received++
 		done <- true
 		return nil

@@ -8,8 +8,9 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"time"
 
-	uuid "github.com/satori/go.uuid"
+	uuid "github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
@@ -43,7 +44,7 @@ func (s *AmqpTap) EstablishTap(exchangeConfigList []ExchangeConfiguration,
 	tapCh TapChannel) error {
 	err := s.connection.Connect(s.createWorkerFunc(exchangeConfigList, tapCh))
 	if err != nil {
-		tapCh <- &TapMessage{nil, err}
+		tapCh <- &TapMessage{nil, err, time.Now()}
 	}
 	return err
 }
@@ -84,13 +85,13 @@ func (s *AmqpTap) setupTapsForExchanges(
 		exchange, queue, err := s.setupTap(rabbitConn, exchangeConfig)
 		if err != nil {
 			// pass err to client, can decide to close tap.
-			tapCh <- &TapMessage{nil, err}
+			tapCh <- &TapMessage{nil, err, time.Now()}
 			break
 		}
 		msgCh, err := s.consumeMessages(rabbitConn, queue)
 		if err != nil {
 			// pass err to client, can decide to close tap.
-			tapCh <- &TapMessage{nil, err}
+			tapCh <- &TapMessage{nil, err, time.Now()}
 			break
 		}
 		channels = append(channels, msgCh)
@@ -108,7 +109,7 @@ func (s *AmqpTap) setupTapsForExchanges(
 func (s *AmqpTap) setupTap(conn *amqp.Connection,
 	exchangeConfig ExchangeConfiguration) (string, string, error) {
 
-	id := uuid.NewV4().String()
+	id := uuid.Must(uuid.NewRandom()).String()
 	tapExchange := getTapExchangeNameForExchange(exchangeConfig.Exchange, id[:12])
 	tapQueue := getTapQueueNameForExchange(exchangeConfig.Exchange, id[:12])
 

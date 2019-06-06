@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
 )
 
@@ -49,14 +50,16 @@ func CreateTimestampFilename(t time.Time) string {
 
 // NewRabtapPersistentMessage creates RabtapPersistentMessage a object
 // from an amqp.Delivery
-func NewRabtapPersistentMessage(m amqp.Delivery,
+func NewRabtapPersistentMessage(message rabtap.TapMessage,
 	includeBody bool) RabtapPersistentMessage {
+
+	m := message.AmqpMessage
 
 	body := []byte{}
 	if includeBody {
 		body = m.Body
 	}
-	message := RabtapPersistentMessage{
+	return RabtapPersistentMessage{
 		Headers:         m.Headers,
 		ContentType:     m.ContentType,
 		ContentEncoding: m.ContentEncoding,
@@ -74,7 +77,6 @@ func NewRabtapPersistentMessage(m amqp.Delivery,
 		RoutingKey:      m.RoutingKey,
 		Body:            body,
 	}
-	return message
 }
 
 // ToAmqpPublishing converts message to an amqp.Publishing object
@@ -96,16 +98,16 @@ func (s RabtapPersistentMessage) ToAmqpPublishing() amqp.Publishing {
 }
 
 // WriteMessageBodyBlob writes the given message the provided stream.
-func WriteMessageBodyBlob(out io.Writer, message *amqp.Delivery) error {
-	_, err := out.Write(message.Body)
+func WriteMessageBodyBlob(out io.Writer, body []byte) error {
+	_, err := out.Write(body)
 	return err
 }
 
 // WriteMessageJSON writes the given message as JSON, optionally with the
 // body included to a stream.
-func WriteMessageJSON(out io.Writer, includeBody bool, message *amqp.Delivery) error {
+func WriteMessageJSON(out io.Writer, includeBody bool, message rabtap.TapMessage) error {
 	// serialize message without body
-	metadata, err := json.MarshalIndent(NewRabtapPersistentMessage(*message, includeBody), "", "  ")
+	metadata, err := json.MarshalIndent(NewRabtapPersistentMessage(message, includeBody), "", "  ")
 	if err != nil {
 		return err
 	}
@@ -113,22 +115,21 @@ func WriteMessageJSON(out io.Writer, includeBody bool, message *amqp.Delivery) e
 	return err
 }
 
-func saveMessageBodyAsBlobFile(filename string, message *amqp.Delivery) error {
-	// save the message as binary file 1:1
+func saveMessageBodyAsBlobFile(filename string, body []byte) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	writer := bufio.NewWriter(file)
-	err = WriteMessageBodyBlob(writer, message)
+	err = WriteMessageBodyBlob(writer, body)
 	if err != nil {
 		return err
 	}
 	return writer.Flush()
 }
 
-func saveMessageAsJSONFile(filename string, includeBody bool, message *amqp.Delivery) error {
+func saveMessageAsJSONFile(filename string, includeBody bool, message rabtap.TapMessage) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -144,11 +145,11 @@ func saveMessageAsJSONFile(filename string, includeBody bool, message *amqp.Deli
 
 // SaveMessageToRawFile writes a message to 2 files, one with the metadata, and
 // one with the payload
-func SaveMessageToRawFile(basename string, message *amqp.Delivery) error {
+func SaveMessageToRawFile(basename string, message rabtap.TapMessage) error {
 	filenameRaw := basename + ".dat"
 	filenameJSON := basename + ".json"
 	log.Debugf("saving message  %s (RAW) with meta data in %s", filenameRaw, filenameJSON)
-	err := saveMessageBodyAsBlobFile(filenameRaw, message)
+	err := saveMessageBodyAsBlobFile(filenameRaw, message.AmqpMessage.Body)
 	if err != nil {
 		return err
 	}
@@ -157,7 +158,7 @@ func SaveMessageToRawFile(basename string, message *amqp.Delivery) error {
 
 // SaveMessageToJSONFile writes a message to a single JSON file, where
 // the body will be BASE64 encoded
-func SaveMessageToJSONFile(filename string, message *amqp.Delivery) error {
+func SaveMessageToJSONFile(filename string, message rabtap.TapMessage) error {
 	log.Debugf("saving message to %s (JSON)", filename)
 	return saveMessageAsJSONFile(filename, true, message)
 }

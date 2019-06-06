@@ -38,7 +38,7 @@ func ExamplePrettyPrintMessage() {
 	}
 
 	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
-	_ = PrettyPrintMessage(os.Stdout, rabtap.TapMessage{&message, nil, ts}, "title", true)
+	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, nil, ts), "title", true)
 
 	// Output:
 	// ------ title ------
@@ -65,7 +65,7 @@ func ExamplePrettyPrintMessage_withFilteredAtributes() {
 	}
 
 	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
-	_ = PrettyPrintMessage(os.Stdout, rabtap.TapMessage{&message, nil, ts}, "title", true)
+	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, nil, ts), "title", true)
 
 	// Output:
 	// ------ title ------

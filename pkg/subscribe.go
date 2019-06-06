@@ -35,6 +35,11 @@ type TapMessage struct {
 	TimeReceived time.Time
 }
 
+// NewTapMessage constructs a new TapMessage
+func NewTapMessage(message *amqp.Delivery, err error, ts time.Time) TapMessage {
+	return TapMessage{AmqpMessage: message, Error: err, TimeReceived: ts}
+}
+
 // TapChannel is a channel for *TapMessage objects
 type TapChannel chan *TapMessage
 

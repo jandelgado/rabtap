@@ -24,9 +24,9 @@ func TestCmdTap(t *testing.T) {
 
 	// receiveFunc must receive messages passed through tapMessageChannel
 	done := make(chan bool)
-	receiveFunc := func(message *amqp.Delivery) error {
+	receiveFunc := func(message rabtap.TapMessage) error {
 		log.Debug("received message on tap: #+v", message)
-		if string(message.Body) == "Hello" {
+		if string(message.AmqpMessage.Body) == "Hello" {
 			done <- true
 		}
 		return nil

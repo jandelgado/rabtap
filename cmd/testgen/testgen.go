@@ -1,3 +1,4 @@
+// (c) copyright 2017-2019 by Jan Delgado
 package main
 
 // testgen is a simple test data generator, which sets up a topology and

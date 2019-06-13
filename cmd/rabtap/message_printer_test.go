@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,9 +15,9 @@ import (
 func TestNewMessageFormatter(t *testing.T) {
 
 	assert.Equal(t, JSONMessageFormatter{},
-		NewMessageFormatter(&amqp.Delivery{ContentType: "application/json"}))
+		NewMessageFormatter("application/json"))
 	assert.Equal(t, DefaultMessageFormatter{},
-		NewMessageFormatter(&amqp.Delivery{ContentType: "unknown"}))
+		NewMessageFormatter("unknown"))
 }
 
 func ExamplePrettyPrintMessage() {
@@ -36,10 +37,12 @@ func ExamplePrettyPrintMessage() {
 		Body:            []byte("simple test message"),
 	}
 
-	_ = PrettyPrintMessage(os.Stdout, &message, "title", true)
+	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
+	noColor := true
+	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, nil, ts), noColor)
 
 	// Output:
-	// ------ title ------
+	// ------ message received on 2019-06-06T23:00:00Z ------
 	// exchange.......: exchange
 	// routingkey.....: routingkey
 	// priority.......: 99
@@ -62,10 +65,12 @@ func ExamplePrettyPrintMessage_withFilteredAtributes() {
 		Body:     []byte("simple test message"),
 	}
 
-	_ = PrettyPrintMessage(os.Stdout, &message, "title", true)
+	noColor := true
+	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
+	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, nil, ts), noColor)
 
 	// Output:
-	// ------ title ------
+	// ------ message received on 2019-06-06T23:00:00Z ------
 	// exchange.......: exchange
 	// simple test message
 	//

@@ -4,8 +4,9 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"time"
 
-	uuid "github.com/satori/go.uuid"
+	uuid "github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
@@ -29,12 +30,18 @@ func NewAmqpSubscriber(uri string, exclusive bool, tlsConfig *tls.Config, logger
 // TapMessage objects are passed through a tapChannel from tap to client
 // either AmqpMessage or Error is set
 type TapMessage struct {
-	AmqpMessage *amqp.Delivery
-	Error       error
+	AmqpMessage       *amqp.Delivery
+	Error             error
+	ReceivedTimestamp time.Time
+}
+
+// NewTapMessage constructs a new TapMessage
+func NewTapMessage(message *amqp.Delivery, err error, ts time.Time) TapMessage {
+	return TapMessage{AmqpMessage: message, Error: err, ReceivedTimestamp: ts}
 }
 
 // TapChannel is a channel for *TapMessage objects
-type TapChannel chan *TapMessage
+type TapChannel chan TapMessage
 
 // Close closes the connection to the broker and ends tapping. Returns result
 // of amqp.Connection.Close() operation.
@@ -54,7 +61,7 @@ func (s *AmqpSubscriber) Connected() bool {
 func (s *AmqpSubscriber) EstablishSubscription(queueName string, tapCh TapChannel) error {
 	err := s.connection.Connect(s.createWorkerFunc(queueName, tapCh))
 	if err != nil {
-		tapCh <- &TapMessage{nil, err}
+		tapCh <- NewTapMessage(nil, err, time.Now())
 	}
 	return err
 }
@@ -65,7 +72,7 @@ func (s *AmqpSubscriber) createWorkerFunc(
 	return func(rabbitConn *amqp.Connection, controlCh chan ControlMessage) ReconnectAction {
 		ch, err := s.consumeMessages(rabbitConn, queueName)
 		if err != nil {
-			tapCh <- &TapMessage{nil, err}
+			tapCh <- NewTapMessage(nil, err, time.Now())
 			return doNotReconnect
 		}
 		// messageloop expects Fanin object, which expects array of channels.
@@ -84,7 +91,7 @@ func (s *AmqpSubscriber) messageLoop(tapCh TapChannel,
 		select {
 		case message := <-fanin.Ch:
 			amqpMessage, _ := message.(amqp.Delivery)
-			tapCh <- &TapMessage{&amqpMessage, nil}
+			tapCh <- NewTapMessage(&amqpMessage, nil, time.Now())
 
 		case controlMessage := <-controlCh:
 			switch controlMessage {
@@ -111,7 +118,7 @@ func (s *AmqpSubscriber) consumeMessages(conn *amqp.Connection,
 
 	msgs, err := ch.Consume(
 		queueName,
-		"__rabtap-consumer-"+uuid.NewV4().String()[:8], // TODO param
+		"__rabtap-consumer-"+uuid.Must(uuid.NewRandom()).String()[:8], // TODO param
 		true, // auto-ack
 		s.exclusive,
 		false, // no-local - unsupported

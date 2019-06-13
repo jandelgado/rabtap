@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,7 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 			amqpURI:            "invalid uri",
 			queue:              "queue",
 			tlsConfig:          &tls.Config{},
-			messageReceiveFunc: func(*amqp.Delivery) error { return nil },
+			messageReceiveFunc: func(rabtap.TapMessage) error { return nil },
 			signalChannel:      make(chan os.Signal, 1)})
 		done <- true
 	}()
@@ -49,9 +50,9 @@ func TestCmdSub(t *testing.T) {
 	amqpURI := testcommon.IntegrationURIFromEnv()
 
 	done := make(chan bool)
-	receiveFunc := func(message *amqp.Delivery) error {
+	receiveFunc := func(message rabtap.TapMessage) error {
 		log.Debug("test: received message: #+v", message)
-		if string(message.Body) == testMessage {
+		if string(message.AmqpMessage.Body) == testMessage {
 			done <- true
 		}
 		return nil

@@ -2,8 +2,6 @@
 
 package main
 
-// subscribe cli command handler
-
 import (
 	"crypto/tls"
 	"os"

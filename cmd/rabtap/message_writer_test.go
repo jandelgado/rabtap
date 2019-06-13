@@ -44,7 +44,8 @@ func TestSaveMessageToRawFile(t *testing.T) {
 	// SaveMessagesToFiles() will create files "test.dat" and "test.json" in
 	// testdir.
 	basename := filepath.Join(testdir, "test")
-	err = SaveMessageToRawFile(basename, rabtap.NewTapMessage(testMessage, nil, time.Now()))
+	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
+	err = SaveMessageToRawFile(basename, rabtap.NewTapMessage(testMessage, nil, createdTs))
 	assert.Nil(t, err)
 
 	// check contents of message body .dat file
@@ -67,6 +68,7 @@ func TestSaveMessageToRawFile(t *testing.T) {
 	assert.Equal(t, len(testMessage.Headers), len(jsonMetaActual.Headers))
 	assert.Equal(t, testMessage.Headers["header"], jsonMetaActual.Headers["header"])
 	assert.Equal(t, testMessage.Timestamp, jsonMetaActual.Timestamp)
+	assert.Equal(t, createdTs, jsonMetaActual.XRabtapReceivedTimestamp)
 }
 
 func TestSaveMessageToFilesToInvalidDir(t *testing.T) {
@@ -84,7 +86,8 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 	defer os.RemoveAll(testdir)
 
 	filename := filepath.Join(testdir, "test")
-	err = SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, nil, time.Now()))
+	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
+	err = SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, nil, createdTs))
 	assert.Nil(t, err)
 
 	contents, err := ioutil.ReadFile(filename)
@@ -98,6 +101,7 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 	assert.Equal(t, len(testMessage.Headers), len(jsonActual.Headers))
 	assert.Equal(t, testMessage.Headers["header"], jsonActual.Headers["header"])
 	assert.Equal(t, testMessage.Timestamp, jsonActual.Timestamp)
+	assert.Equal(t, createdTs, jsonActual.XRabtapReceivedTimestamp)
 	assert.Equal(t, []byte("simple test message."), jsonActual.Body)
 }
 
@@ -114,22 +118,11 @@ func TestCreateTimestampFilename(t *testing.T) {
 	assert.Equal(t, "2009-11-10T23_01_02.000000003Z", filename)
 }
 
-func ExampleWriteMessageBodyBlob() {
-	body := []byte("simple test message.")
-	err := WriteMessageBodyBlob(os.Stdout, body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Output:
-	// simple test message.
-
-}
-
-func ExampleWriteMessageJSON_withBody() {
+func ExampleWriteMessageJSON() {
 
 	// serialize with message body, Body will be base64 encoded.
-	err := WriteMessageJSON(os.Stdout, true /* w/ body*/, rabtap.NewTapMessage(testMessage, nil, time.Now()))
+	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
+	err := WriteMessageJSON(os.Stdout, rabtap.NewTapMessage(testMessage, nil, createdTs))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -155,37 +148,7 @@ func ExampleWriteMessageJSON_withBody() {
 	//   "Redelivered": false,
 	//   "Exchange": "exchange",
 	//   "RoutingKey": "routingkey",
+	//   "XRabtapReceivedTimestamp": "2019-06-13T17:45:01Z",
 	//   "Body": "c2ltcGxlIHRlc3QgbWVzc2FnZS4="
-	// }
-}
-
-func ExampleWriteMessageJSON_withoutBody() {
-	err := WriteMessageJSON(os.Stdout, false /*w/o body*/, rabtap.NewTapMessage(testMessage, nil, time.Now()))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Output:
-	// {
-	//   "Headers": {
-	//     "header": "value"
-	//   },
-	//   "ContentType": "plain/text",
-	//   "ContentEncoding": "utf-8",
-	//   "DeliveryMode": 0,
-	//   "Priority": 99,
-	//   "CorrelationID": "4712",
-	//   "ReplyTo": "",
-	//   "Expiration": "2017-05-22 17:00:00",
-	//   "MessageID": "4711",
-	//   "Timestamp": "2009-11-10T23:00:00Z",
-	//   "Type": "some type",
-	//   "UserID": "456",
-	//   "AppID": "123",
-	//   "DeliveryTag": 0,
-	//   "Redelivered": false,
-	//   "Exchange": "exchange",
-	//   "RoutingKey": "routingkey",
-	//   "Body": ""
 	// }
 }

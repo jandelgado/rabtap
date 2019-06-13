@@ -1,6 +1,12 @@
 
 # Changelog for rabtap
 
+## v1.17 (2019-06-13)
+
+* Timestamp when message was received by rabtap now stored in JSON format
+  in `XRabtapReceivedTimestamp` field.
+* Simplified code
+
 ## v1.16 (2019-04-03)
 
 * new option `--by-connection` for info command added, making `info` show

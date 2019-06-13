@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2019 Jan Delgado
 // RabbitMQ wire-tap. Functions to hook to exchanges and to keep the
 // connection to the broker alive in case of connection errors.
 
@@ -44,7 +44,7 @@ func (s *AmqpTap) EstablishTap(exchangeConfigList []ExchangeConfiguration,
 	tapCh TapChannel) error {
 	err := s.connection.Connect(s.createWorkerFunc(exchangeConfigList, tapCh))
 	if err != nil {
-		tapCh <- &TapMessage{nil, err, time.Now()}
+		tapCh <- NewTapMessage(nil, err, time.Now())
 	}
 	return err
 }
@@ -85,13 +85,13 @@ func (s *AmqpTap) setupTapsForExchanges(
 		exchange, queue, err := s.setupTap(rabbitConn, exchangeConfig)
 		if err != nil {
 			// pass err to client, can decide to close tap.
-			tapCh <- &TapMessage{nil, err, time.Now()}
+			tapCh <- NewTapMessage(nil, err, time.Now())
 			break
 		}
 		msgCh, err := s.consumeMessages(rabbitConn, queue)
 		if err != nil {
 			// pass err to client, can decide to close tap.
-			tapCh <- &TapMessage{nil, err, time.Now()}
+			tapCh <- NewTapMessage(nil, err, time.Now())
 			break
 		}
 		channels = append(channels, msgCh)

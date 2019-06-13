@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
@@ -38,6 +38,9 @@ type RabtapPersistentMessage struct {
 	Exchange    string
 	RoutingKey  string
 
+	// rabtap specific fields
+	XRabtapReceivedTimestamp time.Time
+
 	Body []byte
 }
 
@@ -48,34 +51,29 @@ func CreateTimestampFilename(t time.Time) string {
 	return strings.Replace(basename, ":", "_", -1)
 }
 
-// NewRabtapPersistentMessage creates RabtapPersistentMessage a object
-// from an amqp.Delivery
-func NewRabtapPersistentMessage(message rabtap.TapMessage,
-	includeBody bool) RabtapPersistentMessage {
+// NewRabtapPersistentMessage creates RabtapPersistentMessage object
+// from a rabtap.TapMessage
+func NewRabtapPersistentMessage(message rabtap.TapMessage) RabtapPersistentMessage {
 
 	m := message.AmqpMessage
-
-	body := []byte{}
-	if includeBody {
-		body = m.Body
-	}
 	return RabtapPersistentMessage{
-		Headers:         m.Headers,
-		ContentType:     m.ContentType,
-		ContentEncoding: m.ContentEncoding,
-		Priority:        m.Priority,
-		CorrelationID:   m.CorrelationId,
-		ReplyTo:         m.ReplyTo,
-		Expiration:      m.Expiration,
-		MessageID:       m.MessageId,
-		Timestamp:       m.Timestamp,
-		Type:            m.Type,
-		UserID:          m.UserId,
-		AppID:           m.AppId,
-		DeliveryTag:     m.DeliveryTag,
-		Exchange:        m.Exchange,
-		RoutingKey:      m.RoutingKey,
-		Body:            body,
+		Headers:                  m.Headers,
+		ContentType:              m.ContentType,
+		ContentEncoding:          m.ContentEncoding,
+		Priority:                 m.Priority,
+		CorrelationID:            m.CorrelationId,
+		ReplyTo:                  m.ReplyTo,
+		Expiration:               m.Expiration,
+		MessageID:                m.MessageId,
+		Timestamp:                m.Timestamp,
+		Type:                     m.Type,
+		UserID:                   m.UserId,
+		AppID:                    m.AppId,
+		DeliveryTag:              m.DeliveryTag,
+		Exchange:                 m.Exchange,
+		RoutingKey:               m.RoutingKey,
+		XRabtapReceivedTimestamp: message.ReceivedTimestamp,
+		Body:                     m.Body,
 	}
 }
 
@@ -97,17 +95,10 @@ func (s RabtapPersistentMessage) ToAmqpPublishing() amqp.Publishing {
 		Body:            s.Body}
 }
 
-// WriteMessageBodyBlob writes the given message the provided stream.
-func WriteMessageBodyBlob(out io.Writer, body []byte) error {
-	_, err := out.Write(body)
-	return err
-}
-
 // WriteMessageJSON writes the given message as JSON, optionally with the
 // body included to a stream.
-func WriteMessageJSON(out io.Writer, includeBody bool, message rabtap.TapMessage) error {
-	// serialize message without body
-	metadata, err := json.MarshalIndent(NewRabtapPersistentMessage(message, includeBody), "", "  ")
+func WriteMessageJSON(out io.Writer, message rabtap.TapMessage) error {
+	metadata, err := json.MarshalIndent(NewRabtapPersistentMessage(message), "", "  ")
 	if err != nil {
 		return err
 	}
@@ -122,21 +113,21 @@ func saveMessageBodyAsBlobFile(filename string, body []byte) error {
 	}
 	defer file.Close()
 	writer := bufio.NewWriter(file)
-	err = WriteMessageBodyBlob(writer, body)
+	_, err = writer.Write(body)
 	if err != nil {
 		return err
 	}
 	return writer.Flush()
 }
 
-func saveMessageAsJSONFile(filename string, includeBody bool, message rabtap.TapMessage) error {
+func saveMessageAsJSONFile(filename string, message rabtap.TapMessage) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	writer := bufio.NewWriter(file)
-	err = WriteMessageJSON(writer, includeBody, message)
+	err = WriteMessageJSON(writer, message)
 	if err != nil {
 		return err
 	}
@@ -153,12 +144,18 @@ func SaveMessageToRawFile(basename string, message rabtap.TapMessage) error {
 	if err != nil {
 		return err
 	}
-	return saveMessageAsJSONFile(filenameJSON, false, message)
+	//return saveMessageAsJSONFile(filenameJSON, false, message)
+	// save metadata file without the body
+	oldBody := message.AmqpMessage.Body
+	message.AmqpMessage.Body = []byte{}
+	err = saveMessageAsJSONFile(filenameJSON, message)
+	message.AmqpMessage.Body = oldBody
+	return err
 }
 
 // SaveMessageToJSONFile writes a message to a single JSON file, where
 // the body will be BASE64 encoded
 func SaveMessageToJSONFile(filename string, message rabtap.TapMessage) error {
 	log.Debugf("saving message to %s (JSON)", filename)
-	return saveMessageAsJSONFile(filename, true, message)
+	return saveMessageAsJSONFile(filename, message)
 }

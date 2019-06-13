@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
@@ -34,7 +34,7 @@ func messageReceiveLoop(messageChan rabtap.TapChannel,
 				return message.Error
 			}
 			// let the receiveFunc do the actual message processing
-			if err := messageReceiveFunc(*message); err != nil {
+			if err := messageReceiveFunc(message); err != nil {
 				log.Error(err)
 			}
 		case <-signalChannel:
@@ -50,7 +50,7 @@ func messageReceiveLoop(messageChan rabtap.TapChannel,
 func createMessageReceiveFuncJSON(out io.Writer, optSaveDir *string,
 	_ /* noColor */ bool) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
-		err := WriteMessageJSON(out, true, message)
+		err := WriteMessageJSON(out, message)
 		if err != nil || optSaveDir == nil {
 			return err
 		}
@@ -67,11 +67,7 @@ func createMessageReceiveFuncRaw(out io.Writer, optSaveDir *string,
 	noColor bool) MessageReceiveFunc {
 
 	return func(message rabtap.TapMessage) error {
-		err := PrettyPrintMessage(out, message,
-			fmt.Sprintf("message received on %s",
-				time.Now().Format(time.RFC3339)),
-			noColor,
-		)
+		err := PrettyPrintMessage(out, message, noColor)
 		if err != nil || optSaveDir == nil {
 			return err
 		}

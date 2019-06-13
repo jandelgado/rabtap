@@ -444,6 +444,7 @@ messages in the following format:
   "Redelivered": false,
   "Exchange": "amq.topic",
   "RoutingKey": "test-q-amq.topic-0",
+  "XRabtapReceivedTimestamp": "2019-06-13T19:33:51.920711583+02:00",
   "Body": "dGhpcyB0ZXN0IG1lc3NhZ2U .... IGFuZCBoZWFkZXJzIGFtcXAuVGFibGV7fQ=="
 }
 ...

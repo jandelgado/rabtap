@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
@@ -38,10 +38,11 @@ func ExamplePrettyPrintMessage() {
 	}
 
 	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
-	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, nil, ts), "title", true)
+	noColor := true
+	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, nil, ts), noColor)
 
 	// Output:
-	// ------ title ------
+	// ------ message received on 2019-06-06T23:00:00Z ------
 	// exchange.......: exchange
 	// routingkey.....: routingkey
 	// priority.......: 99
@@ -64,11 +65,12 @@ func ExamplePrettyPrintMessage_withFilteredAtributes() {
 		Body:     []byte("simple test message"),
 	}
 
+	noColor := true
 	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
-	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, nil, ts), "title", true)
+	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, nil, ts), noColor)
 
 	// Output:
-	// ------ title ------
+	// ------ message received on 2019-06-06T23:00:00Z ------
 	// exchange.......: exchange
 	// simple test message
 	//

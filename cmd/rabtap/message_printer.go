@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
@@ -10,7 +10,8 @@ import (
 )
 
 // messageTemplate is the default template to print a message
-const messageTemplate = `------ {{ .Title }} ------
+// TODO allow externalization of template
+const messageTemplate = `------ message received on {{ .Message.ReceivedTimestamp.Format "2006-01-02T15:04:05Z07:00" }} ------
 exchange.......: {{ ExchangeColor .Message.AmqpMessage.Exchange }}
 {{with .Message.AmqpMessage.RoutingKey}}routingkey.....: {{ KeyColor .}}
 {{end}}{{with .Message.AmqpMessage.Priority}}priority.......: {{.}}
@@ -29,8 +30,6 @@ exchange.......: {{ ExchangeColor .Message.AmqpMessage.Exchange }}
 
 // PrintMessageInfo holds info for template
 type PrintMessageInfo struct {
-	// Title to print
-	Title string
 	// Message receveived
 	Message rabtap.TapMessage
 	// formatted body
@@ -62,14 +61,13 @@ func NewMessageFormatter(contentType string) MessageFormatter {
 
 // PrettyPrintMessage formats and prints a tapped message
 func PrettyPrintMessage(out io.Writer, message rabtap.TapMessage,
-	title string, noColor bool) error {
+	noColor bool) error {
 
 	colorizer := NewColorPrinter(noColor)
 
 	formatter := NewMessageFormatter(message.AmqpMessage.ContentType)
 
 	printStruct := PrintMessageInfo{
-		Title:   title,
 		Message: message,
 		Body:    formatter.Format(message),
 	}

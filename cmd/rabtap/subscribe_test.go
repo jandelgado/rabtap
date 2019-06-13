@@ -61,7 +61,7 @@ func TestMessageReceiveLoop(t *testing.T) {
 	}
 	go messageReceiveLoop(messageChan, receiveFunc, signalChannel)
 
-	messageChan <- &rabtap.TapMessage{}
+	messageChan <- rabtap.TapMessage{}
 	<-done                        // TODO add timeout
 	signalChannel <- os.Interrupt // terminates go routine
 	assert.Equal(t, 1, received)

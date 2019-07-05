@@ -259,7 +259,9 @@ The `tap` command allows to tap exchanges and transparently receives messages
 sent to the exchanges.  Rabtap automatically reconnects on connections
 failures. The syntax of the `tap` command is `rabtap tap [--uri URI] EXCHANGES`
 where the `EXCHANGES` argument specifies the exchanges and binding keys to use.
-The `EXCHANGES` argument is of the form `EXCHANGE:[KEY][,EXCHANGE:[KEY]]*`.
+The `EXCHANGES` argument is of the form `EXCHANGE:[KEY][,EXCHANGE:[KEY]]*`. If
+the exchange name contains a colon, use `\\:` to escape it, e.g.
+`myexchange\\:with\\:colons:KEY`.
 
 The acutal format of the binding key depends on the exchange type (e.g.
 direct, topic, headers) and is described in the [RabbitMQ

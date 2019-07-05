@@ -1,6 +1,11 @@
 
 # Changelog for rabtap
 
+## v1.18 (2019-07-05)
+
+* fix: tap: allow colons in exchange names by escaping them (`exchange\\:with\\:colon`).
+  Fixes #13.
+
 ## v1.17 (2019-06-13)
 
 * Timestamp when message was received by rabtap now stored in JSON format

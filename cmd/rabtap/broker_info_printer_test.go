@@ -25,22 +25,22 @@ func TestFilterStringListOneElementKeptInList(t *testing.T) {
 	assert.Equal(t, []string{"B"}, filterStringList(flags, strs))
 }
 
-func TestResolveTemplate(t *testing.T) {
-	type Info struct {
-		Name string
-	}
-	args := Info{"Jan"}
+// func TestResolveTemplate(t *testing.T) {
+//     type Info struct {
+//         Name string
+//     }
+//     args := Info{"Jan"}
 
-	const tpl = "hello {{ .Name }}"
+//     const tpl = "hello {{ .Name }}"
 
-	brokerInfoPrinter := NewBrokerInfoPrinter(
-		BrokerInfoPrinterConfig{
-			NoColor: true},
-	)
+//     brokerInfoPrinter := NewBrokerInfoPrinter(
+//         BrokerInfoPrinterConfig{
+//             NoColor: true},
+//     )
 
-	result := brokerInfoPrinter.resolveTemplate("test", tpl, args)
-	assert.Equal(t, "hello Jan", result)
-}
+//     result := brokerInfoPrinter.resolveTemplate("test", tpl, args)
+//     assert.Equal(t, "hello Jan", result)
+// }
 
 func TestBrokerInfoPrintFailsOnInvalidUri(t *testing.T) {
 	brokerInfoPrinter := NewBrokerInfoPrinter(BrokerInfoPrinterConfig{})

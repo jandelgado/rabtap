@@ -15,7 +15,7 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
-// BrokerInfoRenderer renders a tree representation represented by a RootNode
+// BrokerInfoRenderer renders a tree representation represented by a rootNode
 // into a string representation
 type BrokerInfoRendererText struct {
 	config    BrokerInfoPrinterConfig
@@ -181,20 +181,20 @@ func (s BrokerInfoRendererText) renderNodeText(n interface{}) *TreeNode {
 	var node *TreeNode
 
 	switch t := n.(type) {
-	case *RootNode:
-		node = NewTreeNode(s.renderRootNodeAsString(n.(*RootNode).URL, n.(*RootNode).Overview))
-	case *VhostNode:
-		node = NewTreeNode(s.renderVhostAsString(n.(*VhostNode).Vhost))
-	case *ConnectionNode:
-		node = NewTreeNode(s.renderConnectionElementAsString(n.(*ConnectionNode).Connection))
-	case *ConsumerNode:
-		node = NewTreeNode(s.renderConsumerElementAsString(n.(*ConsumerNode).Consumer))
-	case *QueueNode:
-		node = NewTreeNode(s.renderQueueElementAsString(n.(*QueueNode).Queue))
-	case *BoundQueueNode:
-		node = NewTreeNode(s.renderBoundQueueElementAsString(n.(*BoundQueueNode).Queue, n.(*BoundQueueNode).Binding))
-	case *ExchangeNode:
-		node = NewTreeNode(s.renderExchangeElementAsString(n.(*ExchangeNode).Exchange))
+	case *rootNode:
+		node = NewTreeNode(s.renderRootNodeAsString(n.(*rootNode).URL, n.(*rootNode).Overview))
+	case *vhostNode:
+		node = NewTreeNode(s.renderVhostAsString(n.(*vhostNode).Vhost))
+	case *connectionNode:
+		node = NewTreeNode(s.renderConnectionElementAsString(n.(*connectionNode).Connection))
+	case *consumerNode:
+		node = NewTreeNode(s.renderConsumerElementAsString(n.(*consumerNode).Consumer))
+	case *queueNode:
+		node = NewTreeNode(s.renderQueueElementAsString(n.(*queueNode).Queue))
+	case *boundQueueNode:
+		node = NewTreeNode(s.renderBoundQueueElementAsString(n.(*boundQueueNode).Queue, n.(*boundQueueNode).Binding))
+	case *exchangeNode:
+		node = NewTreeNode(s.renderExchangeElementAsString(n.(*exchangeNode).Exchange))
 	default:
 		panic(fmt.Sprintf("unexpected node encountered %T", t))
 	}
@@ -205,7 +205,7 @@ func (s BrokerInfoRendererText) renderNodeText(n interface{}) *TreeNode {
 	return node
 }
 
-func (s BrokerInfoRendererText) Render(rootNode *RootNode, out io.Writer) error {
+func (s BrokerInfoRendererText) Render(rootNode *rootNode, out io.Writer) error {
 	root := s.renderNodeText(rootNode)
 	PrintTree(root, out)
 	return nil

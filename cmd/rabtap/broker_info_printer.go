@@ -10,10 +10,10 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
-// BrokerInfoRenderer renders a tree representation represented by a RootNode
+// BrokerInfoRenderer renders a tree representation represented by a rootNode
 // into a string representation
 type BrokerInfoRenderer interface {
-	Render(rootNode *RootNode, out io.Writer) error
+	Render(rootNode *rootNode, out io.Writer) error
 }
 
 type Node interface {
@@ -21,61 +21,61 @@ type Node interface {
 	Children() []interface{}
 }
 
-type BaseNode struct {
-	Children_ []interface{}
+type baseNode struct {
+	children []interface{}
 }
 
-func (s *BaseNode) Add(elem interface{}) {
-	s.Children_ = append(s.Children_, elem)
+func (s *baseNode) Add(elem interface{}) {
+	s.children = append(s.children, elem)
 }
 
-func (s *BaseNode) Children() []interface{} {
-	return s.Children_
+func (s *baseNode) Children() []interface{} {
+	return s.children
 }
 
-func (s *BaseNode) HasChildren() bool {
-	return len(s.Children_) > 0
+func (s *baseNode) HasChildren() bool {
+	return len(s.children) > 0
 }
 
-type RootNode struct {
-	BaseNode
+type rootNode struct {
+	baseNode
 	Overview rabtap.RabbitOverview
 	URL      url.URL
 }
 
-type VhostNode struct {
-	BaseNode
+type vhostNode struct {
+	baseNode
 	Vhost string
 }
 
-type ExchangeNode struct {
-	BaseNode
+type exchangeNode struct {
+	baseNode
 	Exchange rabtap.RabbitExchange
 }
 
-type QueueNode struct {
-	BaseNode
+type queueNode struct {
+	baseNode
 	Queue rabtap.RabbitQueue
 }
 
-type BoundQueueNode struct {
-	BaseNode
+type boundQueueNode struct {
+	baseNode
 	Queue   rabtap.RabbitQueue
 	Binding rabtap.RabbitBinding
 }
 
-type ConnectionNode struct {
-	BaseNode
+type connectionNode struct {
+	baseNode
 	Connection rabtap.RabbitConnection
 }
 
 type ChannelNode struct {
-	BaseNode
+	baseNode
 	Channel rabtap.RabbitConnection
 }
 
-type ConsumerNode struct {
-	BaseNode
+type consumerNode struct {
+	baseNode
 	Consumer rabtap.RabbitConsumer
 }
 
@@ -118,6 +118,19 @@ func findBindingsForExchange(exchange rabtap.RabbitExchange, bindings []rabtap.R
 	return result
 }
 
+func (s BrokerInfoPrinter) shouldDisplayExchange(
+	exchange rabtap.RabbitExchange, vhost string) bool {
+
+	if exchange.Vhost != vhost {
+		return false
+	}
+	if exchange.Name == "" && !s.config.ShowDefaultExchange {
+		return false
+	}
+
+	return true
+}
+
 func (s BrokerInfoPrinter) shouldDisplayQueue(
 	queue rabtap.RabbitQueue,
 	exchange rabtap.RabbitExchange,
@@ -136,25 +149,24 @@ func (s BrokerInfoPrinter) shouldDisplayQueue(
 }
 
 func (s BrokerInfoPrinter) createConnectionNodes(
-	vhost string, connName string, brokerInfo rabtap.BrokerInfo) []*ConnectionNode {
-	var conns []*ConnectionNode
+	vhost string, connName string, brokerInfo rabtap.BrokerInfo) []*connectionNode {
+	var conns []*connectionNode
 	i := rabtap.FindConnectionByName(brokerInfo.Connections, vhost, connName)
 	if i != -1 {
-		//		conns = append(conns, NewTreeNode(s.renderConnectionElementAsString(brokerInfo.Connections[i])))
-		return []*ConnectionNode{{BaseNode{[]interface{}{}}, brokerInfo.Connections[i]}}
+		return []*connectionNode{{baseNode{[]interface{}{}}, brokerInfo.Connections[i]}}
 	}
 	return conns
 }
 
 func (s BrokerInfoPrinter) createConsumerNodes(
-	queue rabtap.RabbitQueue, brokerInfo rabtap.BrokerInfo) []*ConsumerNode {
-	var nodes []*ConsumerNode
+	queue rabtap.RabbitQueue, brokerInfo rabtap.BrokerInfo) []*consumerNode {
+	var nodes []*consumerNode
 	vhost := queue.Vhost
 	for _, consumer := range brokerInfo.Consumers {
 		if consumer.Queue.Vhost == vhost &&
 			consumer.Queue.Name == queue.Name {
 			//consumerNode := NewTreeNode(s.renderConsumerElementAsString(consumer))
-			consumerNode := ConsumerNode{BaseNode{[]interface{}{}}, consumer}
+			consumerNode := consumerNode{baseNode{[]interface{}{}}, consumer}
 			connectionNodes := s.createConnectionNodes(vhost, consumer.ChannelDetails.ConnectionName, brokerInfo)
 			// consumerNode.AddList(s.createConnectionNodes(vhost, consumer.ChannelDetails.ConnectionName, brokerInfo))
 			for _, connectionNode := range connectionNodes {
@@ -169,7 +181,7 @@ func (s BrokerInfoPrinter) createConsumerNodes(
 func (s BrokerInfoPrinter) createQueueNodeFromBinding(
 	binding rabtap.RabbitBinding,
 	exchange rabtap.RabbitExchange,
-	brokerInfo rabtap.BrokerInfo) []*BoundQueueNode {
+	brokerInfo rabtap.BrokerInfo) []*boundQueueNode {
 
 	// standard binding of queue to exchange
 	i := rabtap.FindQueueByName(brokerInfo.Queues,
@@ -184,10 +196,10 @@ func (s BrokerInfoPrinter) createQueueNodeFromBinding(
 	}
 
 	if !s.shouldDisplayQueue(queue, exchange, binding) {
-		return []*BoundQueueNode{}
+		return []*boundQueueNode{}
 	}
 
-	queueNode := BoundQueueNode{BaseNode{[]interface{}{}}, queue, binding}
+	queueNode := boundQueueNode{baseNode{[]interface{}{}}, queue, binding}
 
 	if s.config.ShowConsumers {
 		consumers := s.createConsumerNodes(queue, brokerInfo)
@@ -196,16 +208,16 @@ func (s BrokerInfoPrinter) createQueueNodeFromBinding(
 			queueNode.Add(consumer)
 		}
 	}
-	return []*BoundQueueNode{&queueNode}
+	return []*boundQueueNode{&queueNode}
 }
 
 // addExchange recursively (in case of exchange-exchange binding) an exchange to the
 // given node.
 func (s BrokerInfoPrinter) createExchangeNode(
-	exchange rabtap.RabbitExchange, brokerInfo rabtap.BrokerInfo) *ExchangeNode {
+	exchange rabtap.RabbitExchange, brokerInfo rabtap.BrokerInfo) *exchangeNode {
 
 	//exchangeNode := NewTreeNode(s.renderExchangeElementAsString(exchange))
-	exchangeNode := ExchangeNode{BaseNode{[]interface{}{}}, exchange}
+	exchangeNode := exchangeNode{baseNode{[]interface{}{}}, exchange}
 
 	// process all bindings for current exchange
 	for _, binding := range findBindingsForExchange(exchange, brokerInfo.Bindings) {
@@ -233,28 +245,16 @@ func (s BrokerInfoPrinter) createExchangeNode(
 	return &exchangeNode
 }
 
-func (s BrokerInfoPrinter) shouldDisplayExchange(
-	exchange rabtap.RabbitExchange, vhost string) bool {
-
-	if exchange.Vhost != vhost {
-		return false
+func (s BrokerInfoPrinter) createRootNode(rootNodeURL string,
+	overview rabtap.RabbitOverview) (*rootNode, error) {
+	// root of node is URL of rabtap.RabbitMQ broker.
+	url, err := url.Parse(rootNodeURL)
+	if err != nil {
+		return nil, err
 	}
-	if exchange.Name == "" && !s.config.ShowDefaultExchange {
-		return false
-	}
-
-	return true
+	b := baseNode{[]interface{}{}}
+	return &rootNode{b, overview, *url}, nil
 }
-
-// func (s BrokerInfoPrinter) makeRootNode(rootNodeURL string,
-//     overview rabtap.RabbitOverview) (*TreeNode, error) {
-//     // root of node is URL of rabtap.RabbitMQ broker.
-//     url, err := url.Parse(rootNodeURL)
-//     if err != nil {
-//         return nil, err
-//     }
-//     return NewTreeNode(s.renderRootNodeAsString(*url, overview)), nil
-// }
 
 // buildTree renders given brokerInfo into a tree:
 //  RabbitMQ-Host
@@ -265,20 +265,19 @@ func (s BrokerInfoPrinter) shouldDisplayExchange(
 //              +--Connection
 //
 func (s BrokerInfoPrinter) buildTreeByExchange(rootNodeURL string,
-	brokerInfo rabtap.BrokerInfo) (*RootNode, error) {
+	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
 
-	url, err := url.Parse(rootNodeURL)
+	b := baseNode{[]interface{}{}}
+	rootNode, err := s.createRootNode(rootNodeURL, brokerInfo.Overview)
+
 	if err != nil {
 		return nil, err
 	}
 
-	b := BaseNode{[]interface{}{}}
-	rootNode2 := RootNode{b, brokerInfo.Overview, *url}
-
 	for vhost := range uniqueVhosts(brokerInfo.Exchanges) {
 		// vhostNode := NewTreeNode(s.renderVhostAsString(vhost))
 		// root.Add(vhostNode)
-		vhostNode2 := VhostNode{b, vhost}
+		vhostNode := vhostNode{b, vhost}
 		for _, exchange := range brokerInfo.Exchanges {
 			if !s.shouldDisplayExchange(exchange, vhost) {
 				continue
@@ -287,57 +286,57 @@ func (s BrokerInfoPrinter) buildTreeByExchange(rootNodeURL string,
 			if s.config.OmitEmptyExchanges && !exNode.HasChildren() {
 				continue
 			}
-			vhostNode2.Add(exNode)
+			vhostNode.Add(exNode)
 		}
 		//rootNode2.Children = append(root.Children, vhostNode2)
-		rootNode2.Add(&vhostNode2)
+		rootNode.Add(&vhostNode)
 	}
-	return &rootNode2, nil
+	return rootNode, nil
 }
 
-func (s BrokerInfoPrinter) buildTreeByConnection2(rootNodeURL string,
-	brokerInfo rabtap.BrokerInfo) (*RootNode, error) {
+func (s BrokerInfoPrinter) buildTreeByConnection(rootNodeURL string,
+	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
 
 	url, err := url.Parse(rootNodeURL)
 	if err != nil {
 		return nil, err
 	}
-	b := BaseNode{[]interface{}{}}
-	rootNode2 := RootNode{b, brokerInfo.Overview, *url}
+	b := baseNode{[]interface{}{}}
+	rootNode := rootNode{b, brokerInfo.Overview, *url}
 	for vhost := range uniqueVhosts(brokerInfo.Exchanges) {
-		vhostNode2 := VhostNode{b, vhost}
+		vhostNode := vhostNode{b, vhost}
 		for _, conn := range brokerInfo.Connections {
-			connNode2 := ConnectionNode{b, conn}
+			connNode := connectionNode{b, conn}
 			for _, consumer := range brokerInfo.Consumers {
 				if consumer.ChannelDetails.ConnectionName == conn.Name {
-					consNode2 := ConsumerNode{b, consumer}
+					consNode := consumerNode{b, consumer}
 					for _, queue := range brokerInfo.Queues {
 						if consumer.Queue.Vhost == vhost && consumer.Queue.Name == queue.Name {
-							queueNode2 := QueueNode{b, queue}
-							consNode2.Add(&queueNode2)
+							queueNode := queueNode{b, queue}
+							consNode.Add(&queueNode)
 						}
 					}
-					connNode2.Add(&consNode2)
+					connNode.Add(&consNode)
 				}
 			}
-			if s.config.OmitEmptyExchanges && !connNode2.HasChildren() {
+			if s.config.OmitEmptyExchanges && !connNode.HasChildren() {
 				continue
 			}
-			vhostNode2.Add(&connNode2)
+			vhostNode.Add(&connNode)
 		}
-		rootNode2.Add(&vhostNode2)
+		rootNode.Add(&vhostNode)
 	}
-	return &rootNode2, nil
+	return &rootNode, nil
 }
 
 // Print renders given brokerInfo into a tree-view
 func (s BrokerInfoPrinter) Print(brokerInfo rabtap.BrokerInfo,
 	rootNodeURL string, out io.Writer) error {
 
-	var root *RootNode
+	var root *rootNode
 	var err error
 	if s.config.ShowByConnection {
-		root, err = s.buildTreeByConnection2(rootNodeURL, brokerInfo)
+		root, err = s.buildTreeByConnection(rootNodeURL, brokerInfo)
 	} else {
 		root, err = s.buildTreeByExchange(rootNodeURL, brokerInfo)
 	}

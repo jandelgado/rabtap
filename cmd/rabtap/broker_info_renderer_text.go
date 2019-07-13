@@ -4,13 +4,10 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/url"
 	"strings"
-
-	"text/template"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -18,11 +15,11 @@ import (
 // BrokerInfoRenderer renders a tree representation represented by a rootNode
 // into a string representation
 type BrokerInfoRendererText struct {
-	config    BrokerInfoPrinterConfig
+	config    BrokerInfoRendererConfig
 	colorizer ColorPrinter
 }
 
-func NewBrokerInfoRendererText(config BrokerInfoPrinterConfig) BrokerInfoRenderer {
+func NewBrokerInfoRendererText(config BrokerInfoRendererConfig) BrokerInfoRenderer {
 	return &BrokerInfoRendererText{
 		config:    config,
 		colorizer: NewColorPrinter(config.NoColor),
@@ -53,7 +50,7 @@ const (
 		{{- if and .Config.ShowStats .Exchange.MessageStats }}, in=(
 		{{- .Exchange.MessageStats.PublishIn }}, {{printf "%.1f" .Exchange.MessageStats.PublishInDetails.Rate}}/s) msg, out=(
 		{{- .Exchange.MessageStats.PublishOut }}, {{printf "%.1f" .Exchange.MessageStats.PublishOutDetails.Rate}}/s) msg
-		{{- end }}, {{ .ExchangeFlags  }})`
+		{{- end }}, [{{ .ExchangeFlags  }}])`
 	tplQueue = `
 	    {{- QueueColor .Queue.Name }} (queue,
 		{{- if .Config.ShowStats }}
@@ -62,7 +59,7 @@ const (
 		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
 		{{- end }}
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
-		{{- ""}}, {{ .QueueFlags}})`
+		{{- ""}}, [{{ .QueueFlags}}])`
 	tplBoundQueue = `
 	    {{- QueueColor .Binding.Destination }} (queue,
 		{{- with .Binding.RoutingKey }} key='{{ KeyColor .}}',{{end}}
@@ -73,108 +70,82 @@ const (
 		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
 		{{- end }}
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
-		{{- ""}}, {{ .QueueFlags}})`
+		{{- ""}}, [{{ .QueueFlags}}])`
 )
-
-func filterStringList(flags []bool, list []string) []string {
-	result := []string{}
-	for i, s := range list {
-		if flags[i] {
-			result = append(result, s)
-		}
-	}
-	return result
-}
-
-// resolveTemplate resolves a template for use in the broker info printer,
-// with support for colored output. name is just an informational name
-// passed to the template ctor. tpl is the actual template and args
-// the arguments used during rendering.
-func (s BrokerInfoRendererText) resolveTemplate(name string, tpl string, args interface{}) string {
-	tmpl := template.Must(template.New(name).Funcs(
-		s.colorizer.GetFuncMap()).Parse(tpl))
-
-	var buf bytes.Buffer
-	err := tmpl.Execute(&buf, args)
-	if err != nil {
-		panic(err)
-	}
-	return buf.String()
-}
 
 func (s BrokerInfoRendererText) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
 	flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive}
 	names := []string{"D", "AD", "EX"}
-	return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
+	return strings.Join(filterStringList(flags, names), "|")
 }
 
 func (s BrokerInfoRendererText) renderExchangeFlagsAsString(exchange rabtap.RabbitExchange) string {
 	flags := []bool{exchange.Durable, exchange.AutoDelete, exchange.Internal}
 	names := []string{"D", "AD", "I"}
-	return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
+	return strings.Join(filterStringList(flags, names), "|")
 }
 
 func (s BrokerInfoRendererText) renderVhostAsString(vhost string) string {
 	var args = struct {
 		Vhost string
 	}{vhost}
-	return s.resolveTemplate("vhost-tpl", tplVhost, args)
+	return resolveTemplate("vhost-tpl", tplVhost, args, s.colorizer.GetFuncMap())
 }
 
 func (s BrokerInfoRendererText) renderConsumerElementAsString(consumer rabtap.RabbitConsumer) string {
 	var args = struct {
-		Config   BrokerInfoPrinterConfig
+		Config   BrokerInfoRendererConfig
 		Consumer rabtap.RabbitConsumer
 	}{s.config, consumer}
-	return s.resolveTemplate("consumer-tpl", tplConsumer, args)
+	return resolveTemplate("consumer-tpl", tplConsumer, args, s.colorizer.GetFuncMap())
 }
 
 func (s BrokerInfoRendererText) renderConnectionElementAsString(conn rabtap.RabbitConnection) string {
 	var args = struct {
-		Config     BrokerInfoPrinterConfig
+		Config     BrokerInfoRendererConfig
 		Connection rabtap.RabbitConnection
 	}{s.config, conn}
-	return s.resolveTemplate("connnection-tpl", tplConnection, args)
+	return resolveTemplate("connnection-tpl", tplConnection, args, s.colorizer.GetFuncMap())
 }
 
 func (s BrokerInfoRendererText) renderQueueElementAsString(queue rabtap.RabbitQueue) string {
 	queueFlags := s.renderQueueFlagsAsString(queue)
 	var args = struct {
-		Config     BrokerInfoPrinterConfig
+		Config     BrokerInfoRendererConfig
 		Queue      rabtap.RabbitQueue
 		QueueFlags string
 	}{s.config, queue, queueFlags}
-	return s.resolveTemplate("queue-tpl", tplQueue, args)
+	return resolveTemplate("queue-tpl", tplQueue, args, s.colorizer.GetFuncMap())
 }
 
 func (s BrokerInfoRendererText) renderBoundQueueElementAsString(queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
 	queueFlags := s.renderQueueFlagsAsString(queue)
 	var args = struct {
-		Config     BrokerInfoPrinterConfig
+		Config     BrokerInfoRendererConfig
 		Binding    rabtap.RabbitBinding
 		Queue      rabtap.RabbitQueue
 		QueueFlags string
 	}{s.config, binding, queue, queueFlags}
-	return s.resolveTemplate("bound-queue-tpl", tplBoundQueue, args)
+	return resolveTemplate("bound-queue-tpl", tplBoundQueue, args, s.colorizer.GetFuncMap())
 }
 
 func (s BrokerInfoRendererText) renderRootNodeAsString(rabbitURL url.URL, overview rabtap.RabbitOverview) string {
 	var args = struct {
-		Config   BrokerInfoPrinterConfig
+		Config   BrokerInfoRendererConfig
 		URL      url.URL
 		Overview rabtap.RabbitOverview
 	}{s.config, rabbitURL, overview}
-	return s.resolveTemplate("rootnode", tplRootNode, args)
+	return resolveTemplate("rootnode", tplRootNode, args, s.colorizer.GetFuncMap())
 }
 
 func (s BrokerInfoRendererText) renderExchangeElementAsString(exchange rabtap.RabbitExchange) string {
 	exchangeFlags := s.renderExchangeFlagsAsString(exchange)
 	var args = struct {
-		Config        BrokerInfoPrinterConfig
+		Config        BrokerInfoRendererConfig
 		Exchange      rabtap.RabbitExchange
 		ExchangeFlags string
 	}{s.config, exchange, exchangeFlags}
-	return s.resolveTemplate("exchange-tpl", tplExchange, args)
+	return resolveTemplate("exchange-tpl", tplExchange, args, s.colorizer.GetFuncMap())
 }
 
 func (s BrokerInfoRendererText) renderNodeText(n interface{}) *TreeNode {

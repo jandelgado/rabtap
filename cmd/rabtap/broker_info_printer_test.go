@@ -13,35 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFilterStringListOfEmptyLists(t *testing.T) {
-	flags := []bool{}
-	strs := []string{}
-	assert.Equal(t, []string{}, filterStringList(flags, strs))
-}
-
-func TestFilterStringListOneElementKeptInList(t *testing.T) {
-	flags := []bool{false, true, false}
-	strs := []string{"A", "B", "C"}
-	assert.Equal(t, []string{"B"}, filterStringList(flags, strs))
-}
-
-// func TestResolveTemplate(t *testing.T) {
-//     type Info struct {
-//         Name string
-//     }
-//     args := Info{"Jan"}
-
-//     const tpl = "hello {{ .Name }}"
-
-//     brokerInfoPrinter := NewBrokerInfoPrinter(
-//         BrokerInfoPrinterConfig{
-//             NoColor: true},
-//     )
-
-//     result := brokerInfoPrinter.resolveTemplate("test", tpl, args)
-//     assert.Equal(t, "hello Jan", result)
-// }
-
 func TestBrokerInfoPrintFailsOnInvalidUri(t *testing.T) {
 	brokerInfoPrinter := NewBrokerInfoPrinter(BrokerInfoPrinterConfig{})
 	err := brokerInfoPrinter.Print(rabtap.BrokerInfo{}, "//:xxx::invalid uri", os.Stdout)

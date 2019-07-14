@@ -20,11 +20,22 @@ var (
 	}()
 )
 
+// dotRendererTpl holds template fragments to use while rendering
+type dotRendererTpl struct {
+	dotTplRootNode   string
+	dotTplVhost      string
+	dotTplExchange   string
+	dotTplQueue      string
+	dotTplBoundQueue string
+	dotTplConsumer   string
+	dotTplConnection string
+}
+
 // BrokerInfoRenderer renders a tree representation represented by a rootNode
 // into a string representation
 type BrokerInfoRendererDot struct {
-	config BrokerInfoRendererConfig
-	res    string
+	config   BrokerInfoRendererConfig
+	template dotRendererTpl
 }
 
 type dotNode struct {
@@ -34,47 +45,65 @@ type dotNode struct {
 }
 
 func NewBrokerInfoRendererDot(config BrokerInfoRendererConfig) BrokerInfoRenderer {
-	return &BrokerInfoRendererDot{config: config}
+	return &BrokerInfoRendererDot{config: config, template: NewDotRendererTpl()}
 }
 
-const (
-	dotTplRootNode = `
-		  {{- "" }}graph broker {
-		  {{ q .Name }} [label="{{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }}"];
-		  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
-		  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}
-		}`
+// NewDotRendererTpl returns the dot template to use. For now, just one default
+// template is used, later will support loading templates from the filesytem
+func NewDotRendererTpl() dotRendererTpl {
+	return dotRendererTpl{dotTplRootNode: `
+  {{- "" }}graph broker {
+  {{ q .Name }} [label="{{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }}"];
+  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
+  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}
+}`,
 
-	dotTplVhost = `
-		  {{- q .Name }} [label="Virtual host {{ .Vhost }}"];
-	      {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
-		  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`
+		dotTplVhost: `
+  {{ q .Name }} [label="Virtual host {{ .Vhost }}"];
+  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
+  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`,
 
-	dotTplExchange = `
-		  subgraph cluster_0 {
-		    label="exchanges";
-		    style=filled;
-		    color=lightgrey;
-		    node [style=filled,color=white];
-		    {{ q .Name }} [label="{{ .Exchange.Name }}"];
-		  }
-		  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }} [label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{end}}
-		  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}
-		  `
+		dotTplExchange: `
+  subgraph cluster_0 {
+	label="Exchanges";
+	style=filled;
+	color=green;
+	labeljust = "l";
+	node [style=filled,color=white];
+	{{ q .Name }} [style=filled, color=white; label="{{ .Exchange.Name }}"];
+  }
+  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }} [label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{end}}
+  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}
+  `,
 
-	dotTplQueue = `
-		  {{- q .Name }} [label="{{ .Queue.Name }}"];
-		  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
-		  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`
+		dotTplQueue: `
+  subgraph cluster_1 {
+	label="Queues";
+	labeljust = "l";
+	style=filled;
+	color=lightblue;
+	node [style=filled,color=white];
+    {{ q .Name }} [style=filled; color=white; label="{{ .Queue.Name }}"];
+  }
+  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
+  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`,
 
-	dotTplBoundQueue = `
-		  {{- q .Name }} [label="{{ .Queue.Name }}"];
-		  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
-		  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`
+		dotTplBoundQueue: `
+  subgraph cluster_2 {
+	label="Queues";
+	labeljust = "l";
+	style=filled;
+	color=lightblue;
+	node [style=filled,color=white];
+    {{ q .Name }} [style=filled; color=white; label="{{ .Queue.Name }}"];
+  }
+  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
+  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`,
 
-	dotTplConsumer   = `consume`
-	dotTplConnection = `connection`
-)
+		dotTplConsumer: `consumer - todo `,
+
+		dotTplConnection: `connection - todo`}
+}
 
 func (s BrokerInfoRendererDot) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
 	flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive}
@@ -97,7 +126,7 @@ func (s BrokerInfoRendererDot) renderRootNodeAsString(name string, children []do
 		Overview rabtap.RabbitOverview
 	}{name, children, s.config, rabbitURL, overview}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
-	return resolveTemplate("root-dotTpl", dotTplRootNode, args, funcMap)
+	return resolveTemplate("root-dotTpl", s.template.dotTplRootNode, args, funcMap)
 }
 func (s BrokerInfoRendererDot) renderVhostAsString(name string, children []dotNode, vhost string) string {
 	var args = struct {
@@ -106,7 +135,7 @@ func (s BrokerInfoRendererDot) renderVhostAsString(name string, children []dotNo
 		Vhost    string
 	}{name, children, vhost}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
-	return resolveTemplate("vhost-dotTpl", dotTplVhost, args, funcMap)
+	return resolveTemplate("vhost-dotTpl", s.template.dotTplVhost, args, funcMap)
 }
 
 func (s BrokerInfoRendererDot) renderExchangeElementAsString(name string, children []dotNode, exchange rabtap.RabbitExchange) string {
@@ -119,7 +148,7 @@ func (s BrokerInfoRendererDot) renderExchangeElementAsString(name string, childr
 		ExchangeFlags string
 	}{name, children, s.config, exchange, exchangeFlags}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
-	return resolveTemplate("exchange-dotTpl", dotTplExchange, args, funcMap)
+	return resolveTemplate("exchange-dotTpl", s.template.dotTplExchange, args, funcMap)
 }
 
 func (s BrokerInfoRendererDot) renderQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue) string {
@@ -132,7 +161,7 @@ func (s BrokerInfoRendererDot) renderQueueElementAsString(name string, children 
 		QueueFlags string
 	}{name, children, s.config, queue, queueFlags}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
-	return resolveTemplate("queue-dotTpl", dotTplQueue, args, funcMap)
+	return resolveTemplate("queue-dotTpl", s.template.dotTplQueue, args, funcMap)
 }
 
 func (s BrokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
@@ -146,7 +175,7 @@ func (s BrokerInfoRendererDot) renderBoundQueueElementAsString(name string, chil
 		QueueFlags string
 	}{name, children, s.config, binding, queue, queueFlags}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
-	return resolveTemplate("bound-queue-dotTpl", dotTplBoundQueue, args, funcMap)
+	return resolveTemplate("bound-queue-dotTpl", s.template.dotTplBoundQueue, args, funcMap)
 }
 func (s BrokerInfoRendererDot) renderConsumerElementAsString(name string, children []dotNode, consumer rabtap.RabbitConsumer) string {
 	var args = struct {
@@ -156,7 +185,7 @@ func (s BrokerInfoRendererDot) renderConsumerElementAsString(name string, childr
 		Consumer rabtap.RabbitConsumer
 	}{name, children, s.config, consumer}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
-	return resolveTemplate("consumer-dotTpl", dotTplConsumer, args, funcMap)
+	return resolveTemplate("consumer-dotTpl", s.template.dotTplConsumer, args, funcMap)
 }
 
 func (s BrokerInfoRendererDot) renderConnectionElementAsString(name string, children []dotNode, conn rabtap.RabbitConnection) string {
@@ -167,7 +196,7 @@ func (s BrokerInfoRendererDot) renderConnectionElementAsString(name string, chil
 		Connection rabtap.RabbitConnection
 	}{name, children, s.config, conn}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
-	return resolveTemplate("connnection-dotTpl", dotTplConnection, args, funcMap)
+	return resolveTemplate("connnection-dotTpl", s.template.dotTplConnection, args, funcMap)
 }
 
 func (s *BrokerInfoRendererDot) renderNodeText(n interface{}) dotNode {
@@ -217,7 +246,6 @@ func (s *BrokerInfoRendererDot) renderNodeText(n interface{}) dotNode {
 
 func (s *BrokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
 	res := s.renderNodeText(rootNode)
-	//res := s.render(rootNode)
 	fmt.Fprintf(out, res.Text)
 	return nil
 }

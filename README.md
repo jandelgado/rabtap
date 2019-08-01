@@ -223,7 +223,7 @@ The default RabbitMQ management API URI can be set using the `RABTAP_APIURI`
 environment variable. Example:
 
 ```console
-$ export RABTAP_APIURI=http://guest:guest@localhost:15672/
+$ export RABTAP_APIURI=http://guest:guest@localhost:15672/api
 $ rabtap info
 ...
 ```

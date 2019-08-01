@@ -4,6 +4,7 @@ package main
 
 import (
 	"crypto/tls"
+	"net/url"
 	"os"
 	"os/signal"
 
@@ -51,9 +52,11 @@ func createFilterPredicate(expr *string) (Predicate, error) {
 func startCmdInfo(args CommandLineArgs, title string) {
 	queueFilter, err := createFilterPredicate(args.QueueFilter)
 	failOnError(err, "invalid queue filter predicate", os.Exit)
+	apiURL, err := url.Parse(args.APIURI)
+	failOnError(err, "invalid api url", os.Exit)
 	cmdInfo(CmdInfoArg{
 		rootNode: title,
-		client:   rabtap.NewRabbitHTTPClient(args.APIURI, getTLSConfig(args.InsecureTLS)),
+		client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS)),
 		printConfig: BrokerInfoPrinterConfig{
 			ShowStats:           args.ShowStats,
 			ShowConsumers:       args.ShowConsumers,

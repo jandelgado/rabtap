@@ -4,6 +4,7 @@ package main
 
 import (
 	"crypto/tls"
+	"net/url"
 	"os"
 	"testing"
 
@@ -52,7 +53,8 @@ func ExampleBrokerInfoPrinter_Print() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := rabtap.NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
 	brokerInfoPrinter := NewBrokerInfoPrinter(
 		BrokerInfoPrinterConfig{
@@ -104,7 +106,8 @@ func ExampleBrokerInfoPrinter_printByConnection() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := rabtap.NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
 	brokerInfoPrinter := NewBrokerInfoPrinter(
 		BrokerInfoPrinterConfig{
@@ -134,7 +137,8 @@ func ExampleBrokerInfoPrinter_printWithQueueFilter() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := rabtap.NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
 	queueFilter, err := NewPredicateExpression("queue.Name == 'fanout-q2'")
 	if err != nil {

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,8 @@ import (
 func TestGetAllResources(t *testing.T) {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	all, err := client.BrokerInfo()
 
@@ -32,7 +33,8 @@ func TestGetAllResources(t *testing.T) {
 }
 
 func TestGetAllResourcesOnInvalidHostReturnErr(t *testing.T) {
-	client := NewRabbitHTTPClient("localhost:1", &tls.Config{})
+	url, _ := url.Parse("localhost:1")
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 	_, err := client.BrokerInfo()
 	assert.NotNil(t, err)
 }
@@ -41,16 +43,10 @@ func TestGetAllResourcesOnInvalidHostReturnErr(t *testing.T) {
 func TestGetResourceInvalidUriReturnsError(t *testing.T) {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
-
-	resCh := client.getResource(httpRequest{"invalid", reflect.TypeOf(RabbitOverview{})})
-
-	select {
-	case res := <-resCh:
-		assert.NotNil(t, res.err)
-	case <-time.After(time.Second * 1):
-		assert.Fail(t, "result not received in expected time frame")
-	}
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
+	_, err := client.getResource(httpRequest{"invalid", reflect.TypeOf(RabbitOverview{})})
+	assert.NotNil(t, err)
 }
 
 // test non 200 status returned in getResource()
@@ -63,15 +59,11 @@ func TestGetResourceStatusNot200(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
-	client := NewRabbitHTTPClient(ts.URL, &tls.Config{})
-	resCh := client.getResource(httpRequest{ts.URL + "/overview", reflect.TypeOf(RabbitOverview{})})
+	url, _ := url.Parse(ts.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
+	_, err := client.getResource(httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
+	assert.NotNil(t, err) // TODO check error
 
-	select {
-	case res := <-resCh:
-		assert.NotNil(t, res.err) // TODO check error
-	case <-time.After(time.Second * 1):
-		assert.Fail(t, "result not received in expected time frame")
-	}
 }
 
 // // test non invalid json returned
@@ -83,15 +75,10 @@ func TestGetResourceInvalidJSON(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
-	client := NewRabbitHTTPClient(ts.URL, &tls.Config{})
-	resCh := client.getResource(httpRequest{ts.URL + "/overview", reflect.TypeOf(RabbitOverview{})})
-
-	select {
-	case res := <-resCh:
-		assert.NotNil(t, res.err) // TODO check error
-	case <-time.After(time.Second * 1):
-		assert.Fail(t, "result not received in expected time frame")
-	}
+	url, _ := url.Parse(ts.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
+	_, err := client.getResource(httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
+	assert.NotNil(t, err) // TODO check error
 }
 
 // test of GET /api/exchanges endpoint
@@ -99,7 +86,8 @@ func TestRabbitClientGetExchanges(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	result, err := client.Exchanges()
 	assert.Nil(t, err)
@@ -116,7 +104,8 @@ func TestRabbitClientGetQueues(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	result, err := client.Queues()
 	assert.Nil(t, err)
@@ -131,7 +120,8 @@ func TestRabbitClientGetOverview(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	result, err := client.Overview()
 	assert.Nil(t, err)
@@ -143,7 +133,8 @@ func TestRabbitClientGetBindings(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	_, err := client.Bindings()
 	assert.Nil(t, err)
@@ -156,7 +147,8 @@ func TestRabbitClientGetConsumers(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	consumer, err := client.Consumers()
 	assert.Nil(t, err)
@@ -171,7 +163,8 @@ func TestRabbitClientGetConnections(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	conn, err := client.Connections()
 	assert.Nil(t, err)
@@ -184,7 +177,8 @@ func TestRabbitClientGetConsumersChannelDetailsIsEmptyArray(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	consumer, err := client.Consumers()
 	assert.Nil(t, err)
@@ -201,7 +195,8 @@ func TestRabbitClientCloseExistingConnection(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	err := client.CloseConnection("172.17.0.1:40874 -> 172.17.0.2:5672", "reason")
 	assert.Nil(t, err)
@@ -212,7 +207,8 @@ func TestRabbitClientCloseNonExistingConnectionRaisesError(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	err := client.CloseConnection("DOES NOT EXIST", "reason")
 	assert.NotNil(t, err)

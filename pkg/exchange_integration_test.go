@@ -11,6 +11,7 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"net/url"
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
@@ -33,8 +34,8 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 
 	const testName = "testexchange"
 
-	client := NewRabbitHTTPClient(testcommon.IntegrationAPIURIFromEnv(),
-		&tls.Config{})
+	url, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	// make sure exchange does not exist before creation
 	exchanges, err := client.Exchanges()

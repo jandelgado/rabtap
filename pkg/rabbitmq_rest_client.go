@@ -8,73 +8,66 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"reflect"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // RabbitHTTPClient is a minimal client to the rabbitmq management REST api.
 // It implements only functions needed by this tool (i.e. GET on some of the
 // resources).  The messages structs were generated using json-to-go (
-// https://mholt.github.io/json-to-go/ RabbitMQ HTTP API documentation can be).
+// https://mholt.github.io/json-to-go/).
 type RabbitHTTPClient struct {
-	uri    string
+	url    *url.URL // base URL
 	client *http.Client
 }
 
-// NewRabbitHTTPClient returns a new instance of an RabbitHTTPClient
-func NewRabbitHTTPClient(uri string,
+// NewRabbitHTTPClient returns a new instance of an RabbitHTTPClient. url
+// is the base API URL of the REST server.
+func NewRabbitHTTPClient(url *url.URL,
 	tlsConfig *tls.Config) *RabbitHTTPClient {
 	tr := &http.Transport{TLSClientConfig: tlsConfig}
 	client := &http.Client{Transport: tr}
-	return &RabbitHTTPClient{uri, client}
+	return &RabbitHTTPClient{url, client}
 }
 
 type httpRequest struct {
-	uri string
-	t   reflect.Type // type of expected result
+	path string       // relative path
+	t    reflect.Type // type of expected result
 }
 
-type httpResponse struct {
-	result interface{}
-	err    error
-}
-
+// getResource gets resource constructed from s.url and equest.url and
+// deserialized the resource into an request.t type, which is returned.
 // TODO split function in http and unmarshaling part
-func (s RabbitHTTPClient) getResource(request httpRequest) chan httpResponse {
-	res := make(chan httpResponse)
-	go func() {
-		r := reflect.New(request.t).Interface()
-		resp, err := s.client.Get(request.uri)
-		if err != nil {
-			res <- httpResponse{result: r, err: err}
-			return
-		}
+func (s RabbitHTTPClient) getResource(request httpRequest) (interface{}, error) {
 
-		if resp.StatusCode != 200 {
-			err := errors.New(resp.Status)
-			res <- httpResponse{result: r, err: err}
-			return
-		}
+	r := reflect.New(request.t).Interface()
+	url := s.url.String() + "/" + request.path
+	resp, err := s.client.Get(url)
+	if err != nil {
+		return r, err
+	}
 
-		defer resp.Body.Close()
-		buf := new(bytes.Buffer)
-		_, err = buf.ReadFrom(resp.Body)
-		if err != nil {
-			res <- httpResponse{result: r, err: err}
-			return
-		}
+	if resp.StatusCode != 200 {
+		return r, errors.New(resp.Status)
+	}
 
-		err = json.Unmarshal(buf.Bytes(), r)
-		if err != nil {
-			res <- httpResponse{result: r, err: err}
-			return
-		}
-		res <- httpResponse{result: r, err: nil}
-	}()
-	return res
+	defer resp.Body.Close()
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
+	if err != nil {
+		return r, err
+	}
+
+	err = json.Unmarshal(buf.Bytes(), r)
+	return r, err
 }
 
-func (s RabbitHTTPClient) delResource(uri string) error {
-	req, err := http.NewRequest("DELETE", uri, nil)
+// delResource make DELETE request to given relative path
+func (s RabbitHTTPClient) delResource(path string) error {
+	url := s.url.String() + "/" + path
+	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return err
 	}
@@ -90,7 +83,8 @@ func (s RabbitHTTPClient) delResource(uri string) error {
 	return nil
 }
 
-// BrokerInfo represents the result of multiple RabbitMQ ressources
+// BrokerInfo represents the state of multiple RabbitMQ ressources as
+// returned by the RabbitMQ REST API
 type BrokerInfo struct {
 	Overview    RabbitOverview
 	Connections []RabbitConnection
@@ -100,118 +94,59 @@ type BrokerInfo struct {
 	Bindings    []RabbitBinding
 }
 
-func (s RabbitHTTPClient) getConnections() chan httpResponse {
-	return s.getResource(httpRequest{s.uri + "/connections", reflect.TypeOf([]RabbitConnection{})})
-}
-
-func (s RabbitHTTPClient) getOverview() chan httpResponse {
-	return s.getResource(httpRequest{s.uri + "/overview", reflect.TypeOf(RabbitOverview{})})
-}
-
-func (s RabbitHTTPClient) getExchanges() chan httpResponse {
-	return s.getResource(httpRequest{s.uri + "/exchanges", reflect.TypeOf([]RabbitExchange{})})
-}
-
-func (s RabbitHTTPClient) getQueues() chan httpResponse {
-	return s.getResource(httpRequest{s.uri + "/queues", reflect.TypeOf([]RabbitQueue{})})
-}
-
-func (s RabbitHTTPClient) getConsumers() chan httpResponse {
-	return s.getResource(httpRequest{s.uri + "/consumers", reflect.TypeOf([]RabbitConsumer{})})
-}
-
-func (s RabbitHTTPClient) getBindings() chan httpResponse {
-	return s.getResource(httpRequest{s.uri + "/bindings", reflect.TypeOf([]RabbitBinding{})})
-}
-
-// BrokerInfo gets all resources of the broker at a time, in parallel
-// TODO reduce complexity
-func (s RabbitHTTPClient) BrokerInfo() (r BrokerInfo, err error) {
-	const numExpectedResources = 6
-	count := 0
-
-	// get...() returns channel which will provide result when available
-	// TODO use Context
-	overview := s.getOverview()
-	connections := s.getConnections()
-	exchanges := s.getExchanges()
-	queues := s.getQueues()
-	consumers := s.getConsumers()
-	bindings := s.getBindings()
-
-	for {
-		var res httpResponse
-		select {
-		case res := <-overview:
-			r.Overview = *(res.result.(*RabbitOverview))
-		case res = <-connections:
-			r.Connections = *(res.result.(*[]RabbitConnection))
-		case res = <-exchanges:
-			r.Exchanges = *(res.result.(*[]RabbitExchange))
-		case res = <-queues:
-			r.Queues = *(res.result.(*[]RabbitQueue))
-		case res = <-consumers:
-			r.Consumers = *(res.result.(*[]RabbitConsumer))
-		case res = <-bindings:
-			r.Bindings = *(res.result.(*[]RabbitBinding))
-			// TODO add timeout
-		}
-		if res.err != nil {
-			err = res.err
-			return
-		}
-		count++
-		if count == numExpectedResources {
-			return
-		}
-	}
-}
-
-// Connections returns the /connections resource of the broker
-func (s RabbitHTTPClient) Connections() ([]RabbitConnection, error) {
-	result := <-s.getConnections()
-	return *(result.result.(*[]RabbitConnection)), result.err
-}
-
-// Overview returns the /overview resource of the broker
+// Overview returns the /overview resource of the RabbitMQ REST API
 func (s RabbitHTTPClient) Overview() (RabbitOverview, error) {
-	result := <-s.getOverview()
-	return *(result.result.(*RabbitOverview)), result.err
+	res, err := s.getResource(httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
+	return *res.(*RabbitOverview), err
 }
 
-// Exchanges returns the /exchanges resource of the broker
+// Connections returns the /connections resource of the RabbitMQ REST API
+func (s RabbitHTTPClient) Connections() ([]RabbitConnection, error) {
+	res, err := s.getResource(httpRequest{"connections", reflect.TypeOf([]RabbitConnection{})})
+	return *res.(*[]RabbitConnection), err
+}
+
+// Exchanges returns the /exchanges resource of the RabbitMQ REST API
 func (s RabbitHTTPClient) Exchanges() ([]RabbitExchange, error) {
-	result := <-s.getExchanges()
-	return *(result.result.(*[]RabbitExchange)), result.err
+	res, err := s.getResource(httpRequest{"exchanges", reflect.TypeOf([]RabbitExchange{})})
+	return *res.(*[]RabbitExchange), err
 }
 
-// Queues returns the /queues resource of the broker
+// Queues returns the /queues resource of the RabbitMQ REST API
 func (s RabbitHTTPClient) Queues() ([]RabbitQueue, error) {
-	result := <-s.getQueues()
-	return *(result.result.(*[]RabbitQueue)), result.err
+	res, err := s.getResource(httpRequest{"queues", reflect.TypeOf([]RabbitQueue{})})
+	return *res.(*[]RabbitQueue), err
 }
 
-// Consumers returns the /consumers resource of the broker
+// Consumers returns the /consumers resource of the RabbitMQ REST API
 func (s RabbitHTTPClient) Consumers() ([]RabbitConsumer, error) {
-	result := <-s.getConsumers()
-	return *(result.result.(*[]RabbitConsumer)), result.err
+	res, err := s.getResource(httpRequest{"consumers", reflect.TypeOf([]RabbitConsumer{})})
+	return *res.(*[]RabbitConsumer), err
 }
 
-// Bindings returns the /bindings resource of the broker
+// Bindings returns the /bindings resource of the RabbitMQ REST API
 func (s RabbitHTTPClient) Bindings() ([]RabbitBinding, error) {
-	result := <-s.getBindings()
-	return *(result.result.(*[]RabbitBinding)), result.err
+	res, err := s.getResource(httpRequest{"bindings", reflect.TypeOf([]RabbitBinding{})})
+	return *res.(*[]RabbitBinding), err
 }
 
-// Channels returns the /channels resource of the broker. TODO not yet used.
-// func (s RabbitHTTPClient) Channels() ([]RabbitChannel, error) {
-//     result := <-s.getResource2(httpRequest{s.uri + "/channels", reflect.TypeOf([]RabbitChannel{})})
-//     return *(result.result.(*[]RabbitChannel)), result.err
-// }
+// BrokerInfo gets all resources of the broker in parallel
+// TODO use a ctx to for timeout/cancellation
+func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
+	var g errgroup.Group
+	var r BrokerInfo
+	g.Go(func() (err error) { r.Overview, err = s.Overview(); return })
+	g.Go(func() (err error) { r.Connections, err = s.Connections(); return })
+	g.Go(func() (err error) { r.Exchanges, err = s.Exchanges(); return })
+	g.Go(func() (err error) { r.Queues, err = s.Queues(); return })
+	g.Go(func() (err error) { r.Consumers, err = s.Consumers(); return })
+	g.Go(func() (err error) { r.Bindings, err = s.Bindings(); return })
+	return r, g.Wait()
+}
 
 // CloseConnection closes a connection by DELETING the associated resource
 func (s RabbitHTTPClient) CloseConnection(conn, reason string) error {
-	return s.delResource(s.uri + "/connections/" + conn)
+	return s.delResource("connections/" + conn)
 }
 
 // FindQueueByName searches in the queues array for a queue with the given

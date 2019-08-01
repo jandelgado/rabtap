@@ -4,6 +4,7 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"net/url"
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
@@ -14,7 +15,8 @@ func TestDiscoveryUnknownExchange(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	_, err := DiscoverBindingsForExchange(client, "/", "unknown")
 	assert.NotNil(t, err)
@@ -24,7 +26,8 @@ func TestDiscoveryDirectExchange(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	result, err := DiscoverBindingsForExchange(client, "/", "test-direct")
 	assert.Nil(t, err)
@@ -37,7 +40,8 @@ func TestDiscoveryTopicExchange(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	result, err := DiscoverBindingsForExchange(client, "/", "test-topic")
 	assert.Nil(t, err)
@@ -49,7 +53,8 @@ func TestDiscoveryFanoutExchange(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 	result, err := DiscoverBindingsForExchange(client, "/", "test-fanout")
 
 	assert.Nil(t, err)
@@ -61,7 +66,8 @@ func TestDiscoveryHeadersExchange(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
-	client := NewRabbitHTTPClient(mock.URL, &tls.Config{})
+	url, _ := url.Parse(mock.URL)
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 	result, err := DiscoverBindingsForExchange(client, "/", "test-headers")
 
 	assert.Nil(t, err)

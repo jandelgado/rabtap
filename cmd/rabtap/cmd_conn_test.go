@@ -5,6 +5,7 @@ package main
 
 import (
 	"crypto/tls"
+	"net/url"
 	"testing"
 	"time"
 
@@ -36,8 +37,8 @@ func findClosedConnName(connectionsBefore []rabtap.RabbitConnection,
 
 func TestCmdCloseConnection(t *testing.T) {
 
-	uri := testcommon.IntegrationAPIURIFromEnv()
-	client := rabtap.NewRabbitHTTPClient(uri, &tls.Config{})
+	url, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
+	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
 	// we can not get the name of a connection through the API of the AMQP client. So
 	// we figure out the connections name by comparing the list of active
@@ -65,7 +66,7 @@ func TestCmdCloseConnection(t *testing.T) {
 
 	// now close the newly created connection. TODO handle potential
 	// call to failOnError in cmdConnClose
-	err = cmdConnClose(uri, connToClose, "some reason", &tls.Config{})
+	err = cmdConnClose(url.String(), connToClose, "some reason", &tls.Config{})
 	require.Nil(t, err)
 
 	// ... and make sure it gets closed, notified by a message on the errorChan

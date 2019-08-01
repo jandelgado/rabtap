@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/tls"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -29,7 +30,7 @@ func TestCmdPurgeQueue(t *testing.T) {
 	const testExchange = "amq.direct"
 
 	amqpURI := testcommon.IntegrationURIFromEnv()
-	apiURI := testcommon.IntegrationAPIURIFromEnv()
+	apiURL, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 
 	os.Args = []string{"rabtap", "queue",
 		"create", testQueue,
@@ -52,7 +53,7 @@ func TestCmdPurgeQueue(t *testing.T) {
 	main()
 
 	time.Sleep(2 * time.Second)
-	client := rabtap.NewRabbitHTTPClient(apiURI, &tls.Config{})
+	client := rabtap.NewRabbitHTTPClient(apiURL, &tls.Config{})
 	queues, err := client.Queues()
 	assert.Nil(t, err)
 	i := rabtap.FindQueueByName(queues, "/", testQueue)

@@ -11,6 +11,7 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"net/url"
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
@@ -70,8 +71,8 @@ func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 	const exchangeTestName = "amq.direct"
 	const keyTestName = "key"
 
-	client := NewRabbitHTTPClient(testcommon.IntegrationAPIURIFromEnv(),
-		&tls.Config{})
+	url, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
+	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	// make sure queue does not exist before creation
 	queues, err := client.Queues()

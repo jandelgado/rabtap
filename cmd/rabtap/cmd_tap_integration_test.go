@@ -5,8 +5,8 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
-	"os"
 	"testing"
 	"time"
 
@@ -38,9 +38,9 @@ func TestCmdTap(t *testing.T) {
 	tapConfig := []rabtap.TapConfiguration{
 		{AmqpURI: testcommon.IntegrationURIFromEnv(),
 			Exchanges: exchangeConfig}}
-	// signalChannel receives ctrl+C/interrput signal
-	signalChannel := make(chan os.Signal, 1)
-	go cmdTap(tapConfig, &tls.Config{}, receiveFunc, signalChannel)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go cmdTap(ctx, tapConfig, &tls.Config{}, receiveFunc)
 
 	time.Sleep(time.Second * 1)
 	err := ch.Publish(
@@ -61,5 +61,5 @@ func TestCmdTap(t *testing.T) {
 	case <-time.After(time.Second * 2):
 		assert.Fail(t, "did not receive message within expected time")
 	}
-	signalChannel <- os.Interrupt
+	cancel() // stop cmdTap()
 }

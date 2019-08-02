@@ -3,7 +3,9 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
+	"fmt"
 	"net/url"
 	"os"
 	"os/signal"
@@ -42,16 +44,9 @@ func getTLSConfig(insecureTLS bool) *tls.Config {
 	return &tls.Config{InsecureSkipVerify: insecureTLS}
 }
 
-func createFilterPredicate(expr *string) (Predicate, error) {
-	if expr != nil {
-		return NewPredicateExpression(*expr)
-	}
-	return NewPredicateExpression("true")
-}
-
 func startCmdInfo(args CommandLineArgs, title string) {
-	queueFilter, err := createFilterPredicate(args.QueueFilter)
-	failOnError(err, "invalid queue filter predicate", os.Exit)
+	queueFilter, err := NewPredicateExpression(args.QueueFilter)
+	failOnError(err, fmt.Sprintf("invalid queue filter predicate '%s'", args.QueueFilter), os.Exit)
 	apiURL, err := url.Parse(args.APIURI)
 	failOnError(err, "invalid api url", os.Exit)
 	cmdInfo(CmdInfoArg{
@@ -85,51 +80,36 @@ func startCmdPublish(args CommandLineArgs) {
 	failOnError(err, "error publishing message", os.Exit)
 }
 
-func startCmdSubscribe(args CommandLineArgs) {
-	// signalChannel receives ctrl+C/interrput signal
-	signalChannel := make(chan os.Signal, 5)
-	signal.Notify(signalChannel, os.Interrupt)
+func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc := createMessageReceiveFunc(
 		NewColorableWriter(os.Stdout), args.JSONFormat,
 		args.SaveDir, args.NoColor)
-	err := cmdSubscribe(CmdSubscribeArg{
+	err := cmdSubscribe(ctx, CmdSubscribeArg{
 		amqpURI:            args.AmqpURI,
 		queue:              args.QueueName,
 		tlsConfig:          getTLSConfig(args.InsecureTLS),
-		messageReceiveFunc: messageReceiveFunc,
-		signalChannel:      signalChannel})
+		messageReceiveFunc: messageReceiveFunc})
 	failOnError(err, "error subscribing messages", os.Exit)
 }
 
-func startCmdTap(args CommandLineArgs) {
-	signalChannel := make(chan os.Signal, 1)
-	signal.Notify(signalChannel, os.Interrupt)
+func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc := createMessageReceiveFunc(
 		NewColorableWriter(os.Stdout), args.JSONFormat,
 		args.SaveDir, args.NoColor)
-	cmdTap(args.TapConfig, getTLSConfig(args.InsecureTLS),
-		messageReceiveFunc, signalChannel)
+	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS),
+		messageReceiveFunc)
 }
 
-func main() {
-	args, err := ParseCommandLineArgs(os.Args[1:])
-	if err != nil {
-		log.Fatal(err)
-	}
-	initLogging(args.Verbose)
-	log.Debugf("parsed cli-args: %+v", args)
-
-	tlsConfig := getTLSConfig(args.InsecureTLS)
-
+func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) {
 	switch args.Cmd {
 	case InfoCmd:
 		startCmdInfo(args, args.APIURI)
 	case SubCmd:
-		startCmdSubscribe(args)
+		startCmdSubscribe(ctx, args)
 	case PubCmd:
 		startCmdPublish(args)
 	case TapCmd:
-		startCmdTap(args)
+		startCmdTap(ctx, args)
 	case ExchangeCreateCmd:
 		cmdExchangeCreate(CmdExchangeCreateArg{amqpURI: args.AmqpURI,
 			exchange: args.ExchangeName, exchangeType: args.ExchangeType,
@@ -155,4 +135,32 @@ func main() {
 		cmdConnClose(args.APIURI, args.ConnName,
 			args.CloseReason, tlsConfig)
 	}
+}
+
+func main() {
+	args, err := ParseCommandLineArgs(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	initLogging(args.Verbose)
+	tlsConfig := getTLSConfig(args.InsecureTLS)
+
+	// translate ^C (Interrput) in ctx.Done()
+	ctx, cancel := context.WithCancel(context.Background())
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	defer func() {
+		signal.Stop(c)
+		cancel()
+	}()
+	go func() {
+		select {
+		case <-c:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	dispatchCmd(ctx, args, tlsConfig)
 }

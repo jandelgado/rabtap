@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -49,8 +50,8 @@ func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
 }
 
 func TestMessageReceiveLoop(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
 	messageChan := make(rabtap.TapChannel)
-	signalChannel := make(chan os.Signal)
 	done := make(chan bool)
 	received := 0
 
@@ -59,10 +60,10 @@ func TestMessageReceiveLoop(t *testing.T) {
 		done <- true
 		return nil
 	}
-	go messageReceiveLoop(messageChan, receiveFunc, signalChannel)
+	go messageReceiveLoop(ctx, messageChan, receiveFunc)
 
 	messageChan <- rabtap.TapMessage{}
-	<-done                        // TODO add timeout
-	signalChannel <- os.Interrupt // terminates go routine
+	<-done // TODO add timeout
+	cancel()
 	assert.Equal(t, 1, received)
 }

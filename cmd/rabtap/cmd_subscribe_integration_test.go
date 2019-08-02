@@ -8,9 +8,9 @@ package main
 // integration test
 
 import (
+	"context"
 	"crypto/tls"
 	"io"
-	"os"
 	"testing"
 	"time"
 
@@ -22,23 +22,25 @@ import (
 
 func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 
+	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan bool)
 	go func() {
-		cmdSubscribe(CmdSubscribeArg{
+		// we expect cmdSubscribe to return
+		cmdSubscribe(ctx, CmdSubscribeArg{
 			amqpURI:            "invalid uri",
 			queue:              "queue",
 			tlsConfig:          &tls.Config{},
 			messageReceiveFunc: func(rabtap.TapMessage) error { return nil },
-			signalChannel:      make(chan os.Signal, 1)})
+		})
 		done <- true
 	}()
 
-	// test if our tap received the message
 	select {
 	case <-done:
 	case <-time.After(time.Second * 2):
 		assert.Fail(t, "cmdSubscribe did not fail on initial connection error")
 	}
+	cancel()
 }
 
 func TestCmdSub(t *testing.T) {
@@ -58,9 +60,9 @@ func TestCmdSub(t *testing.T) {
 		return nil
 	}
 
-	// signalChannel receives ctrl+C/interrput signal
-	signalChannel := make(chan os.Signal, 1)
+	ctx, cancel := context.WithCancel(context.Background())
 
+	// creat exchange
 	cmdExchangeCreate(CmdExchangeCreateArg{amqpURI: amqpURI,
 		exchange: testExchange, exchangeType: "fanout",
 		durable: false, tlsConfig: tlsConfig})
@@ -73,12 +75,11 @@ func TestCmdSub(t *testing.T) {
 	defer cmdQueueRemove(amqpURI, testQueue, tlsConfig)
 
 	// subscribe to testQueue
-	go cmdSubscribe(CmdSubscribeArg{
+	go cmdSubscribe(ctx, CmdSubscribeArg{
 		amqpURI:            amqpURI,
 		queue:              testQueue,
 		tlsConfig:          tlsConfig,
-		messageReceiveFunc: receiveFunc,
-		signalChannel:      signalChannel})
+		messageReceiveFunc: receiveFunc})
 
 	time.Sleep(time.Second * 1)
 
@@ -107,7 +108,7 @@ func TestCmdSub(t *testing.T) {
 	case <-time.After(time.Second * 2):
 		assert.Fail(t, "did not receive message within expected time")
 	}
-	signalChannel <- os.Interrupt
+	cancel() // stop cmdSubscribe()
 
 	cmdQueueUnbindFromExchange(amqpURI, testQueue, testKey, testExchange, tlsConfig)
 	// TODO check that queue is unbound

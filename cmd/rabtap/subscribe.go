@@ -5,9 +5,9 @@ package main
 // common functionality to subscribe to queues.
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"os"
 	"path"
 	"time"
 
@@ -17,11 +17,15 @@ import (
 // MessageReceiveFunc processes receiced messages from a tap.
 type MessageReceiveFunc func(rabtap.TapMessage) error
 
-func messageReceiveLoop(messageChan rabtap.TapChannel,
-	messageReceiveFunc MessageReceiveFunc, signalChannel chan os.Signal) error {
+func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
+	messageReceiveFunc MessageReceiveFunc) error {
 
 	for {
 		select {
+		case <-ctx.Done():
+			log.Debugf("subscribe: cancel")
+			return nil
+
 		case message, more := <-messageChan:
 			if !more {
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
@@ -37,9 +41,6 @@ func messageReceiveLoop(messageChan rabtap.TapChannel,
 			if err := messageReceiveFunc(message); err != nil {
 				log.Error(err)
 			}
-		case <-signalChannel:
-			log.Debugf("subscribe: caught signal!")
-			return nil
 		}
 	}
 }

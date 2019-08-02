@@ -16,7 +16,7 @@ var RabtapAppVersion = "(version not specified)"
 
 const (
 	// note: usage is interpreted by docopt - this is code.
-	usage = `rabtap - RabbitMQ wire tap.
+	usage = `rabtap - RabbitMQ wire tap.                  github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
@@ -52,7 +52,8 @@ Options:
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
- --filter EXPR        Filter for info command to filter queues (see README.md)
+ --filter EXPR        Predicate for info command to filter queues [default: true]
+                      (see README.md for details)
  -h, --help           print this help.
  -j, --json           print/save/publish message metadata and body to a
                       single JSON file. JSON body is base64 encoded. Otherwise
@@ -151,7 +152,7 @@ type CommandLineArgs struct {
 	ShowConsumers       bool    // info mode: also show consumer
 	ShowByConnection    bool    // info mode: show by connection
 	ShowStats           bool    // info mode: also show statistics
-	QueueFilter         *string // info mode: optional filter for queues
+	QueueFilter         string  // info mode: optional filter predicate
 	OmitEmptyExchanges  bool    // info mode: do not show exchanges wo/ bindings
 	Durable             bool    // queue create, exchange create
 	Autodelete          bool    // queue create, exchange create
@@ -210,16 +211,13 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:                 InfoCmd,
 		commonArgs:          parseCommonArgs(args),
+		QueueFilter:         args["--filter"].(string),
 		OmitEmptyExchanges:  args["--omit-empty"].(bool),
 		ShowConsumers:       args["--consumers"].(bool),
 		ShowStats:           args["--stats"].(bool),
 		ShowDefaultExchange: args["--show-default"].(bool),
 		ShowByConnection:    args["--by-connection"].(bool)}
 
-	if args["--filter"] != nil {
-		filter := args["--filter"].(string)
-		result.QueueFilter = &filter
-	}
 	var err error
 	if result.APIURI, err = parseAPIURI(args); err != nil {
 		return result, err

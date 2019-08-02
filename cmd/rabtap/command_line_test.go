@@ -145,13 +145,13 @@ func TestCliInfoCmd(t *testing.T) {
 	assert.Equal(t, 0, len(args.TapConfig))
 	assert.Equal(t, InfoCmd, args.Cmd)
 	assert.Equal(t, "APIURI", args.APIURI)
+	assert.Equal(t, "true", args.QueueFilter)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowStats)
 	assert.False(t, args.ShowConsumers)
 	assert.False(t, args.ShowByConnection)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
-	assert.Nil(t, args.QueueFilter)
 	assert.False(t, args.OmitEmptyExchanges)
 }
 
@@ -193,7 +193,7 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	assert.Equal(t, "APIURI", args.APIURI)
 	assert.Nil(t, args.SaveDir)
 	assert.False(t, args.Verbose)
-	assert.Equal(t, "EXPR", *args.QueueFilter)
+	assert.Equal(t, "EXPR", args.QueueFilter)
 	assert.True(t, args.ShowStats)
 	assert.True(t, args.ShowConsumers)
 	assert.True(t, args.ShowDefaultExchange)

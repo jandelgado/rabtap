@@ -11,19 +11,25 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// AmqpSubscriberConfig stores configuration of the subscriber
+type AmqpSubscriberConfig struct {
+	Exclusive bool
+	AutoAck   bool
+}
+
 // AmqpSubscriber allows to tap to subscribe to queues
 type AmqpSubscriber struct {
+	config     AmqpSubscriberConfig
 	connection *AmqpConnector
 	logger     logrus.StdLogger
-	exclusive  bool
 }
 
 // NewAmqpSubscriber returns a new AmqpSubscriber object associated with the
 // RabbitMQ broker denoted by the uri parameter.
-func NewAmqpSubscriber(uri string, exclusive bool, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpSubscriber {
+func NewAmqpSubscriber(config AmqpSubscriberConfig, uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpSubscriber {
 	return &AmqpSubscriber{
+		config:     config,
 		connection: NewAmqpConnector(uri, tlsConfig, logger),
-		exclusive:  exclusive,
 		logger:     logger}
 }
 
@@ -119,8 +125,8 @@ func (s *AmqpSubscriber) consumeMessages(conn *amqp.Connection,
 	msgs, err := ch.Consume(
 		queueName,
 		"__rabtap-consumer-"+uuid.Must(uuid.NewRandom()).String()[:8], // TODO param
-		true, // auto-ack
-		s.exclusive,
+		s.config.AutoAck,
+		s.config.Exclusive,
 		false, // no-local - unsupported
 		false, // wait
 		nil,   // args

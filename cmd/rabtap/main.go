@@ -87,6 +87,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	err := cmdSubscribe(ctx, CmdSubscribeArg{
 		amqpURI:            args.AmqpURI,
 		queue:              args.QueueName,
+		AutoAck:            args.AutoAck,
 		tlsConfig:          getTLSConfig(args.InsecureTLS),
 		messageReceiveFunc: messageReceiveFunc})
 	failOnError(err, "error subscribing messages", os.Exit)

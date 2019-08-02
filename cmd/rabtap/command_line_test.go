@@ -261,6 +261,7 @@ func TestCliSubCmdSaveToDir(t *testing.T) {
 	assert.Equal(t, "queuename", args.QueueName)
 	assert.Equal(t, "uri", args.AmqpURI)
 	assert.Equal(t, "dir", *args.SaveDir)
+	assert.True(t, args.AutoAck)
 }
 
 func TestCliCreateQueue(t *testing.T) {

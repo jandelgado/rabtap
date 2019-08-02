@@ -25,8 +25,9 @@ type AmqpTap struct {
 // NewAmqpTap returns a new AmqpTap object associated with the RabbitMQ
 // broker denoted by the uri parameter.
 func NewAmqpTap(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpTap {
+	config := AmqpSubscriberConfig{Exclusive: true, AutoAck: true}
 	return &AmqpTap{
-		AmqpSubscriber: NewAmqpSubscriber(uri, true /* exclusive */, tlsConfig, logger)}
+		AmqpSubscriber: NewAmqpSubscriber(config, uri, tlsConfig, logger)}
 }
 
 func getTapExchangeNameForExchange(exchange, postfix string) string {

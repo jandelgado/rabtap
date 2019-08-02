@@ -16,7 +16,7 @@ var RabtapAppVersion = "(version not specified)"
 
 const (
 	// note: usage is interpreted by docopt - this is code.
-	usage = `rabtap - RabbitMQ wire tap.                  github.com/jandelgado/rabtap
+	usage = `rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
@@ -26,7 +26,7 @@ Usage:
               [--filter EXPR] 
               [--omit-empty] [--show-default] [--by-connection] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [-jkvn]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--no-auto-ack] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri URI] [-kv]
   rabtap queue create QUEUE [--uri URI] [-adkv]
@@ -60,6 +60,9 @@ Options:
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
+ --no-auto-ack        disable auto-ack in subscribe mode. This will lead to 
+                      unacked messages on the broker which will be requeued 
+                      when the channel is closed.
  -o, --omit-empty     don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed 
                       [default: closed by rabtap].
@@ -145,6 +148,7 @@ type CommandLineArgs struct {
 	PubExchange         string  // pub mode: exchange to publish to
 	PubRoutingKey       string  // pub mode: routing key, defaults to ""
 	PubFile             *string // pub mode: file to send
+	AutoAck             bool    // sub mode: auto ack enabled
 	QueueName           string  // queue create, remove, bind, sub
 	QueueBindingKey     string  // queue bind
 	ExchangeName        string  // exchange name  create, remove or queue bind
@@ -245,6 +249,7 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:        SubCmd,
 		commonArgs: parseCommonArgs(args),
+		AutoAck:    !args["--no-auto-ack"].(bool),
 		QueueName:  args["QUEUE"].(string),
 	}
 	var err error

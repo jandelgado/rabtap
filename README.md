@@ -89,7 +89,7 @@ See [below](#build-from-source) if you prefer to compile from source.
 ## Usage
 
 ```
-rabtap - RabbitMQ wire tap.                  github.com/jandelgado/rabtap
+rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
@@ -99,7 +99,7 @@ Usage:
               [--filter EXPR] 
               [--omit-empty] [--show-default] [--by-connection] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [-jkvn]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--no-auto-ack] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri URI] [-kv]
   rabtap queue create QUEUE [--uri URI] [-adkv]
@@ -133,6 +133,9 @@ Options:
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
+ --no-auto-ack        disable auto-ack in subscribe mode. This will lead to 
+                      unacked messages on the broker which will be requeued 
+                      when the channel is closed.
  -o, --omit-empty     don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed 
                       [default: closed by rabtap].

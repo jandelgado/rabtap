@@ -49,7 +49,7 @@ func Example_startCmdInfo() {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeEmpty)
 	defer mock.Close()
 
-	args := CommandLineArgs{APIURI: mock.URL, commonArgs: commonArgs{NoColor: true}}
+	args, _ := ParseCommandLineArgs([]string{"info", "--api", mock.URL, "--no-color"})
 	startCmdInfo(args, "http://rootnode")
 
 	// Output:

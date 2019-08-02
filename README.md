@@ -89,7 +89,7 @@ See [below](#build-from-source) if you prefer to compile from source.
 ## Usage
 
 ```
-rabtap - RabbitMQ wire tap.
+rabtap - RabbitMQ wire tap.                  github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
@@ -125,7 +125,8 @@ Options:
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
- --filter EXPR        Filter for info command to filter queues (see README.md)
+ --filter EXPR        Predicate for info command to filter queues [default: true]
+                      (see README.md for details)
  -h, --help           print this help.
  -j, --json           print/save/publish message metadata and body to a
                       single JSON file. JSON body is base64 encoded. Otherwise

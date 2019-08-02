@@ -3,8 +3,8 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
-	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -23,14 +23,15 @@ func tapCmdShutdownFunc(taps []*rabtap.AmqpTap) {
 
 // cmdTap taps to the given exchanges and displays or saves the received
 // messages.
-func cmdTap(tapConfig []rabtap.TapConfiguration, tlsConfig *tls.Config,
-	messageReceiveFunc MessageReceiveFunc, signalChannel chan os.Signal) {
+func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig *tls.Config,
+	messageReceiveFunc MessageReceiveFunc) {
+
 	// this channel is used to decouple message receiving threads
 	// with the main thread, which does the actual message processing
 	tapMessageChannel := make(rabtap.TapChannel)
 	taps := establishTaps(tapMessageChannel, tapConfig, tlsConfig)
 	defer tapCmdShutdownFunc(taps)
-	err := messageReceiveLoop(tapMessageChannel, messageReceiveFunc, signalChannel)
+	err := messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc)
 	if err != nil {
 		log.Errorf("tap failed with %v", err)
 	}

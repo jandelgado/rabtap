@@ -303,7 +303,6 @@ func (s BrokerInfoPrinter) createQueueNodeFromBinding(
 
 func (s BrokerInfoPrinter) createExchangeNodeFromBinding(
 	binding rabtap.RabbitBinding,
-	exchange rabtap.RabbitExchange,
 	brokerInfo rabtap.BrokerInfo) []*TreeNode {
 
 	// standard binding of exchange to exchange
@@ -311,32 +310,18 @@ func (s BrokerInfoPrinter) createExchangeNodeFromBinding(
 		binding.Vhost,
 		binding.Destination)
 
-	exchange2 := rabtap.RabbitExchange{Name: binding.Destination} // default in case not found
+	exchange := rabtap.RabbitExchange{Name: binding.Destination} // default in case not found
 	if i != -1 {
 		// we test for -1 because (at least in theory) a queue can disappear
 		// since we are making various non-transactional API calls
-		exchange2 = brokerInfo.Exchanges[i]
+		exchange = brokerInfo.Exchanges[i]
 	}
 
-	if !s.shouldDisplayExchange(exchange2, binding.Vhost) {
+	if !s.shouldDisplayExchangeBinding(exchange, binding) {
 		return []*TreeNode{}
 	}
 
-	exchangeText := s.renderBoundExchangeElementAsString(exchange2, binding)
-	exchangeNode := NewTreeNode(exchangeText)
-
-	//if s.config.ShowConsumers {
-	//	consumers := s.createConsumerNodes(exchange2, brokerInfo)
-	//	exchangeNode.AddList(consumers)
-	//}
-	return []*TreeNode{exchangeNode}
-}
-
-func (s BrokerInfoPrinter) createExchangeNodeRef(
-	exchange rabtap.RabbitExchange,
-	brokerInfo rabtap.BrokerInfo) []*TreeNode {
-
-	exchangeText := s.renderExchangeElementAsString(exchange)
+	exchangeText := s.renderBoundExchangeElementAsString(exchange, binding)
 	exchangeNode := NewTreeNode(exchangeText)
 
 	return []*TreeNode{exchangeNode}
@@ -360,7 +345,7 @@ func (s BrokerInfoPrinter) createExchangeNode(
 				binding.Destination)
 			if i != -1 {
 				if visitedExchanges[brokerInfo.Exchanges[i].Name] {
-					exchangeNode.AddList(s.createExchangeNodeFromBinding(binding, brokerInfo.Exchanges[i], brokerInfo))
+					exchangeNode.AddList(s.createExchangeNodeFromBinding(binding, brokerInfo))
 					continue
 				}
 				exchangeNode.Add(
@@ -387,6 +372,25 @@ func (s BrokerInfoPrinter) shouldDisplayExchange(
 		return false
 	}
 
+	return true
+}
+
+func (s BrokerInfoPrinter) shouldDisplayExchangeBinding(
+	exchange rabtap.RabbitExchange, binding rabtap.RabbitBinding) bool {
+
+	if !s.shouldDisplayExchange(exchange, binding.Vhost) {
+		return false
+	}
+
+	// apply filter
+	params := map[string]interface{}{"binding": binding, "exchange": exchange}
+	if res, err := s.config.QueueFilter.Eval(params); err != nil || !res {
+		if err != nil {
+			log.Warnf("error evaluating queue filter: %s", err)
+		} else {
+			return false
+		}
+	}
 	return true
 }
 
@@ -419,8 +423,8 @@ func (s BrokerInfoPrinter) buildTreeByExchange(rootNodeURL string,
 	for vhost := range uniqueVhosts(brokerInfo.Exchanges) {
 		vhostNode := NewTreeNode(s.renderVhostAsString(vhost))
 		root.Add(vhostNode)
-		for _, exchange := range brokerInfo.Exchanges {
-			if !s.shouldDisplayExchange(exchange, vhost) {
+		for i, exchange := range brokerInfo.Exchanges {
+			if !s.shouldDisplayExchangeBinding(exchange, brokerInfo.Bindings[i]) {
 				continue
 			}
 			visitedExchanges := make(map[string]bool)

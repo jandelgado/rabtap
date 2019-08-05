@@ -103,6 +103,10 @@ func WriteMessageJSON(out io.Writer, message rabtap.TapMessage) error {
 		return err
 	}
 	_, err = out.Write(metadata)
+	if err != nil {
+		return err
+	}
+	_, err = out.Write([]byte{'\n'})
 	return err
 }
 

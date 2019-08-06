@@ -394,6 +394,27 @@ func (s BrokerInfoPrinter) shouldDisplayExchangeBinding(
 	return true
 }
 
+func (s BrokerInfoPrinter) shouldDisplayExchangeBindings(
+	exchange rabtap.RabbitExchange, vhost string, brokerInfo rabtap.BrokerInfo) bool {
+
+	if !s.shouldDisplayExchange(exchange, vhost) {
+		return false
+	}
+
+	for _, binding := range findBindingsForExchange(exchange, brokerInfo.Bindings) {
+		// apply filter
+		params := map[string]interface{}{"binding": binding, "exchange": exchange}
+		if res, err := s.config.QueueFilter.Eval(params); err != nil || !res {
+			if err != nil {
+				log.Warnf("error evaluating queue filter: %s", err)
+			} else {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (s BrokerInfoPrinter) makeRootNode(rootNodeURL string,
 	overview rabtap.RabbitOverview) (*TreeNode, error) {
 	// root of node is URL of rabtap.RabbitMQ broker.
@@ -423,8 +444,8 @@ func (s BrokerInfoPrinter) buildTreeByExchange(rootNodeURL string,
 	for vhost := range uniqueVhosts(brokerInfo.Exchanges) {
 		vhostNode := NewTreeNode(s.renderVhostAsString(vhost))
 		root.Add(vhostNode)
-		for i, exchange := range brokerInfo.Exchanges {
-			if !s.shouldDisplayExchangeBinding(exchange, brokerInfo.Bindings[i]) {
+		for _, exchange := range brokerInfo.Exchanges {
+			if !s.shouldDisplayExchangeBindings(exchange, vhost, brokerInfo) {
 				continue
 			}
 			visitedExchanges := make(map[string]bool)

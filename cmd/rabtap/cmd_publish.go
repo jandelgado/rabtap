@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"io"
@@ -10,24 +11,22 @@ import (
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
+	"golang.org/x/sync/errgroup"
 )
-
-// CmdPublishArg contains arguments for the publish command
-type CmdPublishArg struct {
-	amqpURI             string
-	tlsConfig           *tls.Config
-	exchange            string
-	routingKey          string
-	readNextMessageFunc MessageReaderFunc
-}
 
 // MessageReaderFunc provides messages that can be sent to an exchange.
 // returns the message to be published, a flag if more messages are to be read,
 // and an error.
 type MessageReaderFunc func() (amqp.Publishing, bool, error)
 
-// SignalChannel transports os.Signal objects like e.g. os.Interrupt
-// type SignalChannel chan os.Signal
+// CmdPublishArg contains arguments for the publish command
+type CmdPublishArg struct {
+	amqpURI    string
+	tlsConfig  *tls.Config
+	exchange   string
+	routingKey string
+	readerFunc MessageReaderFunc
+}
 
 // publishMessage publishes a single message on the given exchange with the
 // provided routingkey
@@ -65,7 +64,7 @@ func readNextMessageFromJSONStream(decoder *json.Decoder) (amqp.Publishing, bool
 
 // createMessageReaderFunc returns a function that reads messages from the
 // the given reader in JSON or raw-format TODO drop boolean param
-func createMessageReaderFunc(jsonFormat bool, reader io.Reader) MessageReaderFunc {
+func createMessageReaderFunc(jsonFormat bool, reader io.ReadCloser) MessageReaderFunc {
 	if jsonFormat {
 		decoder := json.NewDecoder(reader)
 		return func() (amqp.Publishing, bool, error) {
@@ -78,10 +77,10 @@ func createMessageReaderFunc(jsonFormat bool, reader io.Reader) MessageReaderFun
 }
 
 // publishMessages reads messages with the provided readNextMessageFunc and
-// publishes the messages to the given exchange.
+// publishes the messages to the given exchange. When done closes
+// the publishChannel
 func publishMessageStream(publishChannel rabtap.PublishChannel,
-	exchange, routingKey string,
-	readNextMessageFunc MessageReaderFunc) error {
+	exchange, routingKey string, readNextMessageFunc MessageReaderFunc) error {
 	for {
 		msg, more, err := readNextMessageFunc()
 		switch err {
@@ -104,12 +103,72 @@ func publishMessageStream(publishChannel rabtap.PublishChannel,
 
 // cmdPublish reads messages with the provied readNextMessageFunc and
 // publishes the messages to the given exchange.
-func cmdPublish(cmd CmdPublishArg) error {
+// Termination is a little bit tricky here, since we can not use "select"
+// on a File object to stop a blocking read. There are 3 ways publishing
+// can be stopped:
+// * by an EOF or error on the input file
+// * by ctx.Context() signaling cancellation (e.g. ctrl+c)
+// * by an initial connection failure to the broker
+func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
+
 	log.Debugf("publishing message(s) to exchange %s with routingkey %s",
 		cmd.exchange, cmd.routingKey)
+
+	//readerFunc := createMessageReaderFunc(cmd.jsonFormat, cmd.file)
+
+	g, ctx := errgroup.WithContext(ctx)
+
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)
-	defer publisher.Close()
+	//defer publisher.Close()
 	publishChannel := make(rabtap.PublishChannel)
-	go publishMessageStream(publishChannel, cmd.exchange, cmd.routingKey, cmd.readNextMessageFunc)
-	return publisher.EstablishConnection(publishChannel)
+	//	done, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		// runs as long as readerFunc returns messages. Unfortunately, we
+		// can not stop a blocking read on a file like we do with channels
+		// and select.
+		publishMessageStream(publishChannel, cmd.exchange,
+			cmd.routingKey, cmd.readerFunc)
+		log.Debug("READER EXITING")
+	}()
+
+	g.Go(func() error {
+		err := publisher.EstablishConnection(ctx, publishChannel)
+		//		cancel()
+		log.Debug("PUBLISHER EXITING")
+		return err
+	})
+
+	// defer func() {
+	//     log.Debug("DEFER CALLED, cancelling")
+	//     cancel()
+	//     log.Debug("DEFER CALLED, cancel called")
+	// }()
+	// g.Go(func() error {
+	//     log.Debug("CLOSER STARTING")
+	//     // TODO terminate when publishChannel is closed
+	//     log.Debug("****** CLOSER WAITING")
+	//     select {
+	//     case <-done.Done():
+	//         log.Debug("CLOSER EXITING ")
+
+	//     case <-ctx.Done():
+	//         log.Debug("CLOSE FILE")
+	//         cmd.file.Close()
+	//     }
+	//     log.Debug("CLOSER ENDING")
+	//     return nil
+	// })
+
+	// unfortunately, we can not do a select on a file and cancel a blocking
+	// file read with the ctx object.
+	//publishMessageStream(publishChannel, cmd.exchange, cmd.routingKey, readerFunc)
+
+	if err := g.Wait(); err != nil {
+		log.Errorf("publish failed with %v", err)
+		log.Debug("cmd_publish_end with error")
+		return err
+	}
+	log.Debug("cmd_publish_end ok")
+	return nil
 }

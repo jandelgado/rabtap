@@ -4,6 +4,7 @@
 package rabtap
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"os"
@@ -17,6 +18,7 @@ func TestSubscribe(t *testing.T) {
 
 	// establish sending exchange.
 	conn, ch := testcommon.IntegrationTestConnection(t, "subtest-direct-exchange", "direct", 0, false)
+	session := Session{conn, ch}
 	defer conn.Close()
 
 	queueName := "queue"
@@ -25,16 +27,17 @@ func TestSubscribe(t *testing.T) {
 	// we need to create the queue non-exclusive, since exclusive queues are
 	// bound to the connection which created them (other connections get
 	// error RESOURCE_LOCKED (405)).
-	CreateQueue(ch, queueName, false /*durable*/, true /*ad*/, false /*excl*/)
-	BindQueueToExchange(ch, queueName, keyName, "subtest-direct-exchange")
+	CreateQueue(session, queueName, false /*durable*/, true /*ad*/, false /*excl*/)
+	BindQueueToExchange(session, queueName, keyName, "subtest-direct-exchange")
 
 	finishChan := make(chan int)
 
 	config := AmqpSubscriberConfig{Exclusive: false, AutoAck: true}
 	subscriber := NewAmqpSubscriber(config, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log.New(os.Stderr, "", log.LstdFlags))
-	defer subscriber.Close()
 	resultChannel := make(TapChannel)
-	go subscriber.EstablishSubscription(queueName, resultChannel)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go subscriber.EstablishSubscription(ctx, queueName, resultChannel)
 
 	go func() {
 		numReceived := 0

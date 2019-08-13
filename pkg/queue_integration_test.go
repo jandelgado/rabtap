@@ -47,14 +47,15 @@ func TestIntegrationAmqpPurgeQueue(t *testing.T) {
 
 	// create queue
 	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
+	session := Session{conn, ch}
 	defer conn.Close()
-	err := CreateQueue(ch, queueTestName, false, false, false)
+	err := CreateQueue(session, queueTestName, false, false, false)
 	assert.Nil(t, err)
 
 	// publish & purge 10 messages
 	const numMessages = 10
 	testcommon.PublishTestMessages(t, ch, numMessages, exchangeTestName, queueTestName, nil)
-	num, err := PurgeQueue(ch, queueTestName)
+	num, err := PurgeQueue(session, queueTestName)
 	assert.Nil(t, err)
 	assert.Equal(t, numMessages, num)
 	// TODO additionally verifiy that queue is empty
@@ -81,8 +82,9 @@ func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 
 	// create queue
 	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
+	session := Session{conn, ch}
 	defer conn.Close()
-	err = CreateQueue(ch, queueTestName, false, false, false)
+	err = CreateQueue(session, queueTestName, false, false, false)
 	assert.Nil(t, err)
 
 	// check if queue was created
@@ -91,21 +93,21 @@ func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 	assert.NotEqual(t, -1, findQueue(queueTestName, queues))
 
 	// bind queue to exchange
-	err = BindQueueToExchange(ch, queueTestName, keyTestName, exchangeTestName)
+	err = BindQueueToExchange(session, queueTestName, keyTestName, exchangeTestName)
 	assert.Nil(t, err)
 	bindings, err := client.Bindings()
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// unbind queue from exchange
-	err = UnbindQueueFromExchange(ch, queueTestName, keyTestName, exchangeTestName)
+	err = UnbindQueueFromExchange(session, queueTestName, keyTestName, exchangeTestName)
 	assert.Nil(t, err)
 	bindings, err = client.Bindings()
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// finally remove queue
-	err = RemoveQueue(ch, queueTestName, false, false)
+	err = RemoveQueue(session, queueTestName, false, false)
 	assert.Nil(t, err)
 	queues, err = client.Queues()
 	assert.Nil(t, err)

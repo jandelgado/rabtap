@@ -8,6 +8,7 @@ package rabtap
 // TODO add reconnection test (using toxiproxy)
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"os"
@@ -15,86 +16,50 @@ import (
 	"time"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
-	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 
+	ctx := context.Background()
 	log := log.New(os.Stdout, "ampq_connector_inttest: ", log.Lshortfile)
 
 	conn := NewAmqpConnector("amqp://localhost:1", &tls.Config{}, log)
 
-	worker := func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
+	worker := func(ctx context.Context, session Session) (ReconnectAction, error) {
 		assert.Fail(t, "worker unexpectedly called during test")
-		return doNotReconnect
+		return doNotReconnect, nil
 	}
 
-	err := conn.Connect(worker)
+	err := conn.Connect(ctx, worker)
 	assert.NotNil(t, err)
-}
-
-func XTestAbortConnectionPhase(t *testing.T) {
-
-	// test must be rewritten, since connector now "fails fast" on error
-	// on first connection attempt
-
-	log := log.New(os.Stdout, "ampq_connector_inttest: ", log.Lshortfile)
-
-	conn := NewAmqpConnector("amqp://localhost:1", &tls.Config{}, log)
-
-	worker := func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
-		assert.Fail(t, "worker unepctedly called during test")
-		return doNotReconnect
-	}
-
-	done := make(chan error)
-	go func() {
-		done <- conn.Connect(worker)
-	}()
-
-	time.Sleep(time.Second * 1) // wait for go-routine to start
-	conn.Close()
-
-	select {
-	case <-time.After(5 * time.Second):
-		assert.Fail(t, "Connect() did not shut down as expected")
-	case err := <-done:
-		assert.Nil(t, err)
-	}
 }
 
 // TestIntegrationWorkerInteraction checks that our worker function is properly
 // called an that the shutdown mechanism works.
 func TestIntegrationWorkerInteraction(t *testing.T) {
 
+	ctx, cancel := context.WithCancel(context.Background())
 	log := log.New(os.Stdout, "ampq_connector_inttest: ", log.Lshortfile)
 
 	resultChan := make(chan int, 1)
 
-	worker := func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
-		require.NotNil(t, rabbitConn)
+	worker := func(ctx context.Context, session Session) (ReconnectAction, error) {
 		for {
 			select {
-			case controlMessage := <-controlChan:
-				// when triggered by AmqpConnector.Close(), ShutdownMessage is expected
-				assert.Equal(t, shutdownMessage, controlMessage)
+			case <-ctx.Done():
 				resultChan <- 1337
-				if controlMessage.IsReconnect() {
-					return doReconnect
-				}
-				return doNotReconnect
+				return doNotReconnect, nil
 			}
 		}
 	}
 
 	conn := NewAmqpConnector(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
-	go conn.Connect(worker)
+	go conn.Connect(ctx, worker)
 
 	time.Sleep(time.Second * 2) // wait for connection to be established
 
-	conn.Close()
+	cancel()
 
 	select {
 	case <-time.After(5 * time.Second):
@@ -102,6 +67,5 @@ func TestIntegrationWorkerInteraction(t *testing.T) {
 	case val := <-resultChan:
 		// make sure we received what we expect
 		assert.Equal(t, 1337, val)
-		assert.False(t, conn.Connected())
 	}
 }

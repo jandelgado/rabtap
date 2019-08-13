@@ -3,13 +3,11 @@
 
 package rabtap
 
-import "github.com/streadway/amqp"
-
 // CreateExchange creates a new echange on the given channel
-func CreateExchange(channel *amqp.Channel, exchangeName, exchangeType string,
+func CreateExchange(session Session, exchangeName, exchangeType string,
 	durable, autoDelete bool) error {
 
-	return channel.ExchangeDeclare(
+	return session.ExchangeDeclare(
 		exchangeName,
 		exchangeType,
 		durable,
@@ -20,7 +18,7 @@ func CreateExchange(channel *amqp.Channel, exchangeName, exchangeType string,
 }
 
 // RemoveExchange removes a echange on the given channel
-func RemoveExchange(channel *amqp.Channel,
+func RemoveExchange(session Session,
 	exchangeName string, ifUnused bool) error {
-	return channel.ExchangeDelete(exchangeName, ifUnused, false /* wait*/)
+	return session.ExchangeDelete(exchangeName, ifUnused, false /* wait*/)
 }

@@ -23,7 +23,7 @@ func openAMQPChannel(uri string, tlsConfig *tls.Config) (*amqp.Connection, *amqp
 // a function with the channel as argument. Use this function for simple,
 // one-shot operations like creation of queues, exchanges etc.
 func SimpleAmqpConnector(amqpURI string, tlsConfig *tls.Config,
-	run func(*amqp.Channel) error) error {
+	run func(session Session) error) error {
 	conn, chn, err := openAMQPChannel(amqpURI, tlsConfig)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func SimpleAmqpConnector(amqpURI string, tlsConfig *tls.Config,
 	// queue. But seems to not produce an error. So leave it out for now.
 	// errCh := make(chan *amqp.Error)
 	// chn.NotifyClose(errCh)
-	err = run(chn)
+	err = run(Session{conn, chn})
 
 	if err != nil {
 		return err

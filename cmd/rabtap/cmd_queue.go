@@ -9,7 +9,6 @@ import (
 	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/streadway/amqp"
 )
 
 // CmdQueueCreateArg contains the arguments for cmdQueueCreate
@@ -25,10 +24,10 @@ type CmdQueueCreateArg struct {
 func cmdQueueCreate(cmd CmdQueueCreateArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURI,
 		cmd.tlsConfig,
-		func(chn *amqp.Channel) error {
+		func(session rabtap.Session) error {
 			log.Debugf("creating queue %s (ad=%t, durable=%t)",
 				cmd.queue, cmd.autodelete, cmd.durable)
-			return rabtap.CreateQueue(chn, cmd.queue,
+			return rabtap.CreateQueue(session, cmd.queue,
 				cmd.durable, cmd.autodelete, false)
 		}), "create queue failed", os.Exit)
 }
@@ -38,9 +37,9 @@ func cmdQueueCreate(cmd CmdQueueCreateArg) {
 func cmdQueueRemove(amqpURI, queueName string, tlsConfig *tls.Config) {
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
 		tlsConfig,
-		func(chn *amqp.Channel) error {
+		func(session rabtap.Session) error {
 			log.Debugf("removing queue %s", queueName)
-			return rabtap.RemoveQueue(chn, queueName, false, false)
+			return rabtap.RemoveQueue(session, queueName, false, false)
 		}), "removing queue failed", os.Exit)
 }
 
@@ -48,9 +47,9 @@ func cmdQueueRemove(amqpURI, queueName string, tlsConfig *tls.Config) {
 func cmdQueuePurge(amqpURI, queueName string, tlsConfig *tls.Config) {
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
 		tlsConfig,
-		func(chn *amqp.Channel) error {
+		func(session rabtap.Session) error {
 			log.Debugf("purging queue %s", queueName)
-			num, err := rabtap.PurgeQueue(chn, queueName)
+			num, err := rabtap.PurgeQueue(session, queueName)
 			if err == nil {
 				log.Infof("purged %d elements from queue %s", num, queueName)
 			}
@@ -64,10 +63,10 @@ func cmdQueueBindToExchange(amqpURI, queueName, key, exchangeName string,
 
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
 		tlsConfig,
-		func(chn *amqp.Channel) error {
+		func(session rabtap.Session) error {
 			log.Debugf("binding queue %s to exchange %s w/ key %s",
 				queueName, exchangeName, key)
-			return rabtap.BindQueueToExchange(chn, queueName, key, exchangeName)
+			return rabtap.BindQueueToExchange(session, queueName, key, exchangeName)
 		}), "bind queue failed", os.Exit)
 }
 
@@ -77,9 +76,9 @@ func cmdQueueUnbindFromExchange(amqpURI, queueName, key, exchangeName string,
 
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
 		tlsConfig,
-		func(chn *amqp.Channel) error {
+		func(session rabtap.Session) error {
 			log.Debugf("unbinding queue %s from exchange %s w/ key %s",
 				queueName, exchangeName, key)
-			return rabtap.UnbindQueueFromExchange(chn, queueName, key, exchangeName)
+			return rabtap.UnbindQueueFromExchange(session, queueName, key, exchangeName)
 		}), "unbind queue failed", os.Exit)
 }

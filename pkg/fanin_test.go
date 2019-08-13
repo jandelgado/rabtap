@@ -25,12 +25,12 @@ func expectNilOnChan(t *testing.T, ch <-chan interface{}) {
 	}
 }
 
-func TestFaninMulti(t *testing.T) {
+func TestFaninReceivesFromMultipleChannels(t *testing.T) {
 
 	// create fanin of 3 int channels
-	chan1 := make(chan interface{})
-	chan2 := make(chan interface{})
-	chan3 := make(chan interface{})
+	chan1 := make(chan int)
+	chan2 := make(chan int)
+	chan3 := make(chan int)
 	fanin := NewFanin([]interface{}{chan1, chan2, chan3})
 
 	assert.True(t, fanin.Alive())
@@ -47,6 +47,28 @@ func TestFaninMulti(t *testing.T) {
 	expectIntOnChan(t, 101, fanin.Ch)
 
 	// fanin.Stop() closes fanin channel which in turn sends nil message
+	expectNilOnChan(t, fanin.Ch)
+
+	assert.False(t, fanin.Alive())
+}
+
+func TestFaninClosesChanWhenAllInputsAreClosed(t *testing.T) {
+
+	chan1 := make(chan int)
+	chan2 := make(chan int)
+	fanin := NewFanin([]interface{}{chan1, chan2})
+
+	go func() {
+		chan1 <- 99
+		chan2 <- 100
+		close(chan1)
+		close(chan2)
+	}()
+
+	expectIntOnChan(t, 99, fanin.Ch)
+	expectIntOnChan(t, 100, fanin.Ch)
+
+	// close of last channel closes fanin channel which in turn sends nil message
 	expectNilOnChan(t, fanin.Ch)
 
 	assert.False(t, fanin.Alive())

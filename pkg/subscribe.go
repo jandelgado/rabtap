@@ -3,6 +3,7 @@
 package rabtap
 
 import (
+	"context"
 	"crypto/tls"
 	"time"
 
@@ -51,78 +52,64 @@ type TapChannel chan TapMessage
 
 // Close closes the connection to the broker and ends tapping. Returns result
 // of amqp.Connection.Close() operation.
-func (s *AmqpSubscriber) Close() error {
-	return s.connection.Close()
-}
+// func (s *AmqpSubscriber) Close() error {
+//     return s.connection.Close()
+// }
 
 // Connected returns true if the tap is connected to an exchange, otherwise
 // false
-func (s *AmqpSubscriber) Connected() bool {
-	return s.connection.Connected()
-}
+// func (s *AmqpSubscriber) Connected() bool {
+//     return s.connection.Connected()
+// }
 
 // EstablishSubscription sets up the connection to the broker and sets up
 // the tap, which is bound to the provided consumer function. Typically
 // this function is run as a go-routine.
-func (s *AmqpSubscriber) EstablishSubscription(queueName string, tapCh TapChannel) error {
-	err := s.connection.Connect(s.createWorkerFunc(queueName, tapCh))
-	if err != nil {
-		tapCh <- NewTapMessage(nil, err, time.Now())
-	}
+func (s *AmqpSubscriber) EstablishSubscription(ctx context.Context, queueName string, tapCh TapChannel) error {
+	err := s.connection.Connect(ctx, s.createWorkerFunc(queueName, tapCh))
 	return err
 }
 
 func (s *AmqpSubscriber) createWorkerFunc(
 	queueName string, tapCh TapChannel) AmqpWorkerFunc {
 
-	return func(rabbitConn *amqp.Connection, controlCh chan ControlMessage) ReconnectAction {
-		ch, err := s.consumeMessages(rabbitConn, queueName)
+	return func(ctx context.Context, session Session) (ReconnectAction, error) {
+		ch, err := s.consumeMessages(session, queueName)
 		if err != nil {
-			tapCh <- NewTapMessage(nil, err, time.Now())
-			return doNotReconnect
+			return doNotReconnect, err
 		}
 		// messageloop expects Fanin object, which expects array of channels.
 		var channels []interface{}
 		fanin := NewFanin(append(channels, ch))
-		return s.messageLoop(tapCh, fanin, controlCh)
+		return s.messageLoop(ctx, tapCh, fanin), nil
 	}
 }
 
 // messageLoop forwards incoming amqp messages from the fanin to the provided
 // tapCh.
-func (s *AmqpSubscriber) messageLoop(tapCh TapChannel,
-	fanin *Fanin, controlCh <-chan ControlMessage) ReconnectAction {
+func (s *AmqpSubscriber) messageLoop(ctx context.Context, tapCh TapChannel,
+	fanin *Fanin) ReconnectAction {
 
 	for {
 		select {
-		case message := <-fanin.Ch:
+		case message, more := <-fanin.Ch:
+			s.logger.Printf("AmqpSubscriber: more=%v", more)
+			if !more {
+				return doReconnect
+			}
 			amqpMessage, _ := message.(amqp.Delivery)
 			tapCh <- NewTapMessage(&amqpMessage, nil, time.Now())
 
-		case controlMessage := <-controlCh:
-			switch controlMessage {
-			case shutdownMessage:
-				s.logger.Printf("AmqpSubscriber: shutdown")
-				return doNotReconnect
-			case reconnectMessage:
-				s.logger.Printf("AmqpSubscriber: ending worker due to reconnect")
-				return doReconnect
-			}
+		case <-ctx.Done():
+			return doNotReconnect
 		}
 	}
 }
 
-func (s *AmqpSubscriber) consumeMessages(conn *amqp.Connection,
+func (s *AmqpSubscriber) consumeMessages(session Session,
 	queueName string) (<-chan amqp.Delivery, error) {
 
-	var ch *amqp.Channel
-	var err error
-
-	if ch, err = conn.Channel(); err != nil {
-		return nil, err
-	}
-
-	msgs, err := ch.Consume(
+	msgs, err := session.Consume(
 		queueName,
 		"__rabtap-consumer-"+uuid.Must(uuid.NewRandom()).String()[:8], // TODO param
 		s.config.AutoAck,

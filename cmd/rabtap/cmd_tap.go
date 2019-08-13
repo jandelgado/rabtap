@@ -6,50 +6,52 @@ import (
 	"context"
 	"crypto/tls"
 
+	"golang.org/x/sync/errgroup"
+
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
-func tapCmdShutdownFunc(taps []*rabtap.AmqpTap) {
-	log.Info("rabtap tap threads shutting down ...")
-	for _, tap := range taps {
-		if !tap.Connected() {
-			continue
-		}
-		if err := tap.Close(); err != nil {
-			log.Errorf("error closing tap: %v", err)
-		}
-	}
-}
+// func tapCmdShutdownFunc(taps []*rabtap.AmqpTap) {
+//     log.Info("rabtap tap threads shutting down ...")
+//     for _, tap := range taps {
+//         if !tap.Connected() {
+//             continue
+//         }
+//         if err := tap.Close(); err != nil {
+//             log.Errorf("error closing tap: %v", err)
+//         }
+//     }
+// }
 
 // cmdTap taps to the given exchanges and displays or saves the received
 // messages.
+// TODO feature: discover bindings when no binding keys are given (-> discovery.go)
 func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig *tls.Config,
 	messageReceiveFunc MessageReceiveFunc) {
+
+	//	ctx, cancel := context.WithCancel(ctx)
+	//ctx, _ = context.WithCancel(ctx)
+	g, ctx := errgroup.WithContext(ctx)
 
 	// this channel is used to decouple message receiving threads
 	// with the main thread, which does the actual message processing
 	tapMessageChannel := make(rabtap.TapChannel)
-	taps := establishTaps(tapMessageChannel, tapConfig, tlsConfig)
-	defer tapCmdShutdownFunc(taps)
-	err := messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc)
-	if err != nil {
+
+	taps := []*rabtap.AmqpTap{}
+	for _, config := range tapConfig {
+		tap := rabtap.NewAmqpTap(config.AmqpURI, tlsConfig, log)
+		taps = append(taps, tap)
+		g.Go(func() error {
+			err := tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel)
+			//			cancel()
+			return err
+		})
+	}
+	//defer tapCmdShutdownFunc(taps)
+	g.Go(func() error {
+		return messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc)
+	})
+	if err := g.Wait(); err != nil {
 		log.Errorf("tap failed with %v", err)
 	}
-
-}
-
-// establishTaps establishes all message taps as specified by tapConfiguration
-// array. All received messages will be send to the provided tapMessageChannel
-// channel. Returns array of tabtap.AmqpTap objects and immeadiately starts
-// the processing.
-// TODO feature: discover bindings when no binding keys are given (-> discovery.go)
-func establishTaps(tapMessageChannel rabtap.TapChannel,
-	tapConfigs []rabtap.TapConfiguration, tlsConfig *tls.Config) []*rabtap.AmqpTap {
-	taps := []*rabtap.AmqpTap{}
-	for _, config := range tapConfigs {
-		tap := rabtap.NewAmqpTap(config.AmqpURI, tlsConfig, log)
-		go tap.EstablishTap(config.Exchanges, tapMessageChannel)
-		taps = append(taps, tap)
-	}
-	return taps
 }

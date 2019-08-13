@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
-	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,10 +15,8 @@ func TestSimpleAmqpConnector(t *testing.T) {
 	called := false
 	err := SimpleAmqpConnector(testcommon.IntegrationURIFromEnv(),
 		&tls.Config{},
-		func(chn *amqp.Channel) error {
-			if chn != nil {
-				called = true
-			}
+		func(session Session) error {
+			called = true
 			return nil
 		})
 	assert.Nil(t, err)
@@ -30,7 +27,7 @@ func TestSimpleAmqpConnectorWithError(t *testing.T) {
 	called := false
 	err := SimpleAmqpConnector("invalid_uri",
 		&tls.Config{},
-		func(_ *amqp.Channel) error {
+		func(_ Session) error {
 			// should not be called.
 			called = true
 			return nil

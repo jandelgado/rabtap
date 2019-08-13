@@ -84,10 +84,10 @@ Examples:
 
   # use RABTAP_AMQPURI environment variable to specify broker instead of --uri
   export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
-  echo "Hello" | rabtap pub amq.topic -r "some.key"
-  rabtap sub JDQ
   rabtap queue create JDQ
-  rabtap queue bind JDQ to amq.direct --bindingkey=key
+  rabtap queue bind JDQ to amq.topic --bindingkey=key
+  echo "Hello" | rabtap pub amq.topic --routingkey "key"
+  rabtap sub JDQ
   rabtap queue rm JDQ
 
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api

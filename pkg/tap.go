@@ -2,8 +2,6 @@
 // RabbitMQ wire-tap. Functions to hook to exchanges and to keep the
 // connection to the broker alive in case of connection errors.
 
-// Package rabtap provides funtionalities to tap to RabbitMQ exchanges using
-// exchange-to-exchange bindings.
 package rabtap
 
 import (
@@ -43,11 +41,7 @@ func getTapQueueNameForExchange(exchange, postfix string) string {
 // this function is run as a go-routine.
 func (s *AmqpTap) EstablishTap(ctx context.Context, exchangeConfigList []ExchangeConfiguration,
 	tapCh TapChannel) error {
-	err := s.connection.Connect(ctx, s.createWorkerFunc(exchangeConfigList, tapCh))
-	// if err != nil {
-	//     tapCh <- NewTapMessage(nil, err, time.Now())
-	// }
-	return err
+	return s.connection.Connect(ctx, s.createWorkerFunc(exchangeConfigList, tapCh))
 }
 
 func (s *AmqpTap) createWorkerFunc(
@@ -74,25 +68,15 @@ func (s *AmqpTap) setupTapsForExchanges(
 	exchangeConfigList []ExchangeConfiguration,
 	tapCh TapChannel) ([]interface{}, error) {
 
-	// cleanup left-overs in case of re-connect
-	//_ = s.cleanup(session)
-
 	var channels []interface{}
 
-	// establish each tap with its own channel. TODO
 	for _, exchangeConfig := range exchangeConfigList {
 		exchange, queue, err := s.setupTap(session, exchangeConfig)
 		if err != nil {
-			// pass err to client, can decide to close tap.
-			// TODO log instead
-			//tapCh <- NewTapMessage(nil, err, time.Now())
 			return channels, err
 		}
 		msgCh, err := s.consumeMessages(session, queue)
 		if err != nil {
-			// pass err to client, can decide to close tap.
-			// TODO log instead
-			//tapCh <- NewTapMessage(nil, err, time.Now())
 			return channels, err
 		}
 		channels = append(channels, msgCh)
@@ -181,33 +165,6 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 	}
 	return nil
 }
-
-// func (s *AmqpTap) cleanup(session Session) error {
-
-//     // delete exchanges manually, since auto delete seems to
-//     // not work in all cases. TODO recheck & simplify
-//     for _, exchange := range s.exchanges {
-//         if err := RemoveExchange(session, exchange, false); err != nil {
-//             //if ch, err = conn.Channel(); err != nil {
-//             return err
-//             //}
-//         }
-//     }
-//     s.exchanges = []string{}
-
-//     // delete any created queues since auto delete seems to
-//     // not work in all cases
-//     for _, queue := range s.queues {
-//         if err := RemoveQueue(session, queue, false, false); err != nil {
-//             // TODO channel needs to re-opened after error
-//             //if ch, err = conn.Channel(); err != nil {
-//             return err
-//             //}
-//         }
-//     }
-//     s.queues = []string{}
-//     return nil
-// }
 
 func (s *AmqpTap) bindQueueToExchange(session Session,
 	exchangeName, bindingKey, queueName string) error {

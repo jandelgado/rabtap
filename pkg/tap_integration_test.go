@@ -52,9 +52,6 @@ func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 				success <- numReceived
 				return
 			case message := <-resultChannel:
-				if message.Error != nil {
-					log.Print(message.Error)
-				}
 				if message.AmqpMessage != nil {
 					if string(message.AmqpMessage.Body) == "Hello" {
 						numReceived++

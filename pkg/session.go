@@ -17,14 +17,6 @@ type Session struct {
 	*amqp.Channel
 }
 
-// Close tears the connection down, taking the channel with it.
-// func (s Session) Close() error {
-//     if s.Connection == nil {
-//         return nil
-//     }
-//     return s.Connection.Close()
-// }
-
 // NewChannel opens a new Channel on the connection. Call when current
 // got closed due to errors.
 func (s *Session) NewChannel() error {

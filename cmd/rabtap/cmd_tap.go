@@ -11,18 +11,6 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
-// func tapCmdShutdownFunc(taps []*rabtap.AmqpTap) {
-//     log.Info("rabtap tap threads shutting down ...")
-//     for _, tap := range taps {
-//         if !tap.Connected() {
-//             continue
-//         }
-//         if err := tap.Close(); err != nil {
-//             log.Errorf("error closing tap: %v", err)
-//         }
-//     }
-// }
-
 // cmdTap taps to the given exchanges and displays or saves the received
 // messages.
 // TODO feature: discover bindings when no binding keys are given (-> discovery.go)

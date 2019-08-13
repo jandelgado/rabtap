@@ -45,7 +45,7 @@ func TestSaveMessageToRawFile(t *testing.T) {
 	// testdir.
 	basename := filepath.Join(testdir, "test")
 	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
-	err = SaveMessageToRawFile(basename, rabtap.NewTapMessage(testMessage, nil, createdTs))
+	err = SaveMessageToRawFile(basename, rabtap.NewTapMessage(testMessage, createdTs))
 	assert.Nil(t, err)
 
 	// check contents of message body .dat file
@@ -74,7 +74,7 @@ func TestSaveMessageToRawFile(t *testing.T) {
 func TestSaveMessageToFilesToInvalidDir(t *testing.T) {
 	// use nonexisting path
 	filename := filepath.Join("/thispathshouldnotexist", "test")
-	err := SaveMessageToRawFile(filename, rabtap.NewTapMessage(testMessage, nil, time.Now()))
+	err := SaveMessageToRawFile(filename, rabtap.NewTapMessage(testMessage, time.Now()))
 	assert.NotNil(t, err)
 }
 
@@ -87,7 +87,7 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 
 	filename := filepath.Join(testdir, "test")
 	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
-	err = SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, nil, createdTs))
+	err = SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, createdTs))
 	assert.Nil(t, err)
 
 	contents, err := ioutil.ReadFile(filename)
@@ -108,7 +108,7 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 func TestSaveMessageToFileToInvalidDir(t *testing.T) {
 	// use nonexisting path
 	filename := filepath.Join("/thispathshouldnotexist", "test")
-	err := SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, nil, time.Now()))
+	err := SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, time.Now()))
 	assert.NotNil(t, err)
 }
 
@@ -122,7 +122,7 @@ func ExampleWriteMessageJSON() {
 
 	// serialize with message body, Body will be base64 encoded.
 	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
-	err := WriteMessageJSON(os.Stdout, rabtap.NewTapMessage(testMessage, nil, createdTs))
+	err := WriteMessageJSON(os.Stdout, rabtap.NewTapMessage(testMessage, createdTs))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,3 +1,7 @@
+// Copyright (C) 2019 Jan Delgado
+
+// +build integration
+
 package rabtap
 
 import (

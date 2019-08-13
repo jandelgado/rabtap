@@ -35,39 +35,24 @@ func NewAmqpSubscriber(config AmqpSubscriberConfig, uri string, tlsConfig *tls.C
 }
 
 // TapMessage objects are passed through a tapChannel from tap to client
-// either AmqpMessage or Error is set
 type TapMessage struct {
 	AmqpMessage       *amqp.Delivery
-	Error             error
 	ReceivedTimestamp time.Time
 }
 
 // NewTapMessage constructs a new TapMessage
-func NewTapMessage(message *amqp.Delivery, err error, ts time.Time) TapMessage {
-	return TapMessage{AmqpMessage: message, Error: err, ReceivedTimestamp: ts}
+func NewTapMessage(message *amqp.Delivery, ts time.Time) TapMessage {
+	return TapMessage{AmqpMessage: message, ReceivedTimestamp: ts}
 }
 
 // TapChannel is a channel for *TapMessage objects
 type TapChannel chan TapMessage
 
-// Close closes the connection to the broker and ends tapping. Returns result
-// of amqp.Connection.Close() operation.
-// func (s *AmqpSubscriber) Close() error {
-//     return s.connection.Close()
-// }
-
-// Connected returns true if the tap is connected to an exchange, otherwise
-// false
-// func (s *AmqpSubscriber) Connected() bool {
-//     return s.connection.Connected()
-// }
-
 // EstablishSubscription sets up the connection to the broker and sets up
 // the tap, which is bound to the provided consumer function. Typically
 // this function is run as a go-routine.
 func (s *AmqpSubscriber) EstablishSubscription(ctx context.Context, queueName string, tapCh TapChannel) error {
-	err := s.connection.Connect(ctx, s.createWorkerFunc(queueName, tapCh))
-	return err
+	return s.connection.Connect(ctx, s.createWorkerFunc(queueName, tapCh))
 }
 
 func (s *AmqpSubscriber) createWorkerFunc(
@@ -78,7 +63,7 @@ func (s *AmqpSubscriber) createWorkerFunc(
 		if err != nil {
 			return doNotReconnect, err
 		}
-		// messageloop expects Fanin object, which expects array of channels.
+		// messageLoop expects Fanin object, which expects array of channels.
 		var channels []interface{}
 		fanin := NewFanin(append(channels, ch))
 		return s.messageLoop(ctx, tapCh, fanin), nil
@@ -98,7 +83,7 @@ func (s *AmqpSubscriber) messageLoop(ctx context.Context, tapCh TapChannel,
 				return doReconnect
 			}
 			amqpMessage, _ := message.(amqp.Delivery)
-			tapCh <- NewTapMessage(&amqpMessage, nil, time.Now())
+			tapCh <- NewTapMessage(&amqpMessage, time.Now())
 
 		case <-ctx.Done():
 			return doNotReconnect

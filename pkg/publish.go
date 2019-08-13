@@ -36,12 +36,6 @@ func NewAmqpPublish(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) 
 		logger:     logger}
 }
 
-// // Connected returns true if the tap is connected to an exchange, otherwise
-// // false
-// func (s *AmqpPublish) Connected() bool {
-//     return s.connection.Connected()
-// }
-
 // createWorkerFunc receives messages on the provided channel and publishes
 // the messages on an rabbitmq exchange
 // TODO retry on failed publish
@@ -82,8 +76,3 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 func (s *AmqpPublish) EstablishConnection(ctx context.Context, publishChannel PublishChannel) error {
 	return s.connection.Connect(ctx, s.createWorkerFunc(publishChannel))
 }
-
-// // Close closes the connection to the broker
-// func (s *AmqpPublish) Close() error {
-//     return s.connection.Close()
-// }

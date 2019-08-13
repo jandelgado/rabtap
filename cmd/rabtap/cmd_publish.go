@@ -111,17 +111,10 @@ func publishMessageStream(publishChannel rabtap.PublishChannel,
 // * by an initial connection failure to the broker
 func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 
-	log.Debugf("publishing message(s) to exchange %s with routingkey %s",
-		cmd.exchange, cmd.routingKey)
-
-	//readerFunc := createMessageReaderFunc(cmd.jsonFormat, cmd.file)
-
 	g, ctx := errgroup.WithContext(ctx)
 
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)
-	//defer publisher.Close()
 	publishChannel := make(rabtap.PublishChannel)
-	//	done, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		// runs as long as readerFunc returns messages. Unfortunately, we
@@ -129,40 +122,12 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 		// and select.
 		publishMessageStream(publishChannel, cmd.exchange,
 			cmd.routingKey, cmd.readerFunc)
-		log.Debug("READER EXITING")
 	}()
 
 	g.Go(func() error {
 		err := publisher.EstablishConnection(ctx, publishChannel)
-		//		cancel()
-		log.Debug("PUBLISHER EXITING")
 		return err
 	})
-
-	// defer func() {
-	//     log.Debug("DEFER CALLED, cancelling")
-	//     cancel()
-	//     log.Debug("DEFER CALLED, cancel called")
-	// }()
-	// g.Go(func() error {
-	//     log.Debug("CLOSER STARTING")
-	//     // TODO terminate when publishChannel is closed
-	//     log.Debug("****** CLOSER WAITING")
-	//     select {
-	//     case <-done.Done():
-	//         log.Debug("CLOSER EXITING ")
-
-	//     case <-ctx.Done():
-	//         log.Debug("CLOSE FILE")
-	//         cmd.file.Close()
-	//     }
-	//     log.Debug("CLOSER ENDING")
-	//     return nil
-	// })
-
-	// unfortunately, we can not do a select on a file and cancel a blocking
-	// file read with the ctx object.
-	//publishMessageStream(publishChannel, cmd.exchange, cmd.routingKey, readerFunc)
 
 	if err := g.Wait(); err != nil {
 		log.Errorf("publish failed with %v", err)

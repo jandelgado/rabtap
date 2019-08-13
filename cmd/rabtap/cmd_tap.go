@@ -29,8 +29,6 @@ import (
 func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig *tls.Config,
 	messageReceiveFunc MessageReceiveFunc) {
 
-	//	ctx, cancel := context.WithCancel(ctx)
-	//ctx, _ = context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
 
 	// this channel is used to decouple message receiving threads
@@ -43,11 +41,9 @@ func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig 
 		taps = append(taps, tap)
 		g.Go(func() error {
 			err := tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel)
-			//			cancel()
 			return err
 		})
 	}
-	//defer tapCmdShutdownFunc(taps)
 	g.Go(func() error {
 		return messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc)
 	})

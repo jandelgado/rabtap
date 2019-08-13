@@ -18,12 +18,12 @@ type Session struct {
 }
 
 // Close tears the connection down, taking the channel with it.
-func (s Session) Close() error {
-	if s.Connection == nil {
-		return nil
-	}
-	return s.Connection.Close()
-}
+// func (s Session) Close() error {
+//     if s.Connection == nil {
+//         return nil
+//     }
+//     return s.Connection.Close()
+// }
 
 // NewChannel opens a new Channel on the connection. Call when current
 // got closed due to errors.
@@ -50,6 +50,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config) chan chan Se
 			case sessions <- sess:
 			case <-ctx.Done():
 				log.Println("shutting down session factory")
+				close(sess)
 				return
 			}
 
@@ -89,6 +90,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config) chan chan Se
 			case sess <- Session{conn, ch}:
 			case <-ctx.Done():
 				log.Println("shutting down new session")
+				close(sess)
 				return
 			}
 		}

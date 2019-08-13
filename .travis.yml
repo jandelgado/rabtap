@@ -7,9 +7,6 @@ addons:
     packages:
       - rabbitmq-server
 
-services:
-- rabbitmq
-
 before_install:
 - go get -u golang.org/x/lint/golint
 - go get github.com/gordonklaus/ineffassign
@@ -19,6 +16,7 @@ before_install:
 - go get github.com/mattn/goveralls
 
 script:
+- sudo rabbitmq-plugins enable rabbitmq_management
 - GO111MODULE=on "./pre-commit"
 - GO111MODULE=on make test
 - GO111MODULE=on make build-all

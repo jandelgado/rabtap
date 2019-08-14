@@ -16,7 +16,6 @@ type PublishMessage struct {
 	Exchange   string
 	RoutingKey string
 	Publishing *amqp.Publishing
-	Error      *error
 }
 
 // PublishChannel is a channel for PublishMessage message objects

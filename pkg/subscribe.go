@@ -78,7 +78,6 @@ func (s *AmqpSubscriber) messageLoop(ctx context.Context, tapCh TapChannel,
 	for {
 		select {
 		case message, more := <-fanin.Ch:
-			s.logger.Printf("AmqpSubscriber: more=%v", more)
 			if !more {
 				return doReconnect
 			}

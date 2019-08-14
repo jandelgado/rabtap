@@ -3,13 +3,17 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"log"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
 // taken from streadways amqplib examples
+
+const (
+	retryDelay = 3 * time.Second
+)
 
 // Session composes an amqp.Connection with an amqp.Channel
 type Session struct {
@@ -28,8 +32,12 @@ func (s *Session) NewChannel() error {
 	return err
 }
 
-// redial continually connects to the URL, exiting the program when no longer possible
-func redial(ctx context.Context, url string, tlsConfig *tls.Config) chan chan Session {
+// redial continually connects to the URL and provides a AMQP connection and
+// channel in a Session struct. Closes returned chan when initial connection
+// attempt fails.
+func redial(ctx context.Context, url string, tlsConfig *tls.Config,
+	logger logrus.StdLogger) chan chan Session {
+
 	sessions := make(chan chan Session)
 
 	go func() {
@@ -41,7 +49,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config) chan chan Se
 			select {
 			case sessions <- sess:
 			case <-ctx.Done():
-				log.Println("shutting down session factory")
+				logger.Println("session: shutting down factory (cancel)")
 				close(sess)
 				return
 			}
@@ -49,39 +57,36 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config) chan chan Se
 			// try to connect. fail early if initial connection cant be
 			// established.
 			var conn *amqp.Connection
+			var ch *amqp.Channel
 			var err error
 			for {
 				conn, err = amqp.DialTLS(url, tlsConfig)
 				if err == nil {
-					break
+					ch, err = conn.Channel()
+					if err == nil {
+						break
+					}
 				}
-				log.Printf("cannot (re)dial: %v: %q", err, url)
+				logger.Printf("session: cannot (re-)dial: %v: %q", err, url)
 				if initial {
-					log.Printf("initial connection failed")
 					close(sess)
 					return
 				}
 				select {
 				case <-ctx.Done():
-					log.Println("shutting down session factory")
+					logger.Println("session: shutting down factory (cancel)")
 					close(sess)
 					return
-				case <-time.After(2 * time.Second):
+				case <-time.After(retryDelay):
 				}
 			}
 
 			initial = false
-			log.Printf("connected to %s", url)
-
-			ch, err := conn.Channel()
-			if err != nil {
-				log.Printf("cannot create channel: %v", err)
-			}
 
 			select {
 			case sess <- Session{conn, ch}:
 			case <-ctx.Done():
-				log.Println("shutting down new session")
+				logger.Println("session: shutting down factory (cancel)")
 				close(sess)
 				return
 			}

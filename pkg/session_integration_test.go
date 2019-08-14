@@ -7,6 +7,8 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
@@ -18,7 +20,8 @@ func TestSessionProvidesConnectionAndChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{})
+	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 
 	sessionFactory := <-sessions
 	session := <-sessionFactory
@@ -31,7 +34,8 @@ func TestSessionShutsDownProperlyWhenCancelled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{})
+	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 
 	sessionFactory, more := <-sessions
 	assert.True(t, more)
@@ -45,7 +49,8 @@ func TestSessionFailsEarlyWhenNoConnectionIsPossible(t *testing.T) {
 
 	ctx := context.Background()
 
-	sessions := redial(ctx, "amqp://localhost:1", &tls.Config{})
+	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	sessions := redial(ctx, "amqp://localhost:1", &tls.Config{}, log)
 
 	sessionFactory, more := <-sessions
 	assert.True(t, more)
@@ -61,7 +66,8 @@ func TestSessionNewChannelReturnsNewChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{})
+	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 
 	sessionFactory := <-sessions
 	session := <-sessionFactory

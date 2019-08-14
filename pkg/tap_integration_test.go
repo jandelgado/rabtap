@@ -93,11 +93,9 @@ func TestIntegrationHeadersExchange(t *testing.T) {
 	// header is constructed.
 	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "headers-exchange", "", amqp.Table{"header1": "test0"})
 
-	log.Println("waiting for messages to appear on tap")
 	requireIntFromChan(t, finishChan, MessagesPerTest)
 
 	// the original messages should also be delivered.
-	log.Println("receiving original messages...")
 	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", MessagesPerTest, "queue-0", finishChan)
 	requireIntFromChan(t, finishChan, MessagesPerTest)
 }
@@ -121,11 +119,9 @@ func TestIntegrationDirectExchange(t *testing.T) {
 	// in the tap-exchange defined above.
 	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "direct-exchange", "queue-0", nil)
 
-	log.Println("waiting for messages to appear on tap")
 	requireIntFromChan(t, finishChan, MessagesPerTest)
 
 	// the original messages should also be delivered.
-	log.Println("receiving original message...")
 	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", MessagesPerTest, "queue-0", finishChan)
 	requireIntFromChan(t, finishChan, MessagesPerTest)
 }
@@ -154,11 +150,9 @@ func TestIntegrationTopicExchangeTapSingleQueue(t *testing.T) {
 	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "topic-exchange", "queue-0", nil)
 	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "topic-exchange", "queue-1", nil)
 
-	log.Println("waiting for messages to appear on tap")
 	requireIntFromChan(t, finishChan, MessagesPerTest)
 
 	// the original messages should also be delivered.
-	log.Println("receiving original message...")
 	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", MessagesPerTest, "queue-0", finishChan)
 	requireIntFromChan(t, finishChan, MessagesPerTest)
 
@@ -189,11 +183,9 @@ func TestIntegrationTopicExchangeTapWildcard(t *testing.T) {
 	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "topic-exchange", "queue-0", nil)
 	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "topic-exchange", "queue-1", nil)
 
-	log.Println("waiting for messages to appear on tap")
 	requireIntFromChan(t, finishChan, MessagesPerTest*2)
 
 	// the original messages should also be delivered.
-	log.Println("receiving original message...")
 	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", MessagesPerTest, "queue-0", finishChan)
 	requireIntFromChan(t, finishChan, MessagesPerTest)
 

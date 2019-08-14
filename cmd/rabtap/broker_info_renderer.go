@@ -11,9 +11,9 @@ import (
 // BrokerInfoRendererConfig holds configuration for a renderer. At the
 // moment, all renderers share the same config.
 type BrokerInfoRendererConfig struct {
-	ContentType string // "text", "dot"
-	ShowStats   bool
-	NoColor     bool
+	Format    string // "text", "dot"
+	ShowStats bool
+	NoColor   bool
 }
 
 // BrokerInfoRenderer renders a tree representation represented by a rootNode
@@ -30,11 +30,11 @@ type brokerInfoRendererNewFunc func(BrokerInfoRendererConfig) BrokerInfoRenderer
 var brokerInfoRenderers = map[string]brokerInfoRendererNewFunc{}
 
 // RegisterBrokerInfoRenderer registers a new broker info renderer
-func RegisterBrokerInfoRenderer(contentType string, newFunc brokerInfoRendererNewFunc) {
-	brokerInfoRenderers[contentType] = newFunc
+func RegisterBrokerInfoRenderer(format string, newFunc brokerInfoRendererNewFunc) {
+	brokerInfoRenderers[format] = newFunc
 }
 
 func NewBrokerInfoRenderer(config BrokerInfoRendererConfig) BrokerInfoRenderer {
-	newFunc := brokerInfoRenderers[config.ContentType]
+	newFunc := brokerInfoRenderers[config.Format]
 	return newFunc(config)
 }

@@ -149,10 +149,43 @@ func TestCliInfoCmd(t *testing.T) {
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowStats)
 	assert.False(t, args.ShowConsumers)
-	assert.False(t, args.ShowByConnection)
+	assert.Equal(t, "byExchange", args.InfoMode)
+	assert.Equal(t, "text", args.InfoFormat)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
 	assert.False(t, args.OmitEmptyExchanges)
+}
+
+func TestCliInfoCmdShowByConnection(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"info", "--mode=byConnection"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, InfoCmd, args.Cmd)
+	assert.Equal(t, "byConnection", args.InfoMode)
+}
+
+func TestCliInfoCmdOutputAsDotFile(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"info", "--format=dot"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, InfoCmd, args.Cmd)
+	assert.Equal(t, "dot", args.InfoFormat)
+}
+
+func TestCliInfoCmdFailsWithInvalidMode(t *testing.T) {
+	_, err := ParseCommandLineArgs(
+		[]string{"info", "--mode=INVALID"})
+
+	assert.NotNil(t, err)
+}
+
+func TestCliInfoCmdFailsWithInvalidFormat(t *testing.T) {
+	_, err := ParseCommandLineArgs(
+		[]string{"info", "--format=INVALID"})
+
+	assert.NotNil(t, err)
 }
 
 func TestCliInfoCmdMissingApi(t *testing.T) {
@@ -179,6 +212,7 @@ func TestCliInfoCmdApiFromEnv(t *testing.T) {
 	assert.False(t, args.ShowConsumers)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
+	assert.Equal(t, "byExchange", args.InfoMode)
 }
 
 func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {

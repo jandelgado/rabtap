@@ -17,7 +17,6 @@ type BrokerInfoPrinterConfig struct {
 	ShowDefaultExchange bool
 	ShowConsumers       bool
 	ShowStats           bool
-	ShowByConnection    bool
 	QueueFilter         Predicate
 	OmitEmptyExchanges  bool
 }
@@ -201,12 +200,11 @@ func (s BrokerInfoPrinter) createQueueNodeFromBinding(
 	return []*boundQueueNode{&queueNode}
 }
 
-// addExchange recursively (in case of exchange-exchange binding) an exchange to the
-// given node.
+// createExchangeNode recursively (in case of exchange-exchange binding) an
+// exchange to the given node.
 func (s BrokerInfoPrinter) createExchangeNode(
 	exchange rabtap.RabbitExchange, brokerInfo rabtap.BrokerInfo) *exchangeNode {
 
-	//exchangeNode := NewTreeNode(s.renderExchangeElementAsString(exchange))
 	exchangeNode := exchangeNode{baseNode{[]interface{}{}}, exchange}
 
 	// process all bindings for current exchange
@@ -280,6 +278,13 @@ func (s BrokerInfoPrinter) buildTreeByExchange(rootNodeURL string,
 	return rootNode, nil
 }
 
+// buildTree renders given brokerInfo into a tree:
+//  RabbitMQ-Host
+//  +--VHost
+//     +--Connection
+//        +--Consumer
+//           +--Queue
+// TODO add filtering
 func (s BrokerInfoPrinter) buildTreeByConnection(rootNodeURL string,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
 

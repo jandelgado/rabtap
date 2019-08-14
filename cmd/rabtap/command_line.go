@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -20,13 +21,13 @@ const (
 
 Usage:
   rabtap -h|--help
-  rabtap tap EXCHANGES [--uri URI] [--saveto=DIR] [-jknv]
-  rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jknv]
+  rabtap tap EXCHANGES [--uri URI] [--saveto DIR] [-jknv]
+  rabtap (tap --uri URI EXCHANGES)... [--saveto DIR] [-jknv]
   rabtap info [--api APIURI] [--consumers] [--stats] 
-              [--filter EXPR] 
-              [--omit-empty] [--show-default] [--by-connection] [-knv]
+              [--filter EXPR] [--omit-empty] [--show-default] 
+			  [--mode MODE] [--format FORMAT] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--no-auto-ack] [-jkvn]
+  rabtap sub QUEUE [--uri URI] [--saveto DIR] [--no-auto-ack] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri URI] [-kv]
   rabtap queue create QUEUE [--uri URI] [-adkv]
@@ -59,11 +60,15 @@ Options:
                       single JSON file. JSON body is base64 encoded. Otherwise
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
+ --mode=MODE          mode for info command. One of "byConnection", "byExchange".
+                      [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
  --no-auto-ack        disable auto-ack in subscribe mode. This will lead to 
                       unacked messages on the broker which will be requeued 
                       when the channel is closed.
  -o, --omit-empty     don't show echanges without bindings in info command.
+ --format=FORMAT      output format for info command. One of "text", "dot".
+					  [default: text]
  --reason=REASON      reason why the connection was closed 
                       [default: closed by rabtap].
  -r, --routingkey KEY routing key to use in publish mode.
@@ -154,14 +159,15 @@ type CommandLineArgs struct {
 	ExchangeName        string  // exchange name  create, remove or queue bind
 	ExchangeType        string  // exchange type create, remove or queue bind
 	ShowConsumers       bool    // info mode: also show consumer
-	ShowByConnection    bool    // info mode: show by connection
+	InfoMode            string  // info mode: byExchange, byConnection
 	ShowStats           bool    // info mode: also show statistics
 	QueueFilter         string  // info mode: optional filter predicate
 	OmitEmptyExchanges  bool    // info mode: do not show exchanges wo/ bindings
+	ShowDefaultExchange bool    // info mode: show default exchange
+	InfoFormat          string  // info mode: output format
 	Durable             bool    // queue create, exchange create
 	Autodelete          bool    // queue create, exchange create
 	SaveDir             *string // save mode: optional directory to stores files to
-	ShowDefaultExchange bool
 
 	ConnName    string // conn mode: name of connection
 	CloseReason string // conn mode: reason of close
@@ -219,8 +225,19 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		OmitEmptyExchanges:  args["--omit-empty"].(bool),
 		ShowConsumers:       args["--consumers"].(bool),
 		ShowStats:           args["--stats"].(bool),
-		ShowDefaultExchange: args["--show-default"].(bool),
-		ShowByConnection:    args["--by-connection"].(bool)}
+		ShowDefaultExchange: args["--show-default"].(bool)}
+
+	mode := args["--mode"].(string)
+	if mode != "byExchange" && mode != "byConnection" {
+		return result, errors.New("--mode MODE must be one of {byConnection, byExchange}")
+	}
+	result.InfoMode = mode
+
+	format := args["--format"].(string)
+	if format != "text" && format != "dot" {
+		return result, errors.New("--format FORMAT must be one of {text, dot}")
+	}
+	result.InfoFormat = format
 
 	var err error
 	if result.APIURI, err = parseAPIURI(args); err != nil {

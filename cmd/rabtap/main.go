@@ -53,16 +53,15 @@ func startCmdInfo(args CommandLineArgs, title string) {
 		rootNode: title,
 		client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS)),
 		treeConfig: BrokerInfoPrinterConfig{
-			Mode:                "byExchange",
+			Mode:                args.InfoMode,
 			ShowConsumers:       args.ShowConsumers,
 			ShowDefaultExchange: args.ShowDefaultExchange,
-			ShowByConnection:    args.ShowByConnection, // TODO remove (mode)
 			QueueFilter:         queueFilter,
 			OmitEmptyExchanges:  args.OmitEmptyExchanges},
 		renderConfig: BrokerInfoRendererConfig{
-			ContentType: "dot",
-			ShowStats:   args.ShowStats,
-			NoColor:     args.NoColor},
+			Format:    args.InfoFormat,
+			ShowStats: args.ShowStats,
+			NoColor:   args.NoColor},
 		out: NewColorableWriter(os.Stdout)})
 }
 

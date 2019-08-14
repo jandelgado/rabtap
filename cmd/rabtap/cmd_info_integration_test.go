@@ -2,15 +2,7 @@
 
 package main
 
-import (
-	"os"
-	"regexp"
-	"testing"
-
-	"github.com/jandelgado/rabtap/pkg/testcommon"
-	"github.com/stretchr/testify/assert"
-)
-
+/****
 func TestCmdInfoRootNodeOnly(t *testing.T) {
 
 	// REST api mock returning "empty" broker
@@ -24,4 +16,4 @@ func TestCmdInfoRootNodeOnly(t *testing.T) {
 		"--no-color"}
 	out := testcommon.CaptureOutput(main)
 	assert.Regexp(t, regexp.MustCompile(`http://(.*) \(broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab'\)`), out)
-}
+}**/

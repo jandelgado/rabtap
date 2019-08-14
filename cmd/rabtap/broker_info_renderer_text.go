@@ -12,6 +12,13 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
+var (
+	_ = func() struct{} {
+		RegisterBrokerInfoRenderer("text", NewBrokerInfoRendererText)
+		return struct{}{}
+	}()
+)
+
 // BrokerInfoRenderer renders a tree representation represented by a rootNode
 // into a string representation
 type BrokerInfoRendererText struct {

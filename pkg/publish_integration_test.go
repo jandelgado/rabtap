@@ -10,6 +10,7 @@ package rabtap
 //  $ sudo  docker run --rm -ti -p5672:5672 rabbitmq:3-management)
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"os"
@@ -32,7 +33,8 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 
 	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log.New(os.Stderr, "", log.LstdFlags))
 	publishChannel := make(PublishChannel)
-	go publisher.EstablishConnection(publishChannel)
+	ctx := context.Background()
+	go publisher.EstablishConnection(ctx, publishChannel)
 
 	// AmqpPublish now has started a go-routine which handles
 	// connection to broker and expects messages on the publishChannel
@@ -48,8 +50,4 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 	numReceivedOriginal := <-doneChan
 	assert.Equal(t, numPublishingMessages, numReceivedOriginal)
 	log.Println("good bye.")
-
-	err := publisher.Close()
-	assert.Nil(t, err)
-	assert.False(t, publisher.Connected())
 }

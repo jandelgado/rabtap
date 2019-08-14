@@ -9,7 +9,6 @@ import (
 	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/streadway/amqp"
 )
 
 // CmdExchangeCreateArg contains argument for cmdExchangeCreate
@@ -26,10 +25,10 @@ type CmdExchangeCreateArg struct {
 func cmdExchangeCreate(cmd CmdExchangeCreateArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURI,
 		cmd.tlsConfig,
-		func(chn *amqp.Channel) error {
+		func(session rabtap.Session) error {
 			log.Debugf("creating exchange %s with type %s",
 				cmd.exchange, cmd.exchangeType)
-			return rabtap.CreateExchange(chn, cmd.exchange, cmd.exchangeType,
+			return rabtap.CreateExchange(session, cmd.exchange, cmd.exchangeType,
 				cmd.durable, cmd.autodelete)
 		}), "create exchange failed", os.Exit)
 }
@@ -38,8 +37,8 @@ func cmdExchangeCreate(cmd CmdExchangeCreateArg) {
 func cmdExchangeRemove(amqpURI, exchangeName string, tlsConfig *tls.Config) {
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
 		tlsConfig,
-		func(chn *amqp.Channel) error {
+		func(session rabtap.Session) error {
 			log.Debugf("removing exchange %s", exchangeName)
-			return rabtap.RemoveExchange(chn, exchangeName, false)
+			return rabtap.RemoveExchange(session, exchangeName, false)
 		}), "removing exchange failed", os.Exit)
 }

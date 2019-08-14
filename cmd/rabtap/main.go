@@ -63,20 +63,21 @@ func startCmdInfo(args CommandLineArgs, title string) {
 		out: NewColorableWriter(os.Stdout)})
 }
 
-func startCmdPublish(args CommandLineArgs) {
-	reader := os.Stdin
+func startCmdPublish(ctx context.Context, args CommandLineArgs) {
+	file := os.Stdin
 	if args.PubFile != nil {
 		var err error
-		reader, err = os.Open(*args.PubFile)
+		file, err = os.Open(*args.PubFile)
 		failOnError(err, "error opening "+*args.PubFile, os.Exit)
 	}
-	readerFunc := createMessageReaderFunc(args.JSONFormat, reader)
-	err := cmdPublish(CmdPublishArg{
-		amqpURI:             args.AmqpURI,
-		exchange:            args.PubExchange,
-		routingKey:          args.PubRoutingKey,
-		tlsConfig:           getTLSConfig(args.InsecureTLS),
-		readNextMessageFunc: readerFunc})
+	readerFunc := createMessageReaderFunc(args.JSONFormat, file)
+	err := cmdPublish(ctx, CmdPublishArg{
+		amqpURI:    args.AmqpURI,
+		exchange:   args.PubExchange,
+		routingKey: args.PubRoutingKey,
+		tlsConfig:  getTLSConfig(args.InsecureTLS),
+		readerFunc: readerFunc})
+	file.Close()
 	failOnError(err, "error publishing message", os.Exit)
 }
 
@@ -108,7 +109,7 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 	case SubCmd:
 		startCmdSubscribe(ctx, args)
 	case PubCmd:
-		startCmdPublish(args)
+		startCmdPublish(ctx, args)
 	case TapCmd:
 		startCmdTap(ctx, args)
 	case ExchangeCreateCmd:

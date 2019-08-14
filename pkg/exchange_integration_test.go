@@ -32,7 +32,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 	// since in order to remove an exchange we must create it first, we
 	// tests both functions together in one test case.
 
-	const testName = "testexchange"
+	const testName = "rabtaptestexchange"
 
 	url, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 	client := NewRabbitHTTPClient(url, &tls.Config{})
@@ -44,8 +44,9 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 
 	// create exchange
 	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
+	session := Session{conn, ch}
 	defer conn.Close()
-	err = CreateExchange(ch, testName, "topic", false, false)
+	err = CreateExchange(session, testName, "topic", false, false)
 	assert.Nil(t, err)
 
 	// check if exchange was created
@@ -54,7 +55,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 	assert.NotEqual(t, -1, findExchange(testName, exchanges))
 
 	// finally remove exchange
-	err = RemoveExchange(ch, testName, false)
+	err = RemoveExchange(session, testName, false)
 	assert.Nil(t, err)
 
 	// check if exchange was deleted

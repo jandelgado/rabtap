@@ -8,7 +8,6 @@ import (
 )
 
 // ExchangeConfiguration holds exchange and bindingkey for a single tap
-// TODO add vhost?
 type ExchangeConfiguration struct {
 	// Exchange is the name of the exchange to bind to
 	Exchange string

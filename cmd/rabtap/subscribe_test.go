@@ -24,7 +24,7 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 
 	var b bytes.Buffer
 	rcvFunc := createMessageReceiveFunc(&b, false, &testDir, false)
-	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, nil, time.Now())
+	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
 	_ = rcvFunc(message)
 
@@ -40,7 +40,7 @@ func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
 
 	var b bytes.Buffer
 	rcvFunc := createMessageReceiveFunc(&b, true, &testDir, false)
-	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, nil, time.Now())
+	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
 	_ = rcvFunc(message)
 

@@ -84,23 +84,25 @@ func TestCmdSub(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	messageCount := 0
-	cmdPublish(CmdPublishArg{
-		amqpURI:    amqpURI,
-		exchange:   testExchange,
-		routingKey: testKey,
-		tlsConfig:  tlsConfig,
-		readNextMessageFunc: func() (amqp.Publishing, bool, error) {
-			// provide exactly one message
-			if messageCount > 0 {
-				return amqp.Publishing{}, false, io.EOF
-			}
-			messageCount++
-			return amqp.Publishing{
-				Body:         []byte(testMessage),
-				ContentType:  "text/plain",
-				DeliveryMode: amqp.Transient,
-			}, true, nil
-		}})
+	cmdPublish(
+		ctx,
+		CmdPublishArg{
+			amqpURI:    amqpURI,
+			exchange:   testExchange,
+			routingKey: testKey,
+			tlsConfig:  tlsConfig,
+			readerFunc: func() (amqp.Publishing, bool, error) {
+				// provide exactly one message
+				if messageCount > 0 {
+					return amqp.Publishing{}, false, io.EOF
+				}
+				messageCount++
+				return amqp.Publishing{
+					Body:         []byte(testMessage),
+					ContentType:  "text/plain",
+					DeliveryMode: amqp.Transient,
+				}, true, nil
+			}})
 
 	// test if our tap received the message
 	select {

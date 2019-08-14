@@ -32,11 +32,6 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 				return nil
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %#+v", message)
-			if message.Error != nil {
-				// unrecoverable error received -> log and exit
-				log.Error(message.Error)
-				return message.Error
-			}
 			// let the receiveFunc do the actual message processing
 			if err := messageReceiveFunc(message); err != nil {
 				log.Error(err)
@@ -47,7 +42,7 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 
 // createMessageReceiveFuncJSON returns a function that processes received
 // messages as JSON messages
-// TODO make easier testable (filename creation) and write test
+// TODO make testable (filename creation) and write test
 func createMessageReceiveFuncJSON(out io.Writer, optSaveDir *string,
 	_ /* noColor */ bool) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
@@ -63,7 +58,7 @@ func createMessageReceiveFuncJSON(out io.Writer, optSaveDir *string,
 
 // createMessageReceiveFuncRaw returns a function that processes received
 // messages as "raw" messages
-// TODO make easier testable (filename creation) and write test
+// TODO make testable (filename creation) and write test
 func createMessageReceiveFuncRaw(out io.Writer, optSaveDir *string,
 	noColor bool) MessageReceiveFunc {
 

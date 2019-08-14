@@ -2,8 +2,10 @@ language: go
 go:
 - 1.12.x
 
-services:
-- rabbitmq
+addons:
+  apt:
+    packages:
+      - rabbitmq-server
 
 before_install:
 - go get -u golang.org/x/lint/golint
@@ -14,6 +16,7 @@ before_install:
 - go get github.com/mattn/goveralls
 
 script:
+- sudo rabbitmq-plugins enable rabbitmq_management
 - GO111MODULE=on "./pre-commit"
 - GO111MODULE=on make test
 - GO111MODULE=on make build-all

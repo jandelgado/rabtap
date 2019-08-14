@@ -5,8 +5,8 @@
 
 * new option `--no-auto-ack` for `sub` command disables auto acknowledge when
   messages are received by rabtap (#15)
-* fix: termination with ctrl+c in `tap` and `sub` commands now works reliably
-* Simplified code
+* fix: termination with ctrl+c in `tap`, `pub`, `sub` commands now works reliably
+* heaviliy simplified code
 
 ## v1.18 (2019-07-05)
 

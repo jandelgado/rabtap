@@ -3,14 +3,12 @@
 
 package rabtap
 
-import "github.com/streadway/amqp"
-
 // CreateQueue creates a new queue
 // TODO(JD) get rid of bool types
-func CreateQueue(channel *amqp.Channel, queueName string,
+func CreateQueue(session Session, queueName string,
 	durable, autoDelete, exclusive bool) error {
 
-	_, err := channel.QueueDeclare(
+	_, err := session.QueueDeclare(
 		queueName,
 		durable,
 		autoDelete, // auto delete
@@ -21,26 +19,26 @@ func CreateQueue(channel *amqp.Channel, queueName string,
 }
 
 // RemoveQueue removes a queue
-func RemoveQueue(channel *amqp.Channel,
+func RemoveQueue(session Session,
 	queueName string, ifUnused, ifEmpty bool) error {
-	_, err := channel.QueueDelete(queueName, ifUnused, ifEmpty, false /* wait*/)
+	_, err := session.QueueDelete(queueName, ifUnused, ifEmpty, false /* wait*/)
 	return err
 }
 
 // PurgeQueue clears a queue. Returns number of elements purged
-func PurgeQueue(channel *amqp.Channel, queueName string) (int, error) {
-	return channel.QueuePurge(queueName, false /* wait*/)
+func PurgeQueue(session Session, queueName string) (int, error) {
+	return session.QueuePurge(queueName, false /* wait*/)
 }
 
 // BindQueueToExchange binds the given queue to the given exchange.
 // TODO(JD) support for header based routing
-func BindQueueToExchange(channel *amqp.Channel,
+func BindQueueToExchange(session Session,
 	queueName, key, exchangeName string) error {
-	return channel.QueueBind(queueName, key, exchangeName, false /* wait */, nil)
+	return session.QueueBind(queueName, key, exchangeName, false /* wait */, nil)
 }
 
 // UnbindQueueFromExchange unbinds a queue from an exchange
-func UnbindQueueFromExchange(channel *amqp.Channel,
+func UnbindQueueFromExchange(session Session,
 	queueName, key, exchangeName string) error {
-	return channel.QueueUnbind(queueName, key, exchangeName, nil)
+	return session.QueueUnbind(queueName, key, exchangeName, nil)
 }

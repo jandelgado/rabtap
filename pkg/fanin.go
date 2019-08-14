@@ -59,7 +59,19 @@ func (s *Fanin) loop() error {
 			// The chosen channel has been closed, so zero
 			// out the channel to disable the case (happens on normal shutdown)
 			s.channels[chosen].Chan = reflect.ValueOf(nil)
-			// TODO end fanin if no channels remain?
+
+			// if no channels are left, end the fanin.
+			active := false
+			for i := 1; i < len(s.channels); i++ {
+				if s.channels[i].Chan != reflect.ValueOf(nil) {
+					active = true
+					break
+				}
+			}
+			if !active {
+				close(s.Ch)
+				return nil
+			}
 		} else {
 			s.Ch <- message.Interface()
 		}

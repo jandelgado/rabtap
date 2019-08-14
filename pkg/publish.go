@@ -3,6 +3,7 @@
 package rabtap
 
 import (
+	"context"
 	"crypto/tls"
 
 	"github.com/sirupsen/logrus"
@@ -15,7 +16,6 @@ type PublishMessage struct {
 	Exchange   string
 	RoutingKey string
 	Publishing *amqp.Publishing
-	Error      *error
 }
 
 // PublishChannel is a channel for PublishMessage message objects
@@ -35,38 +35,23 @@ func NewAmqpPublish(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) 
 		logger:     logger}
 }
 
-// Connected returns true if the tap is connected to an exchange, otherwise
-// false
-func (s *AmqpPublish) Connected() bool {
-	return s.connection.Connected()
-}
-
 // createWorkerFunc receives messages on the provided channel and publishes
 // the messages on an rabbitmq exchange
+// TODO retry on failed publish
+// TODO publish notification handler to detect problems
 func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorkerFunc {
 
-	return func(rabbitConn *amqp.Connection, controlChan chan ControlMessage) ReconnectAction {
-		channel, err := rabbitConn.Channel()
-		if err != nil {
-			return doReconnect
-		}
-		defer channel.Close()
-		errChan := make(chan *amqp.Error, 10)
-		channel.NotifyClose(errChan)
+	return func(ctx context.Context, session Session) (ReconnectAction, error) {
 
 		for {
 			select {
-			case err := <-errChan:
-				s.logger.Fatalf("publishing error %#+v", err)
-				return doReconnect
-
 			case message, more := <-publishChannel:
 				if !more {
 					s.logger.Print("publishing channel closed.")
-					return doNotReconnect
+					return doNotReconnect, nil
 				}
 				// TODO need to add notification hdlr to detect pub errors
-				err := channel.Publish(message.Exchange,
+				err := session.Publish(message.Exchange,
 					message.RoutingKey,
 					false, // not mandatory
 					false, // not immeadiate
@@ -74,28 +59,19 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 
 				if err != nil {
 					s.logger.Print("publishing error %#+v", err)
-					// error publishing message
-					// channel is invalid now - re-connect
-					return doReconnect
+					// error publishing message - reconnect.
+					return doReconnect, err
 				}
 
-			case controlMessage := <-controlChan:
-				if controlMessage.IsReconnect() {
-					return doReconnect
-				}
-				return doNotReconnect
+			case <-ctx.Done():
+				return doNotReconnect, nil
+
 			}
 		}
 	}
 }
 
 // EstablishConnection sets up the connection to the broker
-func (s *AmqpPublish) EstablishConnection(publishChannel PublishChannel) error {
-	err := s.connection.Connect(s.createWorkerFunc(publishChannel))
-	return err
-}
-
-// Close closes the connection to the broker
-func (s *AmqpPublish) Close() error {
-	return s.connection.Close()
+func (s *AmqpPublish) EstablishConnection(ctx context.Context, publishChannel PublishChannel) error {
+	return s.connection.Connect(ctx, s.createWorkerFunc(publishChannel))
 }

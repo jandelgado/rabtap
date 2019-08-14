@@ -44,7 +44,7 @@ func TestCmdPurgeQueue(t *testing.T) {
 		"--uri", amqpURI}
 	main()
 
-	// TODO publish messages
+	// TODO publish some messages
 
 	// purge queue and check size
 	os.Args = []string{"rabtap", "queue",
@@ -59,7 +59,14 @@ func TestCmdPurgeQueue(t *testing.T) {
 	i := rabtap.FindQueueByName(queues, "/", testQueue)
 	require.True(t, i != -1)
 
-	// TODO
+	// check that queue is empty
 	queue := queues[i]
 	assert.Equal(t, 0, queue.Messages)
+
+	// remove queue
+	os.Args = []string{"rabtap", "queue",
+		"rm", testQueue,
+		"--uri", amqpURI}
+	main()
+
 }

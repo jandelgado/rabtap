@@ -11,8 +11,8 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
-// BrokerInfoPrinterConfig controls bevaviour when rendering a broker info
-type BrokerInfoPrinterConfig struct {
+// BrokerInfoTreeBuilderConfig controls bevaviour when rendering a broker info
+type BrokerInfoTreeBuilderConfig struct {
 	Mode                string
 	ShowDefaultExchange bool
 	ShowConsumers       bool
@@ -25,17 +25,17 @@ type BrokerInfoTreeBuilder interface {
 	BuildTree(rootNodeURL string, brokerInfo rabtap.BrokerInfo) (*rootNode, error)
 }
 
-type brokerInfoTreeBuilderByConnection struct{ config BrokerInfoPrinterConfig }
-type brokerInfoTreeBuilderByExchange struct{ config BrokerInfoPrinterConfig }
+type brokerInfoTreeBuilderByConnection struct{ config BrokerInfoTreeBuilderConfig }
+type brokerInfoTreeBuilderByExchange struct{ config BrokerInfoTreeBuilderConfig }
 
-func NewBrokerInfoTreeBuilder(config BrokerInfoPrinterConfig) (BrokerInfoTreeBuilder, error) {
+func NewBrokerInfoTreeBuilder(config BrokerInfoTreeBuilderConfig) BrokerInfoTreeBuilder {
 	switch config.Mode {
 	case "byConnection":
-		return &brokerInfoTreeBuilderByConnection{config}, nil
+		return &brokerInfoTreeBuilderByConnection{config}
 	case "byExchange":
-		return &brokerInfoTreeBuilderByExchange{config}, nil
+		return &brokerInfoTreeBuilderByExchange{config}
 	default:
-		return nil, fmt.Errorf("unknown mode %s", config.Mode)
+		panic(fmt.Sprintf("invalid mode %s", config.Mode))
 	}
 }
 
@@ -103,15 +103,15 @@ type consumerNode struct {
 	Consumer rabtap.RabbitConsumer
 }
 
-type BrokerInfoPrinter struct {
-	config BrokerInfoPrinterConfig
+type defaultBrokerInfoTreeBuilder struct {
+	config BrokerInfoTreeBuilderConfig
 }
 
-func NewBrokerInfoPrinter(config BrokerInfoPrinterConfig) *BrokerInfoPrinter {
-	return &BrokerInfoPrinter{config}
+func NewdefaultBrokerInfoTreeBuilder(config BrokerInfoTreeBuilderConfig) *defaultBrokerInfoTreeBuilder {
+	return &defaultBrokerInfoTreeBuilder{config}
 }
 
-func (s BrokerInfoPrinter) shouldDisplayExchange(
+func (s defaultBrokerInfoTreeBuilder) shouldDisplayExchange(
 	exchange rabtap.RabbitExchange, vhost string) bool {
 
 	if exchange.Vhost != vhost {
@@ -124,7 +124,7 @@ func (s BrokerInfoPrinter) shouldDisplayExchange(
 	return true
 }
 
-func (s BrokerInfoPrinter) shouldDisplayQueue(
+func (s defaultBrokerInfoTreeBuilder) shouldDisplayQueue(
 	queue rabtap.RabbitQueue,
 	exchange rabtap.RabbitExchange,
 	binding rabtap.RabbitBinding) bool {
@@ -140,7 +140,7 @@ func (s BrokerInfoPrinter) shouldDisplayQueue(
 	return true
 }
 
-func (s BrokerInfoPrinter) createConnectionNodes(
+func (s defaultBrokerInfoTreeBuilder) createConnectionNodes(
 	vhost string, connName string, brokerInfo rabtap.BrokerInfo) []*connectionNode {
 	var conns []*connectionNode
 	i := rabtap.FindConnectionByName(brokerInfo.Connections, vhost, connName)
@@ -150,7 +150,7 @@ func (s BrokerInfoPrinter) createConnectionNodes(
 	return conns
 }
 
-func (s BrokerInfoPrinter) createConsumerNodes(
+func (s defaultBrokerInfoTreeBuilder) createConsumerNodes(
 	queue rabtap.RabbitQueue, brokerInfo rabtap.BrokerInfo) []*consumerNode {
 	var nodes []*consumerNode
 	vhost := queue.Vhost
@@ -168,7 +168,7 @@ func (s BrokerInfoPrinter) createConsumerNodes(
 	return nodes
 }
 
-func (s BrokerInfoPrinter) createQueueNodeFromBinding(
+func (s defaultBrokerInfoTreeBuilder) createQueueNodeFromBinding(
 	binding rabtap.RabbitBinding,
 	exchange rabtap.RabbitExchange,
 	brokerInfo rabtap.BrokerInfo) []*boundQueueNode {
@@ -202,7 +202,7 @@ func (s BrokerInfoPrinter) createQueueNodeFromBinding(
 
 // createExchangeNode recursively (in case of exchange-exchange binding) an
 // exchange to the given node.
-func (s BrokerInfoPrinter) createExchangeNode(
+func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 	exchange rabtap.RabbitExchange, brokerInfo rabtap.BrokerInfo) *exchangeNode {
 
 	exchangeNode := exchangeNode{baseNode{[]interface{}{}}, exchange}
@@ -232,7 +232,7 @@ func (s BrokerInfoPrinter) createExchangeNode(
 	return &exchangeNode
 }
 
-func (s BrokerInfoPrinter) createRootNode(rootNodeURL string,
+func (s defaultBrokerInfoTreeBuilder) createRootNode(rootNodeURL string,
 	overview rabtap.RabbitOverview) (*rootNode, error) {
 	// root of node is URL of rabtap.RabbitMQ broker.
 	url, err := url.Parse(rootNodeURL)
@@ -251,7 +251,7 @@ func (s BrokerInfoPrinter) createRootNode(rootNodeURL string,
 //           +--Consumer  (optional)
 //              +--Connection
 //
-func (s BrokerInfoPrinter) buildTreeByExchange(rootNodeURL string,
+func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(rootNodeURL string,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
 
 	b := baseNode{[]interface{}{}}
@@ -285,7 +285,7 @@ func (s BrokerInfoPrinter) buildTreeByExchange(rootNodeURL string,
 //        +--Consumer
 //           +--Queue
 // TODO add filtering
-func (s BrokerInfoPrinter) buildTreeByConnection(rootNodeURL string,
+func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(rootNodeURL string,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
 
 	url, err := url.Parse(rootNodeURL)
@@ -323,34 +323,13 @@ func (s BrokerInfoPrinter) buildTreeByConnection(rootNodeURL string,
 func (s brokerInfoTreeBuilderByConnection) BuildTree(
 	rootNodeURL string,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
-	builder := NewBrokerInfoPrinter(s.config)
+	builder := NewdefaultBrokerInfoTreeBuilder(s.config)
 	return builder.buildTreeByConnection(rootNodeURL, brokerInfo)
 }
 
 func (s brokerInfoTreeBuilderByExchange) BuildTree(
 	rootNodeURL string,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
-	builder := NewBrokerInfoPrinter(s.config)
+	builder := NewdefaultBrokerInfoTreeBuilder(s.config)
 	return builder.buildTreeByExchange(rootNodeURL, brokerInfo)
 }
-
-// // Print renders given brokerInfo into a tree-view
-// func (s BrokerInfoPrinter) Print(brokerInfo rabtap.BrokerInfo,
-//     rootNodeURL string, out io.Writer) error {
-
-//     var root *rootNode
-//     var err error
-//     if s.config.ShowByConnection {
-//         root, err = s.buildTreeByConnection(rootNodeURL, brokerInfo)
-//     } else {
-//         root, err = s.buildTreeByExchange(rootNodeURL, brokerInfo)
-//     }
-
-//     if err != nil {
-//         return err
-//     }
-
-//     //	renderer := NewBrokerInfoRendererText(s.config)
-//     renderer := brokerInfoRenderers[s.config.ContentType](s.config)
-//     return renderer.Render(root, out)
-// }

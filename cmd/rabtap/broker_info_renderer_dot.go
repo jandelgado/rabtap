@@ -51,58 +51,47 @@ func NewBrokerInfoRendererDot(config BrokerInfoRendererConfig) BrokerInfoRendere
 // NewDotRendererTpl returns the dot template to use. For now, just one default
 // template is used, later will support loading templates from the filesytem
 func NewDotRendererTpl() dotRendererTpl {
-	return dotRendererTpl{dotTplRootNode: `
-  {{- "" }}graph broker {
-  {{ q .Name }} [label="{{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }}"];
-  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
-  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}
+	return dotRendererTpl{dotTplRootNode: `graph broker {
+{{ q .Name }} [shape="record", label="{RabbitMQ {{ .Overview.RabbitmqVersion }} | 
+               {{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }} |
+               {{- .Overview.ClusterName }} }"];
+
+{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}
 }`,
 
-		dotTplVhost: `
-  {{ q .Name }} [label="Virtual host {{ .Vhost }}"];
-  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
-  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`,
+		dotTplVhost: `{{ q .Name }} [shape="box", label="Virtual host {{ .Vhost }}"];
+
+{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name -}} [headport=n]{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
 		dotTplExchange: `
-  subgraph cluster_0 {
-	label="Exchanges";
-	style=filled;
-	color=green;
-	labeljust = "l";
-	node [style=filled,color=white];
-	{{ q .Name }} [style=filled, color=white; label="{{ .Exchange.Name }}"];
-  }
-  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }} [label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{end}}
-  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}
-  `,
+{{ q .Name }} [shape="record"; label="{ {{ .Exchange.Name }} | {{- .Exchange.Type }} | {
+			  {{- if .Exchange.Durable }} D {{ end }} | 
+			  {{- if .Exchange.AutoDelete }} AD {{ end }} | 
+			  {{- if .Exchange.Internal }} I {{ end }} } }"];
+
+{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }} [fontsize=10; headport=n; label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplQueue: `
-  subgraph cluster_1 {
-	label="Queues";
-	labeljust = "l";
-	style=filled;
-	color=lightblue;
-	node [style=filled,color=white];
-    {{ q .Name }} [style=filled; color=white; label="{{ .Queue.Name }}"];
-  }
-  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
-  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`,
+{{ q .Name }} [shape="record"; label="{{ .Queue.Name }}"];
+
+{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplBoundQueue: `
-  subgraph cluster_2 {
-	label="Queues";
-	labeljust = "l";
-	style=filled;
-	color=lightblue;
-	node [style=filled,color=white];
-    {{ q .Name }} [style=filled; color=white; label="{{ .Queue.Name }}"];
-  }
-  {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{end}}
-  {{ range $i, $e := .Children }}{{ $e.Text }}{{end}}`,
+{{ q .Name }} [shape="record"; label="{ {{ .Queue.Name }} | {
+			  {{- if .Queue.Durable }} D {{ end }} | 
+			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
+			  {{- if .Queue.Exclusive }} EX {{ end }} } }"];
 
-		dotTplConsumer: `consumer - todo `,
+{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
-		dotTplConnection: `connection - todo`}
+		dotTplConsumer: `/* consumers - todo */`,
+
+		dotTplConnection: `/* connections - todo */`}
 }
 
 func (s BrokerInfoRendererDot) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
@@ -244,6 +233,8 @@ func (s *BrokerInfoRendererDot) renderNodeText(n interface{}) dotNode {
 	return node
 }
 
+// Render renders the given tree in graphviz dot format. See
+// https://www.graphviz.org/doc/info/lang.html
 func (s *BrokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
 	res := s.renderNodeText(rootNode)
 	fmt.Fprintf(out, res.Text)

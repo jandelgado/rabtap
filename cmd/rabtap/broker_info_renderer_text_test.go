@@ -1,39 +1,48 @@
 // Copyright (C) 2017 Jan Delgado
+// component tests of the text format info renderer
 
 package main
+
+import (
+	"crypto/tls"
+	"net/url"
+	"os"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
+	"github.com/jandelgado/rabtap/pkg/testcommon"
+)
 
 /****
 func TestBrokerInfoPrintFailsOnInvalidUri(t *testing.T) {
 	// TODO
-	// brokerInfoPrinter := NewBrokerInfoPrinter(BrokerInfoPrinterConfig{})
+	// brokerInfoPrinter := NewBrokerInfoTreeBuilder(BrokerInfoTreeBuilderConfig{})
 	// err := brokerInfoPrinter.Print(rabtap.BrokerInfo{}, "//:xxx::invalid uri", os.Stdout)
 	// assert.NotNil(t, err)
 
 }
+***/
 
-func ExampleBrokerInfoPrinter_Print() {
+func ExampleBrokerInfoRendererText_Print() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
-	brokerInfoPrinter := NewBrokerInfoPrinter(
-		BrokerInfoPrinterConfig{
-			ShowStats:           false,
+	cmdInfo(CmdInfoArg{
+		rootNode: "http://rabbitmq/api",
+		client:   client,
+		treeConfig: BrokerInfoTreeBuilderConfig{
+			Mode:                "byExchange",
 			ShowConsumers:       true,
 			ShowDefaultExchange: false,
 			QueueFilter:         TruePredicate,
 			OmitEmptyExchanges:  false},
-	)
-	brokerInfo, err := client.BrokerInfo()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := brokerInfoPrinter.Print(brokerInfo, "http://rabbitmq/api", os.Stdout); err != nil {
-		log.Fatal(err)
-	}
+		renderConfig: BrokerInfoRendererConfig{
+			Format:    "text",
+			ShowStats: false,
+			NoColor:   true},
+		out: os.Stdout})
 
 	// Output:
 	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
@@ -63,28 +72,27 @@ func ExampleBrokerInfoPrinter_Print() {
 
 }
 
-func ExampleBrokerInfoPrinter_printByConnection() {
+func ExampleBrokerInfoRendererText_printByConnection() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
-	brokerInfoPrinter := NewBrokerInfoPrinter(
-		BrokerInfoPrinterConfig{
-			ShowStats:          false,
-			ShowByConnection:   true,
-			OmitEmptyExchanges: false,
-			NoColor:            true},
-	)
-	brokerInfo, err := client.BrokerInfo()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := brokerInfoPrinter.Print(brokerInfo, "http://rabbitmq/api", os.Stdout); err != nil {
-		log.Fatal(err)
-	}
+	cmdInfo(CmdInfoArg{
+		rootNode: "http://rabbitmq/api",
+		client:   client,
+		treeConfig: BrokerInfoTreeBuilderConfig{
+			Mode:                "byConnection",
+			ShowConsumers:       true,
+			ShowDefaultExchange: false,
+			QueueFilter:         TruePredicate,
+			OmitEmptyExchanges:  false},
+		renderConfig: BrokerInfoRendererConfig{
+			Format:    "text",
+			ShowStats: false,
+			NoColor:   true},
+		out: os.Stdout})
 
 	// Output:
 	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
@@ -93,41 +101,3 @@ func ExampleBrokerInfoPrinter_printByConnection() {
 	//         └── some_consumer (consumer user='guest', prefetch=0, chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
 	//             └── direct-q1 (queue, running, [D])
 }
-
-func ExampleBrokerInfoPrinter_printWithQueueFilter() {
-
-	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
-	defer mock.Close()
-	url, _ := url.Parse(mock.URL)
-	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
-
-	queueFilter, err := NewPredicateExpression("queue.Name == 'fanout-q2'")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	brokerInfoPrinter := NewBrokerInfoPrinter(
-		BrokerInfoPrinterConfig{
-			ShowStats:           false,
-			ShowConsumers:       true,
-			ShowDefaultExchange: false,
-			QueueFilter:         queueFilter,
-			OmitEmptyExchanges:  true,
-			NoColor:             true},
-	)
-	brokerInfo, err := client.BrokerInfo()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := brokerInfoPrinter.Print(brokerInfo, "http://rabbitmq/api", os.Stdout); err != nil {
-		log.Fatal(err)
-	}
-
-	// Output:
-	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
-	// └── Vhost /
-	//     └── test-fanout (exchange, type 'fanout', [D])
-	//         └── fanout-q2 (queue, idle since 2017-05-25 19:14:32, [D])
-
-}****/

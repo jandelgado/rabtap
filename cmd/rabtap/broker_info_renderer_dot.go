@@ -76,7 +76,10 @@ func newDotRendererTpl() dotRendererTpl {
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplQueue: `
-{{ q .Name }} [shape="record"; label="{{ .Queue.Name }}"];
+{{ q .Name }} [shape="record"; label="{ {{ .Queue.Name }} | {
+			  {{- if .Queue.Durable }} D {{ end }} | 
+			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
+			  {{- if .Queue.Exclusive }} EX {{ end }} } }"];
 
 {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
@@ -90,22 +93,21 @@ func newDotRendererTpl() dotRendererTpl {
 {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
-		dotTplConsumer: `/* consumers - todo */`,
+		// TODO add more details
+		dotTplConnection: `
+{{ q .Name }} [shape="recored" label="{{ .Connection.Name }}"];
 
-		dotTplConnection: `/* connections - todo */`}
+{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
+
+		// TODO add more details
+		dotTplConsumer: `
+{{ q .Name }} [shape="recored" label="{{ .Consumer.ConsumerTag}}"];
+
+{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
+	}
 }
-
-// func (s brokerInfoRendererDot) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
-//     flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive}
-//     names := []string{"D", "AD", "EX"}
-//     return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
-// }
-
-// func (s brokerInfoRendererDot) renderExchangeFlagsAsString(exchange rabtap.RabbitExchange) string {
-//     flags := []bool{exchange.Durable, exchange.AutoDelete, exchange.Internal}
-//     names := []string{"D", "AD", "I"}
-//     return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
-// }
 
 func (s brokerInfoRendererDot) renderRootNodeAsString(name string, children []dotNode, rabbitURL url.URL, overview rabtap.RabbitOverview) string {
 	var args = struct {
@@ -118,6 +120,7 @@ func (s brokerInfoRendererDot) renderRootNodeAsString(name string, children []do
 	funcMap := map[string]interface{}{"q": strconv.Quote}
 	return resolveTemplate("root-dotTpl", s.template.dotTplRootNode, args, funcMap)
 }
+
 func (s brokerInfoRendererDot) renderVhostAsString(name string, children []dotNode, vhost string) string {
 	var args = struct {
 		Name     string

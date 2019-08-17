@@ -150,13 +150,13 @@ Options:
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange]
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
- --no-auto-ack        disable auto-ack in subscribe mode. This will lead to 
-                      unacked messages on the broker which will be requeued 
+ --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
+                      unacked messages on the broker which will be requeued
                       when the channel is closed.
  -o, --omit-empty     don't show echanges without bindings in info command.
  --format=FORMAT      output format for info command. One of "text", "dot".
-					  [default: text]
- --reason=REASON      reason why the connection was closed 
+                      [default: text]
+ --reason=REASON      reason why the connection was closed
                       [default: closed by rabtap].
  -r, --routingkey KEY routing key to use in publish mode.
  --saveto DIR         also save messages and metadata to DIR.
@@ -186,7 +186,7 @@ Examples:
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
   rabtap info --filter "binding.Source == 'amq.topic'" -o
-  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
+  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 ```
 
 ### Basic commands
@@ -195,10 +195,10 @@ Rabtap understands the following commands:
 
 * `tap` - taps to an exchange and transparently receives messages sent to the
    exchange, without affecting actual message delivery (using exchange-to-exchange
-   binding). Simulatanous 
+   binding). Simulatanous
 * `sub` - subscribes to a queue and consumes messages sent to the queue (acts
    like a RabbitMQ consumer)
-* `pub` - send messages to an exchange. 
+* `pub` - send messages to an exchange.
 * `info` - show broker related info (exchanges, queues, bindings, stats). The
    features of an exchange are displayed in square brackets with `D` (durable),
    `AD` (auto delete) and `I` (internal). The features of a queue are displayed
@@ -264,7 +264,7 @@ rabbitmq:3-management` or similar command to start a RabbitMQ container.
 
 #### Broker info
 
-The `info` command uses the REST API of RabbitMQ to gather and display 
+The `info` command uses the REST API of RabbitMQ to gather and display
 topolgy related information from the broker. Example:
 
 * `$ rabtap info --api http://guest:guest@localhost:15672/api --consumers` -
@@ -272,9 +272,9 @@ topolgy related information from the broker. Example:
   tree view (see [screenshot](#screenshots)). Note that if `RABTAP_APIURI`
   environment variable is set, the command reduces to `$ rabtap info
   --consumers`
-* `$ rabtap info --mode=byConnection` - shows virtual hosts, connections, 
+* `$ rabtap info --mode=byConnection` - shows virtual hosts, connections,
   consumers and queues of given broker in an tree view.
-* Use the `--format FORMAT` option to generate ouput in different formats, 
+* Use the `--format FORMAT` option to generate ouput in different formats,
   e.g. `text` for the standard console text format (default) or `dot` to output
   the tree structure in dot format.
 
@@ -327,7 +327,7 @@ exchanges:
 
 * `$ rabtap tap --uri amqp://broker1 amq.topic:# tap --uri amqp://broker2 amq.fanout:`
 
-The example connects to `broker1` and taps to the `amq.topic` exchange and to 
+The example connects to `broker1` and taps to the `amq.topic` exchange and to
 the `amq.fanout` exchange on `broker2`.
 
 ##### Message recorder
@@ -348,7 +348,7 @@ Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` +
 
 #### Publish messages
 
-The `pub` command allows to send messages to an exchange, specifying a 
+The `pub` command allows to send messages to an exchange, specifying a
 routing key.
 
 * `$ rabtap pub amq.direct -r routingKey message.json --json`  - publish
@@ -403,7 +403,7 @@ http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbi
         │       └── '172.17.0.1:59228 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:59228')
         ├── test-q-test-topic-1 (queue, key='test-q-test-topic-1', running, [])
         :
-$ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672' 
+$ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672'
 ```
 
 #### Queue commands
@@ -411,7 +411,7 @@ $ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672'
 The `queue` command can be used to easily create, remove, bind or unbind queues:
 
 ```console
-$ rabtap queue create myqueue 
+$ rabtap queue create myqueue
 $ rabtap info --show-default
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
 └── Vhost /
@@ -485,7 +485,7 @@ Note that in JSON mode, the `Body` is base64 encoded.
 ## Filtering output of info command
 
 When your brokers topology is complex, the output of the `info` command can
-become very bloated. The `--filter` helps you to narrow output to 
+become very bloated. The `--filter` helps you to narrow output to
 the desired information.
 
 ### Filtering expressions
@@ -510,13 +510,13 @@ Note: currently the filter is ignored when used in conjunction with
 During evaluation the context (i.e. the current exchange, queue and binding) is
 available in the expression as variables:
 
-* the current exchange is bound to the variable [exchange](#exchange-type) 
-* the current queue is bound to the variable [queue](#queue-type) 
+* the current exchange is bound to the variable [exchange](#exchange-type)
+* the current queue is bound to the variable [queue](#queue-type)
 * the curren binding is bound to the variable [binding](#binding-type)
 
 #### Examples
 
-The examples assume that `RABTAP_APIURI` environment variable points to the 
+The examples assume that `RABTAP_APIURI` environment variable points to the
 broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
 
 * `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty`: print
@@ -525,7 +525,7 @@ broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
   queues with `test` in their name.
 * `rabtap info --filter "queue.Name =~ '.*test.*' && exchange.Type == 'topic'" --omit-empty`: like
   before, but consider only exchanges of type `topic`.
-* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers`: print all queues with at 
+* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers`: print all queues with at
   one consumer
 
 ### Type reference
@@ -562,62 +562,62 @@ type Exchange struct {
 ```go
 type Queue struct {
 	MessagesDetails struct {
-		Rate float64 
-	} 
-	Messages 
+		Rate float64
+	}
+	Messages
 	MessagesUnacknowledgedDetails struct {
-		Rate float64 
-	} 
-	MessagesUnacknowledged int 
+		Rate float64
+	}
+	MessagesUnacknowledged int
 	MessagesReadyDetails   struct {
-		Rate float64 
-	} 
-	MessagesReady     int 
+		Rate float64
+	}
+	MessagesReady     int
 	ReductionsDetails struct {
-		Rate float64 
-	} 
-	Reductions int    
-	Node       string 
-	Exclusive            bool   
-	AutoDelete           bool   
-	Durable              bool   
-	Vhost                string 
-	Name                 string 
-	MessageBytesPagedOut int    
-	MessagesPagedOut     int    
+		Rate float64
+	}
+	Reductions int
+	Node       string
+	Exclusive            bool
+	AutoDelete           bool
+	Durable              bool
+	Vhost                string
+	Name                 string
+	MessageBytesPagedOut int
+	MessagesPagedOut     int
 	BackingQueueStatus   struct {
-		Mode string 
-		Q1   int    
-		Q2   int    
-		Q3  int 
-		Q4  int 
-		Len int 
-		NextSeqID         int     
-		AvgIngressRate    float64 
-		AvgEgressRate     float64 
-		AvgAckIngressRate float64 
-		AvgAckEgressRate  float64 
-	} 
-	MessageBytesPersistent     int 
-	MessageBytesRAM            int 
-	MessageBytesUnacknowledged int 
-	MessageBytesReady          int 
-	MessageBytes               int 
-	MessagesPersistent         int 
-	MessagesUnacknowledgedRAM  int 
-	MessagesReadyRAM           int 
-	MessagesRAM                int 
+		Mode string
+		Q1   int
+		Q2   int
+		Q3  int
+		Q4  int
+		Len int
+		NextSeqID         int
+		AvgIngressRate    float64
+		AvgEgressRate     float64
+		AvgAckIngressRate float64
+		AvgAckEgressRate  float64
+	}
+	MessageBytesPersistent     int
+	MessageBytesRAM            int
+	MessageBytesUnacknowledged int
+	MessageBytesReady          int
+	MessageBytes               int
+	MessagesPersistent         int
+	MessagesUnacknowledgedRAM  int
+	MessagesReadyRAM           int
+	MessagesRAM                int
 	GarbageCollection          struct {
-		MinorGcs        int 
-		FullsweepAfter  int 
-		MinHeapSize     int 
-		MinBinVheapSize int 
-		MaxHeapSize     int 
-	} 
-	State string 
-	Consumers int 
-	IdleSince string 
-	Memory    int    
+		MinorGcs        int
+		FullsweepAfter  int
+		MinHeapSize     int
+		MinBinVheapSize int
+		MaxHeapSize     int
+	}
+	State string
+	Consumers int
+	IdleSince string
+	Memory    int
 }
 ```
 

@@ -42,7 +42,7 @@ and exchanges, inspect broker.
         * [Binding type](#binding-type)
 * [Build from source](#build-from-source)
     * [Download and build using go get](#download-and-build-using-go-get)
-    * [Build using Makefile](#build-using-makefile)
+    * [Build using Makefile and tests](#build-using-makefile-and-tests)
 * [Test data generator](#test-data-generator)
 * [Contributing](#contributing)
 * [Author](#author)
@@ -89,16 +89,15 @@ See [below](#build-from-source) if you prefer to compile from source.
 ## Usage
 
 ```
-
 rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
   rabtap tap EXCHANGES [--uri URI] [--saveto DIR] [-jknv]
   rabtap (tap --uri URI EXCHANGES)... [--saveto DIR] [-jknv]
-  rabtap info [--api APIURI] [--consumers] [--stats] 
-              [--filter EXPR] [--omit-empty] [--show-default] 
-			  [--mode MODE] [--format FORMAT] [-knv]
+  rabtap info [--api APIURI] [--consumers] [--stats]
+              [--filter EXPR] [--omit-empty] [--show-default]
+              [--mode MODE] [--format FORMAT] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
   rabtap sub QUEUE [--uri URI] [--saveto DIR] [--no-auto-ack] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
@@ -134,7 +133,7 @@ Options:
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
-                      [default: byExchange].
+                      [default: byExchange]
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
  --no-auto-ack        disable auto-ack in subscribe mode. This will lead to 
                       unacked messages on the broker which will be requeued 
@@ -258,11 +257,11 @@ topolgy related information from the broker. Example:
   tree view (see [screenshot](#screenshots)). Note that if `RABTAP_APIURI`
   environment variable is set, the command reduces to `$ rabtap info
   --consumers`
-* `$ rabtap info  --mode=byConnection` - shows virtual hosts, connections, 
+* `$ rabtap info --mode=byConnection` - shows virtual hosts, connections, 
   consumers and queues of given broker in an tree view.
 * Use the `--format FORMAT` option to generate ouput in different formats, 
-  e.g. `text` for the standard console text format or `dot` to output the 
-  tree structure in dot format.
+  e.g. `text` for the standard console text format (default) or `dot` to output
+  the tree structure in dot format.
 
   TODO example dot
 
@@ -627,7 +626,7 @@ type Binding struct {
 $ GO111MODULE=on go get github.com/jandelgado/rabtap/cmd/rabtap
 ```
 
-### Build using Makefile
+### Build using Makefile and tests
 
 To build rabtap from source, you need [go](https://golang.org/) (version >= 12)
 and the following tools installed:
@@ -640,9 +639,14 @@ and the following tools installed:
 ```
 $ export GO111MODULE=on
 $ git clone https://github.com/jandelgado/rabtap && cd rabtap
-$ make test
+$ make test  -or- make short-test
 $ make
 ```
+
+In order to run all tests (`make test`) an instance of RabbitMQ is expected to
+run on localhost. Easiest way to start one is running `make run-broker`, which
+will start a RabbitMQ docker container (i.e.  `docker run -ti --rm -p 5672:5672
+-p 15672:15672 rabbitmq:3-management`).
 
 ## Test data generator
 
@@ -654,8 +658,8 @@ included in the `cmd/testgen` directory.
 * fork this repository
 * create your feature branch
 * add code
-* add tests and make sure test coverage does not fall
-* make sure pre-commit hook does not fail
+* add tests and make sure test coverage does not fall (`make test`)
+* make sure pre-commit hook does not fail (`./pre-commit`)
 * add [documentation](README.md)
 * commit changes
 * submit a PR

@@ -11,6 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMain(m *testing.M) {
+	os.Unsetenv("RABTAP_AMQPURI")
+	os.Unsetenv("RABTAP_APIURI")
+	code := m.Run()
+	os.Exit(code)
+}
+
 func TestParseAmqpURI(t *testing.T) {
 	// since multple --uri arguments are possible docopt returns an array
 	args := map[string]interface{}{"--uri": []string{"URI"}}
@@ -158,7 +165,7 @@ func TestCliInfoCmd(t *testing.T) {
 
 func TestCliInfoCmdShowByConnection(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"info", "--mode=byConnection"})
+		[]string{"info", "--api=uri", "--mode=byConnection"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, InfoCmd, args.Cmd)
@@ -167,7 +174,7 @@ func TestCliInfoCmdShowByConnection(t *testing.T) {
 
 func TestCliInfoCmdOutputAsDotFile(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"info", "--format=dot"})
+		[]string{"info", "--api=uri", "--format=dot"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, InfoCmd, args.Cmd)
@@ -176,21 +183,19 @@ func TestCliInfoCmdOutputAsDotFile(t *testing.T) {
 
 func TestCliInfoCmdFailsWithInvalidMode(t *testing.T) {
 	_, err := ParseCommandLineArgs(
-		[]string{"info", "--mode=INVALID"})
+		[]string{"info", "--api=uri", "--mode=INVALID"})
 
 	assert.NotNil(t, err)
 }
 
 func TestCliInfoCmdFailsWithInvalidFormat(t *testing.T) {
 	_, err := ParseCommandLineArgs(
-		[]string{"info", "--format=INVALID"})
+		[]string{"info", "--api=uri", "--format=INVALID"})
 
 	assert.NotNil(t, err)
 }
 
 func TestCliInfoCmdMissingApi(t *testing.T) {
-	const key = "RABTAP_APIURI"
-	os.Unsetenv(key)
 	_, err := ParseCommandLineArgs(
 		[]string{"info"})
 	assert.NotNil(t, err)

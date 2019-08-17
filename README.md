@@ -79,6 +79,12 @@ with unset attributes filtered out and the message body:
 
 ![info mode](doc/images/tap.png)
 
+Using the `--format=dot` option, the `info` command can generate output in
+the `dot` format, which can be visualized using graphviz, e.g.
+`rabtap info --show-default --format dot | dot -T svg > mybroker.svg`
+
+![info mode](doc/images/info-dot.png)
+
 ## Installation
 
 Pre-compiled binaries can be downloaded for multiple platforms from the

@@ -5,6 +5,7 @@
 // Definition of interface and default implementation.
 // TODO split into interface, impl and factory when new builder(s) are
 // implemented
+// TODO add unit test. currently only component tested in cmd_info_test.go
 
 package main
 

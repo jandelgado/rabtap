@@ -14,6 +14,7 @@ and exchanges, inspect broker.
 * [Features](#features)
 * [Screenshots](#screenshots)
     * [Show broker topology](#show-broker-topology)
+    * [Tap messages](#tap-messages)
     * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
 * [Installation](#installation)
 * [Usage](#usage)
@@ -78,15 +79,16 @@ Output of `rabtap info --stats` command, showing additional statistics:
 
 ![info mode](doc/images/info-stats.png)
 
-Output of rabtap running in `tap` mode, showing message meta data
-with unset attributes filtered out and the message body:
+### Tap messages
+
+Output of rabtap in `tap` mode, showing message meta data and the message body:
 
 ![info mode](doc/images/tap.png)
 
 ### Visualize broker topology with graphviz
 
 Using the `--format=dot` option, the `info` command can generate output in the
-`dot` format, which can be visualized using graphviz, e.g.  `rabtap info
+`dot` format, which can be visualized using graphviz, e.g. `rabtap info
 --show-default --format dot | dot -T svg > mybroker.svg`. The resulting SVG
 file can be visualized with a web browser, e.g. `firefox mybroker.svg`.
 

@@ -46,6 +46,7 @@ func TestFailOnError(t *testing.T) {
 }
 
 func Example_startCmdInfo() {
+	// TODO move to cmd_info_test
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeEmpty)
 	defer mock.Close()
 

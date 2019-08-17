@@ -31,9 +31,8 @@ type dotRendererTpl struct {
 	dotTplConnection string
 }
 
-// BrokerInfoRenderer renders a tree representation represented by a rootNode
-// into a string representation
-type BrokerInfoRendererDot struct {
+// brokerInfoRendererDot renders into graphviz dot format
+type brokerInfoRendererDot struct {
 	config   BrokerInfoRendererConfig
 	template dotRendererTpl
 }
@@ -44,13 +43,15 @@ type dotNode struct {
 	ParentAssoc string
 }
 
+// NewBrokerInfoRendererDot returns a BrokerInfoRenderer implementation that
+// renders into graphviz dot format
 func NewBrokerInfoRendererDot(config BrokerInfoRendererConfig) BrokerInfoRenderer {
-	return &BrokerInfoRendererDot{config: config, template: NewDotRendererTpl()}
+	return &brokerInfoRendererDot{config: config, template: newDotRendererTpl()}
 }
 
-// NewDotRendererTpl returns the dot template to use. For now, just one default
+// newDotRendererTpl returns the dot template to use. For now, just one default
 // template is used, later will support loading templates from the filesytem
-func NewDotRendererTpl() dotRendererTpl {
+func newDotRendererTpl() dotRendererTpl {
 	return dotRendererTpl{dotTplRootNode: `graph broker {
 {{ q .Name }} [shape="record", label="{RabbitMQ {{ .Overview.RabbitmqVersion }} | 
                {{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }} |
@@ -94,19 +95,19 @@ func NewDotRendererTpl() dotRendererTpl {
 		dotTplConnection: `/* connections - todo */`}
 }
 
-// func (s BrokerInfoRendererDot) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
+// func (s brokerInfoRendererDot) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
 //     flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive}
 //     names := []string{"D", "AD", "EX"}
 //     return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
 // }
 
-// func (s BrokerInfoRendererDot) renderExchangeFlagsAsString(exchange rabtap.RabbitExchange) string {
+// func (s brokerInfoRendererDot) renderExchangeFlagsAsString(exchange rabtap.RabbitExchange) string {
 //     flags := []bool{exchange.Durable, exchange.AutoDelete, exchange.Internal}
 //     names := []string{"D", "AD", "I"}
 //     return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
 // }
 
-func (s BrokerInfoRendererDot) renderRootNodeAsString(name string, children []dotNode, rabbitURL url.URL, overview rabtap.RabbitOverview) string {
+func (s brokerInfoRendererDot) renderRootNodeAsString(name string, children []dotNode, rabbitURL url.URL, overview rabtap.RabbitOverview) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
@@ -117,7 +118,7 @@ func (s BrokerInfoRendererDot) renderRootNodeAsString(name string, children []do
 	funcMap := map[string]interface{}{"q": strconv.Quote}
 	return resolveTemplate("root-dotTpl", s.template.dotTplRootNode, args, funcMap)
 }
-func (s BrokerInfoRendererDot) renderVhostAsString(name string, children []dotNode, vhost string) string {
+func (s brokerInfoRendererDot) renderVhostAsString(name string, children []dotNode, vhost string) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
@@ -127,7 +128,7 @@ func (s BrokerInfoRendererDot) renderVhostAsString(name string, children []dotNo
 	return resolveTemplate("vhost-dotTpl", s.template.dotTplVhost, args, funcMap)
 }
 
-func (s BrokerInfoRendererDot) renderExchangeElementAsString(name string, children []dotNode, exchange rabtap.RabbitExchange) string {
+func (s brokerInfoRendererDot) renderExchangeElementAsString(name string, children []dotNode, exchange rabtap.RabbitExchange) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
@@ -138,7 +139,7 @@ func (s BrokerInfoRendererDot) renderExchangeElementAsString(name string, childr
 	return resolveTemplate("exchange-dotTpl", s.template.dotTplExchange, args, funcMap)
 }
 
-func (s BrokerInfoRendererDot) renderQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue) string {
+func (s brokerInfoRendererDot) renderQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
@@ -149,7 +150,7 @@ func (s BrokerInfoRendererDot) renderQueueElementAsString(name string, children 
 	return resolveTemplate("queue-dotTpl", s.template.dotTplQueue, args, funcMap)
 }
 
-func (s BrokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
+func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
@@ -160,7 +161,7 @@ func (s BrokerInfoRendererDot) renderBoundQueueElementAsString(name string, chil
 	funcMap := map[string]interface{}{"q": strconv.Quote}
 	return resolveTemplate("bound-queue-dotTpl", s.template.dotTplBoundQueue, args, funcMap)
 }
-func (s BrokerInfoRendererDot) renderConsumerElementAsString(name string, children []dotNode, consumer rabtap.RabbitConsumer) string {
+func (s brokerInfoRendererDot) renderConsumerElementAsString(name string, children []dotNode, consumer rabtap.RabbitConsumer) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
@@ -171,7 +172,7 @@ func (s BrokerInfoRendererDot) renderConsumerElementAsString(name string, childr
 	return resolveTemplate("consumer-dotTpl", s.template.dotTplConsumer, args, funcMap)
 }
 
-func (s BrokerInfoRendererDot) renderConnectionElementAsString(name string, children []dotNode, conn rabtap.RabbitConnection) string {
+func (s brokerInfoRendererDot) renderConnectionElementAsString(name string, children []dotNode, conn rabtap.RabbitConnection) string {
 	var args = struct {
 		Name       string
 		Children   []dotNode
@@ -182,7 +183,7 @@ func (s BrokerInfoRendererDot) renderConnectionElementAsString(name string, chil
 	return resolveTemplate("connnection-dotTpl", s.template.dotTplConnection, args, funcMap)
 }
 
-func (s *BrokerInfoRendererDot) renderNode(n interface{}) dotNode {
+func (s *brokerInfoRendererDot) renderNode(n interface{}) dotNode {
 	var node dotNode
 
 	children := []dotNode{}
@@ -229,7 +230,7 @@ func (s *BrokerInfoRendererDot) renderNode(n interface{}) dotNode {
 
 // Render renders the given tree in graphviz dot format. See
 // https://www.graphviz.org/doc/info/lang.html
-func (s *BrokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
+func (s *brokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
 	res := s.renderNode(rootNode)
 	fmt.Fprintf(out, res.Text)
 	return nil

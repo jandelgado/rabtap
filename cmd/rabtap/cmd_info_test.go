@@ -1,5 +1,6 @@
 // Copyright (C) 2017 Jan Delgado
-// component tests of the text format info renderer
+// component tests of the text format info renderer called through cmdInfo
+// top level entry point
 
 package main
 
@@ -22,7 +23,7 @@ func TestBrokerInfoPrintFailsOnInvalidUri(t *testing.T) {
 }
 ***/
 
-func ExampleBrokerInfoRendererText_Render() {
+func Example_cmdInfoByExchange() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
@@ -72,7 +73,7 @@ func ExampleBrokerInfoRendererText_Render() {
 
 }
 
-func ExampleBrokerInfoRendererText_printByConnection() {
+func Example_cmdInfoByConnection() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()

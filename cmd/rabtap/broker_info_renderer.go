@@ -34,6 +34,8 @@ func RegisterBrokerInfoRenderer(format string, newFunc brokerInfoRendererNewFunc
 	brokerInfoRenderers[format] = newFunc
 }
 
+// NewBrokerInfoRenderer returns a new BrokerInfoRenderer for the given format
+// config.Format that is initialized with the given config.
 func NewBrokerInfoRenderer(config BrokerInfoRendererConfig) BrokerInfoRenderer {
 	newFunc := brokerInfoRenderers[config.Format]
 	return newFunc(config)

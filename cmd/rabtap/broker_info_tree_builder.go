@@ -1,6 +1,10 @@
 // Copyright (C) 2017-2019 Jan Delgado
+
 // rendering of info return by broker API into abstract tree represenations,
 // which can later be rendered into something useful (e.g. text, dot etc.)
+// Definition of interface and default implementation.
+// TODO split into interface, impl and factory when new builder(s) are
+// implemented
 
 package main
 
@@ -21,6 +25,8 @@ type BrokerInfoTreeBuilderConfig struct {
 	OmitEmptyExchanges  bool
 }
 
+// BrokerInfoTreeBuilder transforms a rabtap.BrokerInfo into a tree
+// representation that can be easily rendered (e.g. into text, dot fomats)
 type BrokerInfoTreeBuilder interface {
 	BuildTree(rootNodeURL string, brokerInfo rabtap.BrokerInfo) (*rootNode, error)
 }
@@ -28,6 +34,8 @@ type BrokerInfoTreeBuilder interface {
 type brokerInfoTreeBuilderByConnection struct{ config BrokerInfoTreeBuilderConfig }
 type brokerInfoTreeBuilderByExchange struct{ config BrokerInfoTreeBuilderConfig }
 
+// NewBrokerInfoTreeBuilder returns a BrokerInfoTreeBuilder implementation
+// that builds a tree for the config.Mode
 func NewBrokerInfoTreeBuilder(config BrokerInfoTreeBuilderConfig) BrokerInfoTreeBuilder {
 	switch config.Mode {
 	case "byConnection":
@@ -39,6 +47,8 @@ func NewBrokerInfoTreeBuilder(config BrokerInfoTreeBuilderConfig) BrokerInfoTree
 	}
 }
 
+// Node represents functionality to add/access child nodes on a tree node
+// TODO rename to something less generic
 type Node interface {
 	Add(elem interface{})
 	Children() []interface{}
@@ -93,10 +103,10 @@ type connectionNode struct {
 }
 
 // channelNode is not yet used
-type channelNode struct {
-	baseNode
-	Channel rabtap.RabbitConnection
-}
+// type channelNode struct {
+//     baseNode
+//     Channel rabtap.RabbitConnection
+// }
 
 type consumerNode struct {
 	baseNode
@@ -107,7 +117,7 @@ type defaultBrokerInfoTreeBuilder struct {
 	config BrokerInfoTreeBuilderConfig
 }
 
-func NewdefaultBrokerInfoTreeBuilder(config BrokerInfoTreeBuilderConfig) *defaultBrokerInfoTreeBuilder {
+func newDefaultBrokerInfoTreeBuilder(config BrokerInfoTreeBuilderConfig) *defaultBrokerInfoTreeBuilder {
 	return &defaultBrokerInfoTreeBuilder{config}
 }
 
@@ -324,13 +334,13 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(rootNodeURL string,
 func (s brokerInfoTreeBuilderByConnection) BuildTree(
 	rootNodeURL string,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
-	builder := NewdefaultBrokerInfoTreeBuilder(s.config)
+	builder := newDefaultBrokerInfoTreeBuilder(s.config)
 	return builder.buildTreeByConnection(rootNodeURL, brokerInfo)
 }
 
 func (s brokerInfoTreeBuilderByExchange) BuildTree(
 	rootNodeURL string,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
-	builder := NewdefaultBrokerInfoTreeBuilder(s.config)
+	builder := newDefaultBrokerInfoTreeBuilder(s.config)
 	return builder.buildTreeByExchange(rootNodeURL, brokerInfo)
 }

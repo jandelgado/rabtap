@@ -14,8 +14,8 @@ and exchanges, inspect broker.
 * [Features](#features)
 * [Screenshots](#screenshots)
     * [Show broker topology](#show-broker-topology)
-    * [Tap messages](#tap-messages)
     * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
+    * [Tap messages](#tap-messages)
 * [Installation](#installation)
 * [Usage](#usage)
     * [Basic commands](#basic-commands)
@@ -79,12 +79,6 @@ Output of `rabtap info --stats` command, showing additional statistics:
 
 ![info mode](doc/images/info-stats.png)
 
-### Tap messages
-
-Output of rabtap in `tap` mode, showing message meta data and the message body:
-
-![info mode](doc/images/tap.png)
-
 ### Visualize broker topology with graphviz
 
 Using the `--format=dot` option, the `info` command can generate output in the
@@ -93,6 +87,12 @@ Using the `--format=dot` option, the `info` command can generate output in the
 file can be visualized with a web browser, e.g. `firefox mybroker.svg`.
 
 ![info mode](doc/images/info-dot.png)
+
+### Tap messages
+
+Output of rabtap in `tap` mode, showing message meta data and the message body:
+
+![info mode](doc/images/tap.png)
 
 ## Installation
 

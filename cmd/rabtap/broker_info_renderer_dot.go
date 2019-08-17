@@ -1,5 +1,6 @@
 // Copyright (C) 2017-2019 Jan Delgado
 // Render broker info into a dot graph representation
+// https://www.graphviz.org/doc/info/lang.html
 
 package main
 
@@ -8,7 +9,6 @@ import (
 	"io"
 	"net/url"
 	"strconv"
-	"strings"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -94,17 +94,17 @@ func NewDotRendererTpl() dotRendererTpl {
 		dotTplConnection: `/* connections - todo */`}
 }
 
-func (s BrokerInfoRendererDot) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
-	flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive}
-	names := []string{"D", "AD", "EX"}
-	return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
-}
+// func (s BrokerInfoRendererDot) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
+//     flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive}
+//     names := []string{"D", "AD", "EX"}
+//     return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
+// }
 
-func (s BrokerInfoRendererDot) renderExchangeFlagsAsString(exchange rabtap.RabbitExchange) string {
-	flags := []bool{exchange.Durable, exchange.AutoDelete, exchange.Internal}
-	names := []string{"D", "AD", "I"}
-	return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
-}
+// func (s BrokerInfoRendererDot) renderExchangeFlagsAsString(exchange rabtap.RabbitExchange) string {
+//     flags := []bool{exchange.Durable, exchange.AutoDelete, exchange.Internal}
+//     names := []string{"D", "AD", "I"}
+//     return "[" + strings.Join(filterStringList(flags, names), "|") + "]"
+// }
 
 func (s BrokerInfoRendererDot) renderRootNodeAsString(name string, children []dotNode, rabbitURL url.URL, overview rabtap.RabbitOverview) string {
 	var args = struct {
@@ -128,41 +128,35 @@ func (s BrokerInfoRendererDot) renderVhostAsString(name string, children []dotNo
 }
 
 func (s BrokerInfoRendererDot) renderExchangeElementAsString(name string, children []dotNode, exchange rabtap.RabbitExchange) string {
-	exchangeFlags := s.renderExchangeFlagsAsString(exchange)
 	var args = struct {
-		Name          string
-		Children      []dotNode
-		Config        BrokerInfoRendererConfig
-		Exchange      rabtap.RabbitExchange
-		ExchangeFlags string
-	}{name, children, s.config, exchange, exchangeFlags}
+		Name     string
+		Children []dotNode
+		Config   BrokerInfoRendererConfig
+		Exchange rabtap.RabbitExchange
+	}{name, children, s.config, exchange}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
 	return resolveTemplate("exchange-dotTpl", s.template.dotTplExchange, args, funcMap)
 }
 
 func (s BrokerInfoRendererDot) renderQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue) string {
-	queueFlags := s.renderQueueFlagsAsString(queue)
 	var args = struct {
-		Name       string
-		Children   []dotNode
-		Config     BrokerInfoRendererConfig
-		Queue      rabtap.RabbitQueue
-		QueueFlags string
-	}{name, children, s.config, queue, queueFlags}
+		Name     string
+		Children []dotNode
+		Config   BrokerInfoRendererConfig
+		Queue    rabtap.RabbitQueue
+	}{name, children, s.config, queue}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
 	return resolveTemplate("queue-dotTpl", s.template.dotTplQueue, args, funcMap)
 }
 
 func (s BrokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
-	queueFlags := s.renderQueueFlagsAsString(queue)
 	var args = struct {
-		Name       string
-		Children   []dotNode
-		Config     BrokerInfoRendererConfig
-		Binding    rabtap.RabbitBinding
-		Queue      rabtap.RabbitQueue
-		QueueFlags string
-	}{name, children, s.config, binding, queue, queueFlags}
+		Name     string
+		Children []dotNode
+		Config   BrokerInfoRendererConfig
+		Binding  rabtap.RabbitBinding
+		Queue    rabtap.RabbitQueue
+	}{name, children, s.config, binding, queue}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
 	return resolveTemplate("bound-queue-dotTpl", s.template.dotTplBoundQueue, args, funcMap)
 }
@@ -188,12 +182,12 @@ func (s BrokerInfoRendererDot) renderConnectionElementAsString(name string, chil
 	return resolveTemplate("connnection-dotTpl", s.template.dotTplConnection, args, funcMap)
 }
 
-func (s *BrokerInfoRendererDot) renderNodeText(n interface{}) dotNode {
+func (s *BrokerInfoRendererDot) renderNode(n interface{}) dotNode {
 	var node dotNode
 
 	children := []dotNode{}
 	for _, child := range n.(Node).Children() {
-		c := s.renderNodeText(child.(Node))
+		c := s.renderNode(child.(Node))
 		children = append(children, c)
 	}
 
@@ -205,14 +199,10 @@ func (s *BrokerInfoRendererDot) renderNodeText(n interface{}) dotNode {
 		vhost := n.(*vhostNode)
 		name := fmt.Sprintf("vhost_%s", vhost.Vhost)
 		node = dotNode{name, s.renderVhostAsString(name, children, vhost.Vhost), ""}
-	case *connectionNode:
-		conn := n.(*connectionNode)
-		name := fmt.Sprintf("connection_%s", conn.Connection.Name)
-		node = dotNode{name, s.renderConnectionElementAsString(name, children, conn.Connection), ""}
-	case *consumerNode:
-		cons := n.(*consumerNode)
-		name := fmt.Sprintf("consumer_%s", cons.Consumer.ConsumerTag)
-		node = dotNode{name, s.renderConsumerElementAsString(name, children, cons.Consumer), ""}
+	case *exchangeNode:
+		exchange := n.(*exchangeNode).Exchange
+		name := fmt.Sprintf("exchange_%s", exchange.Name)
+		node = dotNode{name, s.renderExchangeElementAsString(name, children, exchange), ""}
 	case *queueNode:
 		queue := n.(*queueNode).Queue
 		name := fmt.Sprintf("queue_%s", queue.Name)
@@ -223,10 +213,14 @@ func (s *BrokerInfoRendererDot) renderNodeText(n interface{}) dotNode {
 		binding := boundQueue.Binding
 		name := fmt.Sprintf("boundqueue_%s", queue.Name)
 		node = dotNode{name, s.renderBoundQueueElementAsString(name, children, queue, binding), binding.RoutingKey}
-	case *exchangeNode:
-		exchange := n.(*exchangeNode).Exchange
-		name := fmt.Sprintf("exchange_%s", exchange.Name)
-		node = dotNode{name, s.renderExchangeElementAsString(name, children, exchange), ""}
+	case *connectionNode:
+		conn := n.(*connectionNode)
+		name := fmt.Sprintf("connection_%s", conn.Connection.Name)
+		node = dotNode{name, s.renderConnectionElementAsString(name, children, conn.Connection), ""}
+	case *consumerNode:
+		cons := n.(*consumerNode)
+		name := fmt.Sprintf("consumer_%s", cons.Consumer.ConsumerTag)
+		node = dotNode{name, s.renderConsumerElementAsString(name, children, cons.Consumer), ""}
 	default:
 		panic(fmt.Sprintf("unexpected node encountered %T", t))
 	}
@@ -236,7 +230,7 @@ func (s *BrokerInfoRendererDot) renderNodeText(n interface{}) dotNode {
 // Render renders the given tree in graphviz dot format. See
 // https://www.graphviz.org/doc/info/lang.html
 func (s *BrokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
-	res := s.renderNodeText(rootNode)
+	res := s.renderNode(rootNode)
 	fmt.Fprintf(out, res.Text)
 	return nil
 }

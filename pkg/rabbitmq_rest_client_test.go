@@ -272,3 +272,31 @@ func TestFindConsumerByQueue(t *testing.T) {
 func TestFindConsumerByQueueNotFoundReturnsCorrectValue(t *testing.T) {
 	assert.Equal(t, -1, FindConsumerByQueue([]RabbitConsumer{}, "vhost", "q1"))
 }
+
+func TestUniqueVhostsReturnsUniqueMapOfVhosts(t *testing.T) {
+	exchanges := []RabbitExchange{
+		{Name: "e1", Vhost: "vhost1"},
+		{Name: "e2", Vhost: "vhost1"},
+		{Name: "e3", Vhost: "vhost2"},
+		{Name: "e4", Vhost: "vhost3"},
+	}
+	// expect map[string]bool returned with 3 entries
+	vhosts := UniqueVhosts(exchanges)
+	assert.Equal(t, 3, len(vhosts))
+	assert.True(t, vhosts["vhost1"])
+	assert.True(t, vhosts["vhost2"])
+	assert.True(t, vhosts["vhost3"])
+}
+
+func TestFindBindingsByExchangeReturnsMatchingBindings(t *testing.T) {
+	bindings := []RabbitBinding{
+		{Source: "e1", Vhost: "vh1", Destination: "q1"},
+		{Source: "e2", Vhost: "vh2", Destination: "q2"},
+		{Source: "e1", Vhost: "vh1", Destination: "q3"},
+	}
+	exchange := RabbitExchange{Name: "e1", Vhost: "vh1"}
+	foundBindings := FindBindingsForExchange(exchange, bindings)
+	assert.Equal(t, 2, len(foundBindings))
+	assert.Equal(t, "q1", foundBindings[0].Destination)
+	assert.Equal(t, "q3", foundBindings[1].Destination)
+}

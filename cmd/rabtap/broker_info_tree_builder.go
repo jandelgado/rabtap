@@ -299,16 +299,17 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(rootNodeURL string,
 		for _, conn := range brokerInfo.Connections {
 			connNode := connectionNode{b, conn}
 			for _, consumer := range brokerInfo.Consumers {
-				if consumer.ChannelDetails.ConnectionName == conn.Name {
-					consNode := consumerNode{b, consumer}
-					for _, queue := range brokerInfo.Queues {
-						if consumer.Queue.Vhost == vhost && consumer.Queue.Name == queue.Name {
-							queueNode := queueNode{b, queue}
-							consNode.Add(&queueNode)
-						}
-					}
-					connNode.Add(&consNode)
+				if consumer.ChannelDetails.ConnectionName != conn.Name {
+					continue
 				}
+				consNode := consumerNode{b, consumer}
+				for _, queue := range brokerInfo.Queues {
+					if consumer.Queue.Vhost == vhost && consumer.Queue.Name == queue.Name {
+						queueNode := queueNode{b, queue}
+						consNode.Add(&queueNode)
+					}
+				}
+				connNode.Add(&consNode)
 			}
 			if s.config.OmitEmptyExchanges && !connNode.HasChildren() {
 				continue

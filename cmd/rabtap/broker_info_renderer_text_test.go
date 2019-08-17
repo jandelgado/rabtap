@@ -22,7 +22,7 @@ func TestBrokerInfoPrintFailsOnInvalidUri(t *testing.T) {
 }
 ***/
 
-func ExampleBrokerInfoRendererText_Print() {
+func ExampleBrokerInfoRendererText_Render() {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()

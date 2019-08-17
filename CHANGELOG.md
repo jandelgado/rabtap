@@ -5,7 +5,11 @@
 
 * new option `--no-auto-ack` for `sub` command disables auto acknowledge when
   messages are received by rabtap (#15)
+* new: output of `info` command can now also be rendered to dot format, to 
+  create a visualization using graphviz. Set format with `--format=dot`, e.g.
+  `rabtap info --format=dot`.
 * fix: termination with ctrl+c in `tap`, `pub`, `sub` commands now works reliably
+* change: option `--by-connection` of `info` command changed to `--mode=byConnection`
 * heaviliy simplified code
 
 ## v1.18 (2019-07-05)

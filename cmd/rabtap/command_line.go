@@ -23,9 +23,9 @@ Usage:
   rabtap -h|--help
   rabtap tap EXCHANGES [--uri URI] [--saveto DIR] [-jknv]
   rabtap (tap --uri URI EXCHANGES)... [--saveto DIR] [-jknv]
-  rabtap info [--api APIURI] [--consumers] [--stats] 
-              [--filter EXPR] [--omit-empty] [--show-default] 
-			  [--mode MODE] [--format FORMAT] [-knv]
+  rabtap info [--api APIURI] [--consumers] [--stats]
+              [--filter EXPR] [--omit-empty] [--show-default]
+              [--mode MODE] [--format FORMAT] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
   rabtap sub QUEUE [--uri URI] [--saveto DIR] [--no-auto-ack] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
@@ -63,13 +63,13 @@ Options:
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
- --no-auto-ack        disable auto-ack in subscribe mode. This will lead to 
-                      unacked messages on the broker which will be requeued 
+ --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
+                      unacked messages on the broker which will be requeued
                       when the channel is closed.
  -o, --omit-empty     don't show echanges without bindings in info command.
  --format=FORMAT      output format for info command. One of "text", "dot".
-					  [default: text]
- --reason=REASON      reason why the connection was closed 
+                      [default: text]
+ --reason=REASON      reason why the connection was closed
                       [default: closed by rabtap].
  -r, --routingkey KEY routing key to use in publish mode.
  --saveto DIR         also save messages and metadata to DIR.
@@ -99,7 +99,7 @@ Examples:
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
   rabtap info --filter "binding.Source == 'amq.topic'" -o
-  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
+  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 `
 )
 

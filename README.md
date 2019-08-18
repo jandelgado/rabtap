@@ -84,7 +84,7 @@ Output of `rabtap info --stats` command, showing additional statistics:
 Using the `--format=dot` option, the `info` command can generate output in the
 `dot` format, which can be visualized using graphviz, e.g. `rabtap info
 --show-default --format dot | dot -T svg > mybroker.svg`. The resulting SVG
-file can be visualized with a web browser, e.g. `firefox mybroker.svg`.
+file can be visualized with a web browser.
 
 ![info mode](doc/images/info-dot.png)
 
@@ -265,21 +265,24 @@ rabbitmq:3-management` or similar command to start a RabbitMQ container.
 #### Broker info
 
 The `info` command uses the REST API of RabbitMQ to gather and display
-topolgy related information from the broker. Example:
+topolgy related information from the broker.
 
-* `$ rabtap info --api http://guest:guest@localhost:15672/api --consumers` -
-  shows virtual hosts exchanges, queues and consumers of given broker in an
-  tree view (see [screenshot](#screenshots)). Note that if `RABTAP_APIURI`
-  environment variable is set, the command reduces to `$ rabtap info
-  --consumers`
-* `$ rabtap info --mode=byConnection` - shows virtual hosts, connections,
+The `--mode MODE` option controls how the output is structured. Valid options
+for `MODE` are `byExchange` (default) or `byConnection`.
+
+The `--format FORMAT` option controls the format of generated output. Valid
+options are `text` for console text format (default) or `dot` to output the
+tree structure in dot format for visualization with graphviz.
+
+Examples (assume that `RABTAP_APIURI` environment variable is set):
+
+* `rabtap info --consumers` - shows virtual hosts exchanges, queues and
+  consumers of given broker in a tree view (see [screenshot](#screenshots)).
+* `rabtap info --mode=byConnection` - shows virtual hosts, connections,
   consumers and queues of given broker in an tree view.
-* Use the `--format FORMAT` option to generate ouput in different formats,
-  e.g. `text` for the standard console text format (default) or `dot` to output
-  the tree structure in dot format.
-
-  TODO example dot
-
+* `rabtap info --format=dot | dot -T svg > broker.svg` - renders broker info
+  into `dot` format and uses graphviz to render a SVG file for final
+  visualization.
 
 #### Wire-tapping messages
 

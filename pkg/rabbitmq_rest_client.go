@@ -173,6 +173,27 @@ func FindExchangeByName(exchanges []RabbitExchange,
 	return -1
 }
 
+// UniqueVhosts returns the set of unique vhosts in the array of exchanges
+func UniqueVhosts(exchanges []RabbitExchange) (vhosts map[string]bool) {
+	vhosts = make(map[string]bool)
+	for _, exchange := range exchanges {
+		vhosts[exchange.Vhost] = true
+	}
+	return
+}
+
+// FindBindingsForExchange returns all bindings for a given exchange
+func FindBindingsForExchange(exchange RabbitExchange, bindings []RabbitBinding) []RabbitBinding {
+	var result []RabbitBinding
+	for _, binding := range bindings {
+		if binding.Source == exchange.Name &&
+			binding.Vhost == exchange.Vhost {
+			result = append(result, binding)
+		}
+	}
+	return result
+}
+
 // currently not used.
 // func FindChannelByName(channels []RabbitChannel,
 //     vhost, channelName string) int {

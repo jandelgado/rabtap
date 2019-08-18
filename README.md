@@ -13,6 +13,9 @@ and exchanges, inspect broker.
 
 * [Features](#features)
 * [Screenshots](#screenshots)
+    * [Show broker topology](#show-broker-topology)
+    * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
+    * [Tap messages](#tap-messages)
 * [Installation](#installation)
 * [Usage](#usage)
     * [Basic commands](#basic-commands)
@@ -42,7 +45,7 @@ and exchanges, inspect broker.
         * [Binding type](#binding-type)
 * [Build from source](#build-from-source)
     * [Download and build using go get](#download-and-build-using-go-get)
-    * [Build using Makefile](#build-using-makefile)
+    * [Build using Makefile and tests](#build-using-makefile-and-tests)
 * [Test data generator](#test-data-generator)
 * [Contributing](#contributing)
 * [Author](#author)
@@ -66,6 +69,8 @@ and exchanges, inspect broker.
 
 ## Screenshots
 
+### Show broker topology
+
 Output of `rabtap info` command:
 
 ![info mode](doc/images/info.png)
@@ -74,8 +79,18 @@ Output of `rabtap info --stats` command, showing additional statistics:
 
 ![info mode](doc/images/info-stats.png)
 
-Output of rabtap running in `tap` mode, showing message meta data
-with unset attributes filtered out and the message body:
+### Visualize broker topology with graphviz
+
+Using the `--format=dot` option, the `info` command can generate output in the
+`dot` format, which can be visualized using graphviz, e.g. `rabtap info
+--show-default --format dot | dot -T svg > mybroker.svg`. The resulting SVG
+file can be visualized with a web browser.
+
+![info mode](doc/images/info-dot.png)
+
+### Tap messages
+
+Output of rabtap in `tap` mode, showing message meta data and the message body:
 
 ![info mode](doc/images/tap.png)
 
@@ -93,13 +108,13 @@ rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
-  rabtap tap EXCHANGES [--uri URI] [--saveto=DIR] [-jknv]
-  rabtap (tap --uri URI EXCHANGES)... [--saveto=DIR] [-jknv]
-  rabtap info [--api APIURI] [--consumers] [--stats] 
-              [--filter EXPR] 
-              [--omit-empty] [--show-default] [--by-connection] [-knv]
+  rabtap tap EXCHANGES [--uri URI] [--saveto DIR] [-jknv]
+  rabtap (tap --uri URI EXCHANGES)... [--saveto DIR] [-jknv]
+  rabtap info [--api APIURI] [--consumers] [--stats]
+              [--filter EXPR] [--omit-empty] [--show-default]
+              [--mode MODE] [--format FORMAT] [-knv]
   rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--no-auto-ack] [-jkvn]
+  rabtap sub QUEUE [--uri URI] [--saveto DIR] [--no-auto-ack] [-jkvn]
   rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri URI] [-kv]
   rabtap queue create QUEUE [--uri URI] [-adkv]
@@ -132,12 +147,16 @@ Options:
                       single JSON file. JSON body is base64 encoded. Otherwise
                       metadata and body (as-is) are saved separately.
  -k, --insecure       allow insecure TLS connections (no certificate check).
+ --mode=MODE          mode for info command. One of "byConnection", "byExchange".
+                      [default: byExchange]
  -n, --no-color       don't colorize output (also environment variable NO_COLOR)
- --no-auto-ack        disable auto-ack in subscribe mode. This will lead to 
-                      unacked messages on the broker which will be requeued 
+ --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
+                      unacked messages on the broker which will be requeued
                       when the channel is closed.
  -o, --omit-empty     don't show echanges without bindings in info command.
- --reason=REASON      reason why the connection was closed 
+ --format=FORMAT      output format for info command. One of "text", "dot".
+                      [default: text]
+ --reason=REASON      reason why the connection was closed
                       [default: closed by rabtap].
  -r, --routingkey KEY routing key to use in publish mode.
  --saveto DIR         also save messages and metadata to DIR.
@@ -167,7 +186,7 @@ Examples:
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
   rabtap info --filter "binding.Source == 'amq.topic'" -o
-  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672" 
+  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 ```
 
 ### Basic commands
@@ -176,10 +195,10 @@ Rabtap understands the following commands:
 
 * `tap` - taps to an exchange and transparently receives messages sent to the
    exchange, without affecting actual message delivery (using exchange-to-exchange
-   binding). Simulatanous 
+   binding). Simulatanous
 * `sub` - subscribes to a queue and consumes messages sent to the queue (acts
    like a RabbitMQ consumer)
-* `pub` - send messages to an exchange. 
+* `pub` - send messages to an exchange.
 * `info` - show broker related info (exchanges, queues, bindings, stats). The
    features of an exchange are displayed in square brackets with `D` (durable),
    `AD` (auto delete) and `I` (internal). The features of a queue are displayed
@@ -245,17 +264,25 @@ rabbitmq:3-management` or similar command to start a RabbitMQ container.
 
 #### Broker info
 
-The `info` command uses the REST API of RabbitMQ to gather and display 
-topolgy related information from the broker. Example:
+The `info` command uses the REST API of RabbitMQ to gather and display
+topolgy related information from the broker.
 
-* `$ rabtap info --api http://guest:guest@localhost:15672/api --consumers` -
-  shows virtual hosts exchanges, queues and consumers of given broker in an
-  tree view (see [screenshot](#screenshots)). Note that if `RABTAP_APIURI`
-  environment variable is set, the command reduces to `$ rabtap info
-  --consumers`
-* `$ rabtap info  --by-connection` - shows virtual hosts, connections, 
+The `--mode MODE` option controls how the output is structured. Valid options
+for `MODE` are `byExchange` (default) or `byConnection`.
+
+The `--format FORMAT` option controls the format of generated output. Valid
+options are `text` for console text format (default) or `dot` to output the
+tree structure in dot format for visualization with graphviz.
+
+Examples (assume that `RABTAP_APIURI` environment variable is set):
+
+* `rabtap info --consumers` - shows virtual hosts exchanges, queues and
+  consumers of given broker in a tree view (see [screenshot](#screenshots)).
+* `rabtap info --mode=byConnection` - shows virtual hosts, connections,
   consumers and queues of given broker in an tree view.
-
+* `rabtap info --format=dot | dot -T svg > broker.svg` - renders broker info
+  into `dot` format and uses graphviz to render a SVG file for final
+  visualization.
 
 #### Wire-tapping messages
 
@@ -303,7 +330,7 @@ exchanges:
 
 * `$ rabtap tap --uri amqp://broker1 amq.topic:# tap --uri amqp://broker2 amq.fanout:`
 
-The example connects to `broker1` and taps to the `amq.topic` exchange and to 
+The example connects to `broker1` and taps to the `amq.topic` exchange and to
 the `amq.fanout` exchange on `broker2`.
 
 ##### Message recorder
@@ -324,7 +351,7 @@ Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` +
 
 #### Publish messages
 
-The `pub` command allows to send messages to an exchange, specifying a 
+The `pub` command allows to send messages to an exchange, specifying a
 routing key.
 
 * `$ rabtap pub amq.direct -r routingKey message.json --json`  - publish
@@ -379,7 +406,7 @@ http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbi
         │       └── '172.17.0.1:59228 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:59228')
         ├── test-q-test-topic-1 (queue, key='test-q-test-topic-1', running, [])
         :
-$ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672' 
+$ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672'
 ```
 
 #### Queue commands
@@ -387,7 +414,7 @@ $ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672'
 The `queue` command can be used to easily create, remove, bind or unbind queues:
 
 ```console
-$ rabtap queue create myqueue 
+$ rabtap queue create myqueue
 $ rabtap info --show-default
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
 └── Vhost /
@@ -461,7 +488,7 @@ Note that in JSON mode, the `Body` is base64 encoded.
 ## Filtering output of info command
 
 When your brokers topology is complex, the output of the `info` command can
-become very bloated. The `--filter` helps you to narrow output to 
+become very bloated. The `--filter` helps you to narrow output to
 the desired information.
 
 ### Filtering expressions
@@ -486,13 +513,13 @@ Note: currently the filter is ignored when used in conjunction with
 During evaluation the context (i.e. the current exchange, queue and binding) is
 available in the expression as variables:
 
-* the current exchange is bound to the variable [exchange](#exchange-type) 
-* the current queue is bound to the variable [queue](#queue-type) 
+* the current exchange is bound to the variable [exchange](#exchange-type)
+* the current queue is bound to the variable [queue](#queue-type)
 * the curren binding is bound to the variable [binding](#binding-type)
 
 #### Examples
 
-The examples assume that `RABTAP_APIURI` environment variable points to the 
+The examples assume that `RABTAP_APIURI` environment variable points to the
 broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
 
 * `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty`: print
@@ -501,7 +528,7 @@ broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
   queues with `test` in their name.
 * `rabtap info --filter "queue.Name =~ '.*test.*' && exchange.Type == 'topic'" --omit-empty`: like
   before, but consider only exchanges of type `topic`.
-* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers`: print all queues with at 
+* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers`: print all queues with at
   one consumer
 
 ### Type reference
@@ -538,62 +565,62 @@ type Exchange struct {
 ```go
 type Queue struct {
 	MessagesDetails struct {
-		Rate float64 
-	} 
-	Messages 
+		Rate float64
+	}
+	Messages
 	MessagesUnacknowledgedDetails struct {
-		Rate float64 
-	} 
-	MessagesUnacknowledged int 
+		Rate float64
+	}
+	MessagesUnacknowledged int
 	MessagesReadyDetails   struct {
-		Rate float64 
-	} 
-	MessagesReady     int 
+		Rate float64
+	}
+	MessagesReady     int
 	ReductionsDetails struct {
-		Rate float64 
-	} 
-	Reductions int    
-	Node       string 
-	Exclusive            bool   
-	AutoDelete           bool   
-	Durable              bool   
-	Vhost                string 
-	Name                 string 
-	MessageBytesPagedOut int    
-	MessagesPagedOut     int    
+		Rate float64
+	}
+	Reductions int
+	Node       string
+	Exclusive            bool
+	AutoDelete           bool
+	Durable              bool
+	Vhost                string
+	Name                 string
+	MessageBytesPagedOut int
+	MessagesPagedOut     int
 	BackingQueueStatus   struct {
-		Mode string 
-		Q1   int    
-		Q2   int    
-		Q3  int 
-		Q4  int 
-		Len int 
-		NextSeqID         int     
-		AvgIngressRate    float64 
-		AvgEgressRate     float64 
-		AvgAckIngressRate float64 
-		AvgAckEgressRate  float64 
-	} 
-	MessageBytesPersistent     int 
-	MessageBytesRAM            int 
-	MessageBytesUnacknowledged int 
-	MessageBytesReady          int 
-	MessageBytes               int 
-	MessagesPersistent         int 
-	MessagesUnacknowledgedRAM  int 
-	MessagesReadyRAM           int 
-	MessagesRAM                int 
+		Mode string
+		Q1   int
+		Q2   int
+		Q3  int
+		Q4  int
+		Len int
+		NextSeqID         int
+		AvgIngressRate    float64
+		AvgEgressRate     float64
+		AvgAckIngressRate float64
+		AvgAckEgressRate  float64
+	}
+	MessageBytesPersistent     int
+	MessageBytesRAM            int
+	MessageBytesUnacknowledged int
+	MessageBytesReady          int
+	MessageBytes               int
+	MessagesPersistent         int
+	MessagesUnacknowledgedRAM  int
+	MessagesReadyRAM           int
+	MessagesRAM                int
 	GarbageCollection          struct {
-		MinorGcs        int 
-		FullsweepAfter  int 
-		MinHeapSize     int 
-		MinBinVheapSize int 
-		MaxHeapSize     int 
-	} 
-	State string 
-	Consumers int 
-	IdleSince string 
-	Memory    int    
+		MinorGcs        int
+		FullsweepAfter  int
+		MinHeapSize     int
+		MinBinVheapSize int
+		MaxHeapSize     int
+	}
+	State string
+	Consumers int
+	IdleSince string
+	Memory    int
 }
 ```
 
@@ -617,7 +644,7 @@ type Binding struct {
 $ GO111MODULE=on go get github.com/jandelgado/rabtap/cmd/rabtap
 ```
 
-### Build using Makefile
+### Build using Makefile and tests
 
 To build rabtap from source, you need [go](https://golang.org/) (version >= 12)
 and the following tools installed:
@@ -630,9 +657,14 @@ and the following tools installed:
 ```
 $ export GO111MODULE=on
 $ git clone https://github.com/jandelgado/rabtap && cd rabtap
-$ make test
+$ make test  -or- make short-test
 $ make
 ```
+
+In order to run all tests (`make test`) an instance of RabbitMQ is expected to
+run on localhost. Easiest way to start one is running `make run-broker`, which
+will start a RabbitMQ docker container (i.e.  `docker run -ti --rm -p 5672:5672
+-p 15672:15672 rabbitmq:3-management`).
 
 ## Test data generator
 
@@ -644,8 +676,8 @@ included in the `cmd/testgen` directory.
 * fork this repository
 * create your feature branch
 * add code
-* add tests and make sure test coverage does not fall
-* make sure pre-commit hook does not fail
+* add tests and make sure test coverage does not fall (`make test`)
+* make sure pre-commit hook does not fail (`./pre-commit`)
 * add [documentation](README.md)
 * commit changes
 * submit a PR

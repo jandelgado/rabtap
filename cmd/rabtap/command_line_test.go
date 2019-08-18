@@ -11,6 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMain(m *testing.M) {
+	os.Unsetenv("RABTAP_AMQPURI")
+	os.Unsetenv("RABTAP_APIURI")
+	code := m.Run()
+	os.Exit(code)
+}
+
 func TestParseAmqpURI(t *testing.T) {
 	// since multple --uri arguments are possible docopt returns an array
 	args := map[string]interface{}{"--uri": []string{"URI"}}
@@ -149,15 +156,46 @@ func TestCliInfoCmd(t *testing.T) {
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowStats)
 	assert.False(t, args.ShowConsumers)
-	assert.False(t, args.ShowByConnection)
+	assert.Equal(t, "byExchange", args.InfoMode)
+	assert.Equal(t, "text", args.InfoFormat)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
 	assert.False(t, args.OmitEmptyExchanges)
 }
 
+func TestCliInfoCmdShowByConnection(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"info", "--api=uri", "--mode=byConnection"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, InfoCmd, args.Cmd)
+	assert.Equal(t, "byConnection", args.InfoMode)
+}
+
+func TestCliInfoCmdOutputAsDotFile(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"info", "--api=uri", "--format=dot"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, InfoCmd, args.Cmd)
+	assert.Equal(t, "dot", args.InfoFormat)
+}
+
+func TestCliInfoCmdFailsWithInvalidMode(t *testing.T) {
+	_, err := ParseCommandLineArgs(
+		[]string{"info", "--api=uri", "--mode=INVALID"})
+
+	assert.NotNil(t, err)
+}
+
+func TestCliInfoCmdFailsWithInvalidFormat(t *testing.T) {
+	_, err := ParseCommandLineArgs(
+		[]string{"info", "--api=uri", "--format=INVALID"})
+
+	assert.NotNil(t, err)
+}
+
 func TestCliInfoCmdMissingApi(t *testing.T) {
-	const key = "RABTAP_APIURI"
-	os.Unsetenv(key)
 	_, err := ParseCommandLineArgs(
 		[]string{"info"})
 	assert.NotNil(t, err)
@@ -179,6 +217,7 @@ func TestCliInfoCmdApiFromEnv(t *testing.T) {
 	assert.False(t, args.ShowConsumers)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
+	assert.Equal(t, "byExchange", args.InfoMode)
 }
 
 func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {

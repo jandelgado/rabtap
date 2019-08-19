@@ -1,7 +1,11 @@
 
 # Changelog for rabtap
 
-## v1.19 (2019-08-03)
+## v1.20 (2019-08-xx)
+
+* fix: typo in connection node of dot output
+
+## v1.19 (2019-08-18)
 
 * new option `--no-auto-ack` for `sub` command disables auto acknowledge when
   messages are received by rabtap (#15)

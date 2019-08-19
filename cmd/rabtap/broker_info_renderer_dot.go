@@ -95,14 +95,14 @@ func newDotRendererTpl() dotRendererTpl {
 
 		// TODO add more details
 		dotTplConnection: `
-{{ q .Name }} [shape="recored" label="{{ .Connection.Name }}"];
+{{ q .Name }} [shape="record" label="{{ .Connection.Name }}"];
 
 {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
 		// TODO add more details
 		dotTplConsumer: `
-{{ q .Name }} [shape="recored" label="{{ .Consumer.ConsumerTag}}"];
+{{ q .Name }} [shape="record" label="{{ .Consumer.ConsumerTag}}"];
 
 {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,

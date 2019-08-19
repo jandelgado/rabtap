@@ -223,10 +223,10 @@ const expectedResultDotByConnection = `graph broker {
 
 "vhost_/" -- "connection_172.17.0.1:40874 -> 172.17.0.2:5672"[headport=n];
 
-"connection_172.17.0.1:40874 -> 172.17.0.2:5672" [shape="recored" label="172.17.0.1:40874 -> 172.17.0.2:5672"];
+"connection_172.17.0.1:40874 -> 172.17.0.2:5672" [shape="record" label="172.17.0.1:40874 -> 172.17.0.2:5672"];
 
 "connection_172.17.0.1:40874 -> 172.17.0.2:5672" -- "consumer_some_consumer"
-"consumer_some_consumer" [shape="recored" label="some_consumer"];
+"consumer_some_consumer" [shape="record" label="some_consumer"];
 
 "consumer_some_consumer" -- "queue_direct-q1"
 "queue_direct-q1" [shape="record"; label="{ direct-q1 | { D  | | } }"];

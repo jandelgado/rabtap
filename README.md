@@ -17,6 +17,9 @@ and exchanges, inspect broker.
     * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
     * [Tap messages](#tap-messages)
 * [Installation](#installation)
+    * [Pre-compiled binaries](#pre-compiled-binaries)
+    * [Arch Linux](#arch-linux)
+    * [Installation from source](#installation-from-source)
 * [Usage](#usage)
     * [Basic commands](#basic-commands)
     * [Broker URI specification](#broker-uri-specification)
@@ -96,10 +99,23 @@ Output of rabtap in `tap` mode, showing message meta data and the message body:
 
 ## Installation
 
+### Pre-compiled binaries
+
 Pre-compiled binaries can be downloaded for multiple platforms from the
 [releases page](https://github.com/jandelgado/rabtap/releases).
 
-See [below](#build-from-source) if you prefer to compile from source.
+### Arch Linux
+
+Rabtap can be installed from the Arch Linux User Repository (AUR):
+
+```console
+$ yay -S rabtap-bin
+```
+
+### Installation from source
+
+See the [build from source section](#build-from-source) if you prefer to
+compile from source.
 
 ## Usage
 

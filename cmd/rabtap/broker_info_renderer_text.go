@@ -83,8 +83,7 @@ const (
 )
 
 func (s brokerInfoRendererText) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
-	_, hasDlx := queue.EffectivePolicyDefinition["dead-letter-exchange"]
-	flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive, hasDlx}
+	flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive, queue.HasDlx()}
 	names := []string{"D", "AD", "EX", "DLX"}
 	return strings.Join(filterStringList(flags, names), "|")
 }

@@ -429,14 +429,15 @@ type RabbitQueue struct {
 	Node       string `json:"node"`
 	Arguments  struct {
 	} `json:"arguments"`
-	Exclusive            bool   `json:"exclusive"`
-	AutoDelete           bool   `json:"auto_delete"`
-	Durable              bool   `json:"durable"`
-	Vhost                string `json:"vhost"`
-	Name                 string `json:"name"`
-	MessageBytesPagedOut int    `json:"message_bytes_paged_out"`
-	MessagesPagedOut     int    `json:"messages_paged_out"`
-	BackingQueueStatus   struct {
+	Exclusive                 bool              `json:"exclusive"`
+	AutoDelete                bool              `json:"auto_delete"`
+	Durable                   bool              `json:"durable"`
+	EffectivePolicyDefinition map[string]string `json:"effective_policy_definition"`
+	Vhost                     string            `json:"vhost"`
+	Name                      string            `json:"name"`
+	MessageBytesPagedOut      int               `json:"message_bytes_paged_out"`
+	MessagesPagedOut          int               `json:"messages_paged_out"`
+	BackingQueueStatus        struct {
 		Mode string `json:"mode"`
 		Q1   int    `json:"q1"`
 		Q2   int    `json:"q2"`
@@ -477,6 +478,20 @@ type RabbitQueue struct {
 	// TODO use cusom marshaller and parese into time.Time
 	IdleSince string `json:"idle_since"`
 	Memory    int    `json:"memory"`
+}
+
+// HasDlx returns true if the given queue has an associated DLX
+func (s RabbitQueue) HasDlx() bool {
+	_, hasDlx := s.EffectivePolicyDefinition["dead-letter-exchange"]
+	return hasDlx
+}
+
+// Dlx returns the name of the associated DLX, "" if not configured.
+// Since "" denotes also the default exchange, make sure to check existence
+// with HasDlx()
+func (s RabbitQueue) Dlx() string {
+	dlx, _ := s.EffectivePolicyDefinition["dead-letter-exchange"]
+	return dlx
 }
 
 // RabbitBinding models the /bindings resource of the rabbitmq http api

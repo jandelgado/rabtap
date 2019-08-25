@@ -9,6 +9,13 @@
   (see README.md). Note that the exchange is now optional and will be taken
   from the message metadata that is published. 
 
+## v1.22 (2019-12-xx)
+
+* new: `info` command shows info on configured dead letter exchange (DLX) for
+  a queue. Filtering for queues with a DLX is also supported (see README.md).
+* fix: typo in connection node of dot output
+* implemented workarounds when RabbitMQ api returns `[]` instead of object (JSON)
+
 ## v1.21 (2019-12-14)
 
 * new option: `--format FORMAT` which controls output format in `tap`, 
@@ -52,7 +59,7 @@
 ## v1.16 (2019-04-03)
 
 * new option `--by-connection` for info command added, making `info` show
-  connection > 
+  connection 
 * new: prefetch count added to output of `info` command (on consumer level)
 
 ## v1.15 (2019-03-01)

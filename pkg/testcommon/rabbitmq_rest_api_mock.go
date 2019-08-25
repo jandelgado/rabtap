@@ -437,6 +437,9 @@ const (
         "exclusive": false,
         "auto_delete": false,
         "durable": true,
+		"effective_policy_definition": {
+			"dead-letter-exchange": "mydlx"
+		},
         "vhost": "/",
         "name": "direct-q1",
         "message_bytes_paged_out": 0,

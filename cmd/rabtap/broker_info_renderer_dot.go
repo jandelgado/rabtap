@@ -52,59 +52,62 @@ func NewBrokerInfoRendererDot(config BrokerInfoRendererConfig) BrokerInfoRendere
 // newDotRendererTpl returns the dot template to use. For now, just one default
 // template is used, later will support loading templates from the filesytem
 func newDotRendererTpl() dotRendererTpl {
-	return dotRendererTpl{dotTplRootNode: `graph broker {
+	return dotRendererTpl{dotTplRootNode: `digraph broker {
 {{ q .Name }} [shape="record", label="{RabbitMQ {{ .Overview.RabbitmqVersion }} | 
                {{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }} |
                {{- .Overview.ClusterName }} }"];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}
 }`,
 
 		dotTplVhost: `{{ q .Name }} [shape="box", label="Virtual host {{ .Vhost }}"];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name -}} [headport=n]{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name -}} [headport=n]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
 		dotTplExchange: `
-{{ q .Name }} [shape="record"; label="{ {{ .Exchange.Name }} | {{- .Exchange.Type }} | {
+{{ q .Name }} [shape="record"; label="{ { E | {{ .Exchange.Name }} } | {{- .Exchange.Type }} | {
 			  {{- if .Exchange.Durable }} D {{ end }} | 
 			  {{- if .Exchange.AutoDelete }} AD {{ end }} | 
 			  {{- if .Exchange.Internal }} I {{ end }} } }"];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }} [fontsize=10; headport=n; label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }} [fontsize=10; headport=n; label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplQueue: `
-{{ q .Name }} [shape="record"; label="{ {{ .Queue.Name }} | {
+{{ q .Name }} [shape="record"; label="{ { Q | {{ .Queue.Name }} } | {
 			  {{- if .Queue.Durable }} D {{ end }} | 
 			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
-			  {{- if .Queue.Exclusive }} EX {{ end }} } }"];
+			  {{- if .Queue.Exclusive }} EX {{ end }} | 
+			  {{- if .Queue.HasDlx }} DLX {{ end }} } }"];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplBoundQueue: `
-{{ q .Name }} [shape="record"; label="{ {{ .Queue.Name }} | {
+{{ q .Name }} [shape="record"; label="{ { Q | {{ .Queue.Name }} } | {
 			  {{- if .Queue.Durable }} D {{ end }} | 
 			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
-			  {{- if .Queue.Exclusive }} EX {{ end }} } }"];
+			  {{- if .Queue.Exclusive }} EX {{ end }} | 
+			  {{- if .Queue.HasDlx }}<dlx> DLX {{ end }} } }"];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
+{{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}};{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
 		// TODO add more details
 		dotTplConnection: `
-{{ q .Name }} [shape="record" label="{{ .Connection.Name }}"];
+{{ q .Name }} [shape="record" label="{ Conn | {{ .Connection.Name }} }"];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
 		// TODO add more details
 		dotTplConsumer: `
-{{ q .Name }} [shape="record" label="{{ .Consumer.ConsumerTag}}"];
+{{ q .Name }} [shape="record" label="{ Cons | {{ .Consumer.ConsumerTag}} }"];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 	}
 }

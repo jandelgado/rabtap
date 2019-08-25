@@ -59,7 +59,7 @@ func Example_cmdInfoByExchangeInTextFormat() {
 	//     ├── amq.rabbitmq.trace (exchange, type 'topic', [D|I])
 	//     ├── amq.topic (exchange, type 'topic', [D])
 	//     ├── test-direct (exchange, type 'direct', [D|AD|I])
-	//     │   ├── direct-q1 (queue, key='direct-q1', running, [D])
+	//     │   ├── direct-q1 (queue, key='direct-q1', running, [D|DLX])
 	//     │   │   ├── some_consumer (consumer user='guest', prefetch=0, chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
 	//     │   │   │   └── '172.17.0.1:40874 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:40874')
 	//     │   │   └── another_consumer w/ faulty channel (consumer user='', prefetch=0, chan='')
@@ -103,90 +103,90 @@ func Example_cmdInfoByConnectionInTextFormat() {
 	// └── Vhost /
 	//     └── '172.17.0.1:40874 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:40874')
 	//         └── some_consumer (consumer user='guest', prefetch=0, chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
-	//             └── direct-q1 (queue, running, [D])
+	//             └── direct-q1 (queue, running, [D|DLX])
 }
 
-const expectedResultDotByExchange = `graph broker {
+const expectedResultDotByExchange = `digraph broker {
 "root" [shape="record", label="{RabbitMQ 3.6.9 |http://rabbitmq/api |rabbit@08f57d1fe8ab }"];
 
-"root" -- "vhost_/";
+"root" -> "vhost_/";
 "vhost_/" [shape="box", label="Virtual host /"];
 
-"vhost_/" -- "exchange_amq.direct"[headport=n];
-"vhost_/" -- "exchange_amq.fanout"[headport=n];
-"vhost_/" -- "exchange_amq.headers"[headport=n];
-"vhost_/" -- "exchange_amq.match"[headport=n];
-"vhost_/" -- "exchange_amq.rabbitmq.log"[headport=n];
-"vhost_/" -- "exchange_amq.rabbitmq.trace"[headport=n];
-"vhost_/" -- "exchange_amq.topic"[headport=n];
-"vhost_/" -- "exchange_test-direct"[headport=n];
-"vhost_/" -- "exchange_test-fanout"[headport=n];
-"vhost_/" -- "exchange_test-headers"[headport=n];
-"vhost_/" -- "exchange_test-topic"[headport=n];
+"vhost_/" -> "exchange_amq.direct"[headport=n];
+"vhost_/" -> "exchange_amq.fanout"[headport=n];
+"vhost_/" -> "exchange_amq.headers"[headport=n];
+"vhost_/" -> "exchange_amq.match"[headport=n];
+"vhost_/" -> "exchange_amq.rabbitmq.log"[headport=n];
+"vhost_/" -> "exchange_amq.rabbitmq.trace"[headport=n];
+"vhost_/" -> "exchange_amq.topic"[headport=n];
+"vhost_/" -> "exchange_test-direct"[headport=n];
+"vhost_/" -> "exchange_test-fanout"[headport=n];
+"vhost_/" -> "exchange_test-headers"[headport=n];
+"vhost_/" -> "exchange_test-topic"[headport=n];
 
-"exchange_amq.direct" [shape="record"; label="{ amq.direct |direct | { D  | | } }"];
-
-
-"exchange_amq.fanout" [shape="record"; label="{ amq.fanout |fanout | { D  | | } }"];
+"exchange_amq.direct" [shape="record"; label="{ { E | amq.direct } |direct | { D  | | } }"];
 
 
-"exchange_amq.headers" [shape="record"; label="{ amq.headers |headers | { D  | | } }"];
+"exchange_amq.fanout" [shape="record"; label="{ { E | amq.fanout } |fanout | { D  | | } }"];
 
 
-"exchange_amq.match" [shape="record"; label="{ amq.match |headers | { D  | | } }"];
+"exchange_amq.headers" [shape="record"; label="{ { E | amq.headers } |headers | { D  | | } }"];
 
 
-"exchange_amq.rabbitmq.log" [shape="record"; label="{ amq.rabbitmq.log |topic | { D  | | I  } }"];
+"exchange_amq.match" [shape="record"; label="{ { E | amq.match } |headers | { D  | | } }"];
 
 
-"exchange_amq.rabbitmq.trace" [shape="record"; label="{ amq.rabbitmq.trace |topic | { D  | | I  } }"];
+"exchange_amq.rabbitmq.log" [shape="record"; label="{ { E | amq.rabbitmq.log } |topic | { D  | | I  } }"];
 
 
-"exchange_amq.topic" [shape="record"; label="{ amq.topic |topic | { D  | | } }"];
+"exchange_amq.rabbitmq.trace" [shape="record"; label="{ { E | amq.rabbitmq.trace } |topic | { D  | | I  } }"];
 
 
-"exchange_test-direct" [shape="record"; label="{ test-direct |direct | { D  | AD  | I  } }"];
-
-"exchange_test-direct" -- "boundqueue_direct-q1" [fontsize=10; headport=n; label="direct-q1"];
-"exchange_test-direct" -- "boundqueue_direct-q2" [fontsize=10; headport=n; label="direct-q2"];
-
-"boundqueue_direct-q1" [shape="record"; label="{ direct-q1 | { D  | | } }"];
+"exchange_amq.topic" [shape="record"; label="{ { E | amq.topic } |topic | { D  | | } }"];
 
 
-"boundqueue_direct-q2" [shape="record"; label="{ direct-q2 | { D  | | } }"];
+"exchange_test-direct" [shape="record"; label="{ { E | test-direct } |direct | { D  | AD  | I  } }"];
+
+"exchange_test-direct" -> "boundqueue_direct-q1" [fontsize=10; headport=n; label="direct-q1"];
+"exchange_test-direct" -> "boundqueue_direct-q2" [fontsize=10; headport=n; label="direct-q2"];
+
+"boundqueue_direct-q1" [shape="record"; label="{ { Q | direct-q1 } | { D  | | |<dlx> DLX  } }"];
+
+"boundqueue_direct-q1":dlx -> "exchange_mydlx";
+"boundqueue_direct-q2" [shape="record"; label="{ { Q | direct-q2 } | { D  | | | } }"];
 
 
-"exchange_test-fanout" [shape="record"; label="{ test-fanout |fanout | { D  | | } }"];
+"exchange_test-fanout" [shape="record"; label="{ { E | test-fanout } |fanout | { D  | | } }"];
 
-"exchange_test-fanout" -- "boundqueue_fanout-q1" [fontsize=10; headport=n; label=""];
-"exchange_test-fanout" -- "boundqueue_fanout-q2" [fontsize=10; headport=n; label=""];
+"exchange_test-fanout" -> "boundqueue_fanout-q1" [fontsize=10; headport=n; label=""];
+"exchange_test-fanout" -> "boundqueue_fanout-q2" [fontsize=10; headport=n; label=""];
 
-"boundqueue_fanout-q1" [shape="record"; label="{ fanout-q1 | { D  | | } }"];
-
-
-"boundqueue_fanout-q2" [shape="record"; label="{ fanout-q2 | { D  | | } }"];
+"boundqueue_fanout-q1" [shape="record"; label="{ { Q | fanout-q1 } | { D  | | | } }"];
 
 
-"exchange_test-headers" [shape="record"; label="{ test-headers |headers | { D  | AD  | } }"];
-
-"exchange_test-headers" -- "boundqueue_header-q1" [fontsize=10; headport=n; label="headers-q1"];
-"exchange_test-headers" -- "boundqueue_header-q2" [fontsize=10; headport=n; label="headers-q2"];
-
-"boundqueue_header-q1" [shape="record"; label="{ header-q1 | { D  | | } }"];
+"boundqueue_fanout-q2" [shape="record"; label="{ { Q | fanout-q2 } | { D  | | | } }"];
 
 
-"boundqueue_header-q2" [shape="record"; label="{ header-q2 | { D  | | } }"];
+"exchange_test-headers" [shape="record"; label="{ { E | test-headers } |headers | { D  | AD  | } }"];
+
+"exchange_test-headers" -> "boundqueue_header-q1" [fontsize=10; headport=n; label="headers-q1"];
+"exchange_test-headers" -> "boundqueue_header-q2" [fontsize=10; headport=n; label="headers-q2"];
+
+"boundqueue_header-q1" [shape="record"; label="{ { Q | header-q1 } | { D  | | | } }"];
 
 
-"exchange_test-topic" [shape="record"; label="{ test-topic |topic | { D  | | } }"];
-
-"exchange_test-topic" -- "boundqueue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
-"exchange_test-topic" -- "boundqueue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
-
-"boundqueue_topic-q1" [shape="record"; label="{ topic-q1 | { D  | AD  | EX  } }"];
+"boundqueue_header-q2" [shape="record"; label="{ { Q | header-q2 } | { D  | | | } }"];
 
 
-"boundqueue_topic-q2" [shape="record"; label="{ topic-q2 | { D  | | } }"];
+"exchange_test-topic" [shape="record"; label="{ { E | test-topic } |topic | { D  | | } }"];
+
+"exchange_test-topic" -> "boundqueue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
+"exchange_test-topic" -> "boundqueue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
+
+"boundqueue_topic-q1" [shape="record"; label="{ { Q | topic-q1 } | { D  | AD  | EX  | } }"];
+
+
+"boundqueue_topic-q2" [shape="record"; label="{ { Q | topic-q2 } | { D  | | | } }"];
 
 }`
 
@@ -211,25 +211,26 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 			out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
+	// fmt.Print(result)
 	assert.Equal(t, strings.Trim(expectedResultDotByExchange, " \n"),
 		strings.Trim(result, " \n"))
 }
 
-const expectedResultDotByConnection = `graph broker {
+const expectedResultDotByConnection = `digraph broker {
 "root" [shape="record", label="{RabbitMQ 3.6.9 |http://rabbitmq/api |rabbit@08f57d1fe8ab }"];
 
-"root" -- "vhost_/";
+"root" -> "vhost_/";
 "vhost_/" [shape="box", label="Virtual host /"];
 
-"vhost_/" -- "connection_172.17.0.1:40874 -> 172.17.0.2:5672"[headport=n];
+"vhost_/" -> "connection_172.17.0.1:40874 -> 172.17.0.2:5672"[headport=n];
 
-"connection_172.17.0.1:40874 -> 172.17.0.2:5672" [shape="record" label="172.17.0.1:40874 -> 172.17.0.2:5672"];
+"connection_172.17.0.1:40874 -> 172.17.0.2:5672" [shape="record" label="{ Conn | 172.17.0.1:40874 -> 172.17.0.2:5672 }"];
 
-"connection_172.17.0.1:40874 -> 172.17.0.2:5672" -- "consumer_some_consumer"
-"consumer_some_consumer" [shape="record" label="some_consumer"];
+"connection_172.17.0.1:40874 -> 172.17.0.2:5672" -> "consumer_some_consumer"
+"consumer_some_consumer" [shape="record" label="{ Cons | some_consumer }"];
 
-"consumer_some_consumer" -- "queue_direct-q1"
-"queue_direct-q1" [shape="record"; label="{ direct-q1 | { D  | | } }"];
+"consumer_some_consumer" -> "queue_direct-q1"
+"queue_direct-q1" [shape="record"; label="{ { Q | direct-q1 } | { D  | | | DLX  } }"];
 
 }`
 
@@ -254,6 +255,7 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 			out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
+	// fmt.Print(result)
 	assert.Equal(t, strings.Trim(expectedResultDotByConnection, " \n"),
 		strings.Trim(result, " \n"))
 }

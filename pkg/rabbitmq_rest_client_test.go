@@ -300,3 +300,14 @@ func TestFindBindingsByExchangeReturnsMatchingBindings(t *testing.T) {
 	assert.Equal(t, "q1", foundBindings[0].Destination)
 	assert.Equal(t, "q3", foundBindings[1].Destination)
 }
+
+func TestQueueDlxAccessorMethods(t *testing.T) {
+	dlxPolicy := map[string]string{"dead-letter-exchange": "mydlx"}
+	qWithDlx := RabbitQueue{EffectivePolicyDefinition: dlxPolicy}
+	assert.True(t, qWithDlx.HasDlx())
+	assert.Equal(t, "mydlx", qWithDlx.Dlx())
+
+	qWithoutDlx := RabbitQueue{}
+	assert.False(t, qWithoutDlx.HasDlx())
+	assert.Equal(t, "", qWithoutDlx.Dlx())
+}

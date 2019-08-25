@@ -49,7 +49,7 @@ and exchanges, inspect broker.
         * [Binding type](#binding-type)
 * [Build from source](#build-from-source)
     * [Download and build using go get](#download-and-build-using-go-get)
-    * [Build using Makefile and tests](#build-using-makefile-and-tests)
+    * [Build using Makefile and running tests](#build-using-makefile-and-running-tests)
 * [Test data generator](#test-data-generator)
 * [Contributing](#contributing)
 * [Author](#author)
@@ -85,10 +85,11 @@ Output of `rabtap info --stats` command, showing additional statistics:
 
 ### Visualize broker topology with graphviz
 
-Using the `--format=dot` option, the `info` command can generate output in the
-`dot` format, which can be visualized using graphviz, e.g. `rabtap info
---show-default --format dot | dot -T svg > mybroker.svg`. The resulting SVG
-file can be visualized with a web browser.
+Using the `--format=dot` option, the `info` command generates output in the
+`dot` format, which can be visualized using graphviz, e.g.  `info --format=dot
+--show-default | dot -T svg > broker.svg` to produce nice graphs visualizing
+the brokers topology. The resulting SVG file can be displayed in a web
+browser. 
 
 ![info mode](doc/images/info-dot.png)
 
@@ -593,10 +594,12 @@ broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
   only queues bound to exchange `amq.direct` and skip all empty exchanges.
 * `rabtap info --filter "queue.Name =~ '.*test.*'" --omit-empty` - print all
   queues with `test` in their name.
-* `rabtap info --filter "queue.Name =~ '.*test.*' && exchange.Type == 'topic'" --omit-empty` - like
-  before, but consider only exchanges of type `topic`.
-* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print 
-  all queues with at least one consumer
+* `rabtap info --filter "queue.Name =~ '.*test.*' && exchange.Type == 'topic'"
+  --omit-empty`: like before, but consider only exchanges of type `topic`
+* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers`:
+  print all queues with at one consumer
+* `rabtap info --filter "queue.HasDlx()" --omit`: print all queues with an 
+  associated DLX (dead letter exchange)
 
 ### Type reference
 
@@ -638,66 +641,71 @@ type Exchange struct {
 
 ```go
 type Queue struct {
-    MessagesDetails struct {
-        Rate float64
-    }
-    Messages
-    MessagesUnacknowledgedDetails struct {
-        Rate float64
-    }
-    MessagesUnacknowledged int
-    MessagesReadyDetails   struct {
-        Rate float64
-    }
-    MessagesReady     int
-    ReductionsDetails struct {
-        Rate float64
-    }
-    Reductions int
-    Node       string
-    Exclusive            bool
-    AutoDelete           bool
-    Durable              bool
-    Vhost                string
-    Name                 string
-    MessageBytesPagedOut int
-    MessagesPagedOut     int
-    BackingQueueStatus   struct {
-        Mode string
-        Q1   int
-        Q2   int
-        Q3  int
-        Q4  int
-        Len int
-        NextSeqID         int
-        AvgIngressRate    float64
-        AvgEgressRate     float64
-        AvgAckIngressRate float64
-        AvgAckEgressRate  float64
-    }
-    MessageBytesPersistent     int
-    MessageBytesRAM            int
-    MessageBytesUnacknowledged int
-    MessageBytesReady          int
-    MessageBytes               int
-    MessagesPersistent         int
-    MessagesUnacknowledgedRAM  int
-    MessagesReadyRAM           int
-    MessagesRAM                int
-    GarbageCollection          struct {
-        MinorGcs        int
-        FullsweepAfter  int
-        MinHeapSize     int
-        MinBinVheapSize int
-        MaxHeapSize     int
-    }
-    State string
-    Consumers int
-    IdleSince string
-    Memory    int
+	MessagesDetails struct {
+		Rate float64
+	}
+	Messages
+	MessagesUnacknowledgedDetails struct {
+		Rate float64
+	}
+	MessagesUnacknowledged int
+	MessagesReadyDetails   struct {
+		Rate float64
+	}
+	MessagesReady     int
+	ReductionsDetails struct {
+		Rate float64
+	}
+	Reductions int
+	Node       string
+	Exclusive            bool
+	AutoDelete           bool
+	Durable              bool
+	EffectivePolicyDefinition map[string]string 
+	Vhost                string
+	Name                 string
+	MessageBytesPagedOut int
+	MessagesPagedOut     int
+	BackingQueueStatus   struct {
+		Mode string
+		Q1   int
+		Q2   int
+		Q3  int
+		Q4  int
+		Len int
+		NextSeqID         int
+		AvgIngressRate    float64
+		AvgEgressRate     float64
+		AvgAckIngressRate float64
+		AvgAckEgressRate  float64
+	}
+	MessageBytesPersistent     int
+	MessageBytesRAM            int
+	MessageBytesUnacknowledged int
+	MessageBytesReady          int
+	MessageBytes               int
+	MessagesPersistent         int
+	MessagesUnacknowledgedRAM  int
+	MessagesReadyRAM           int
+	MessagesRAM                int
+	GarbageCollection          struct {
+		MinorGcs        int
+		FullsweepAfter  int
+		MinHeapSize     int
+		MinBinVheapSize int
+		MaxHeapSize     int
+	}
+	State string
+	Consumers int
+	IdleSince string
+	Memory    int
 }
 ```
 </details>
+
+The `Queue` type provides the following methods:
+* `func (s Queue) HasDlx() bool` - return true if queue has an associated DLX.
+* `func (s Queue) Dlx() string` - return name of the associated DLX, "" if none.
 
 #### Binding type
 
@@ -725,7 +733,7 @@ type Binding struct {
 $ GO111MODULE=on go get github.com/jandelgado/rabtap/cmd/rabtap
 ```
 
-### Build using Makefile and tests
+### Build using Makefile and running tests
 
 To build rabtap from source, you need [go](https://golang.org/) (version >= 1.12)
 and [golangci-lint](https://github.com/golangci/golangci-lint) installed. 

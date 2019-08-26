@@ -317,13 +317,22 @@ func TestFindBindingsByExchangeReturnsMatchingBindings(t *testing.T) {
 	assert.Equal(t, "q3", foundBindings[1].Destination)
 }
 
-func TestQueueDlxAccessorMethods(t *testing.T) {
-	dlxPolicy := map[string]string{"dead-letter-exchange": "mydlx"}
-	qWithDlx := RabbitQueue{EffectivePolicyDefinition: dlxPolicy}
-	assert.True(t, qWithDlx.HasDlx())
-	assert.Equal(t, "mydlx", qWithDlx.Dlx())
-
+func TestQueueDlxAccessorMethodsWhenNotDefined(t *testing.T) {
 	qWithoutDlx := RabbitQueue{}
 	assert.False(t, qWithoutDlx.HasDlx())
 	assert.Equal(t, "", qWithoutDlx.Dlx())
+}
+
+func TestQueueDlxAccessorMethodsWhenDefinedInArguments(t *testing.T) {
+	args := map[string]interface{}{"x-dead-letter-exchange": "mydlx", "test": 1234, "empty": nil}
+	qWithDlx := RabbitQueue{Arguments: args}
+	assert.True(t, qWithDlx.HasDlx())
+	assert.Equal(t, "mydlx", qWithDlx.Dlx())
+}
+
+func TestQueueDlxAccessorMethodsWhenDefinedInPolicy(t *testing.T) {
+	dlxPolicy := map[string]interface{}{"dead-letter-exchange": "mydlx", "test": 1234, "empty": nil}
+	qWithDlx := RabbitQueue{EffectivePolicyDefinition: dlxPolicy}
+	assert.True(t, qWithDlx.HasDlx())
+	assert.Equal(t, "mydlx", qWithDlx.Dlx())
 }

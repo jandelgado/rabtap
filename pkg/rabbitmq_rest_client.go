@@ -137,20 +137,6 @@ func (s RabbitHTTPClient) Policies() ([]RabbitPolicy, error) {
 	return *res.(*[]RabbitPolicy), err
 }
 
-func fixQueueEffectivePolicyDefinitions(policies []RabbitPolicy, queues []RabbitQueue) {
-	// create EffectivePolicyDefinitions in RabbitQueues array since older API
-	// versions do not provide this attribute.
-	for qi, q := range queues {
-		if q.Policy == nil {
-			continue
-		}
-		if i := FindPolicyByName(policies, q.Vhost, *q.Policy); i != -1 {
-			policy := policies[i]
-			queues[qi].EffectivePolicyDefinition = policy.Definition
-		}
-	}
-}
-
 // BrokerInfo gets all resources of the broker in parallel
 // TODO use a ctx to for timeout/cancellation
 func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
@@ -163,16 +149,7 @@ func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
 	g.Go(func() (err error) { r.Consumers, err = s.Consumers(); return })
 	g.Go(func() (err error) { r.Bindings, err = s.Bindings(); return })
 	g.Go(func() (err error) { r.Policies, err = s.Policies(); return })
-	err := g.Wait()
-
-	if err != nil {
-		return r, err
-	}
-
-	// make older RabbitMQ API version compatbile (pre 3.7)
-	fixQueueEffectivePolicyDefinitions(r.Policies, r.Queues)
-
-	return r, nil
+	return r, g.Wait()
 }
 
 // CloseConnection closes a connection by DELETING the associated resource
@@ -468,18 +445,17 @@ type RabbitQueue struct {
 	ReductionsDetails struct {
 		Rate float64 `json:"rate"`
 	} `json:"reductions_details"`
-	Reductions int    `json:"reductions"`
-	Node       string `json:"node"`
-	Arguments  struct {
-	} `json:"arguments"`
-	Exclusive                 bool              `json:"exclusive"`
-	AutoDelete                bool              `json:"auto_delete"`
-	Durable                   bool              `json:"durable"`
-	EffectivePolicyDefinition map[string]string `json:"effective_policy_definition"`
-	Vhost                     string            `json:"vhost"`
-	Name                      string            `json:"name"`
-	MessageBytesPagedOut      int               `json:"message_bytes_paged_out"`
-	MessagesPagedOut          int               `json:"messages_paged_out"`
+	Reductions                int                    `json:"reductions"`
+	Node                      string                 `json:"node"`
+	Arguments                 map[string]interface{} `json:"arguments,omitempty"`
+	Exclusive                 bool                   `json:"exclusive"`
+	AutoDelete                bool                   `json:"auto_delete"`
+	Durable                   bool                   `json:"durable"`
+	EffectivePolicyDefinition map[string]interface{} `json:"effective_policy_definition"`
+	Vhost                     string                 `json:"vhost"`
+	Name                      string                 `json:"name"`
+	MessageBytesPagedOut      int                    `json:"message_bytes_paged_out"`
+	MessagesPagedOut          int                    `json:"messages_paged_out"`
 	BackingQueueStatus        struct {
 		Mode string `json:"mode"`
 		Q1   int    `json:"q1"`
@@ -523,18 +499,29 @@ type RabbitQueue struct {
 	Memory    int    `json:"memory"`
 }
 
-// HasDlx returns true if the given queue has an associated DLX
+// HasDlx returns true if the given queue has an associated DLX, either defined
+// by a policy or passed by argument during creation.
 func (s RabbitQueue) HasDlx() bool {
-	_, hasDlx := s.EffectivePolicyDefinition["dead-letter-exchange"]
-	return hasDlx
+	if _, hasDlx := s.EffectivePolicyDefinition["dead-letter-exchange"]; hasDlx {
+		return true
+	}
+	if _, hasDlx := s.Arguments["x-dead-letter-exchange"]; hasDlx {
+		return true
+	}
+	return false
 }
 
 // Dlx returns the name of the associated DLX, "" if not configured.
 // Since "" denotes also the default exchange, make sure to check existence
-// with HasDlx()
+// with HasDlx().
 func (s RabbitQueue) Dlx() string {
-	dlx, _ := s.EffectivePolicyDefinition["dead-letter-exchange"]
-	return dlx
+	if dlx, hasDlx := s.EffectivePolicyDefinition["dead-letter-exchange"]; hasDlx {
+		return dlx.(string)
+	}
+	if dlx, hasDlx := s.Arguments["x-dead-letter-exchange"]; hasDlx {
+		return dlx.(string)
+	}
+	return ""
 }
 
 // RabbitBinding models the /bindings resource of the rabbitmq http api
@@ -575,12 +562,12 @@ type RabbitExchange struct {
 
 // RabbitPolicy models the /policies resource of the rabbitmq http api
 type RabbitPolicy struct {
-	Vhost      string            `json:"vhost"`
-	Name       string            `json:"name"`
-	Pattern    string            `json:"pattern"`
-	ApplyTo    string            `json:"apply-to"`
-	Definition map[string]string `json:"definition"`
-	Priority   int               `json:"priority"`
+	Vhost      string                 `json:"vhost"`
+	Name       string                 `json:"name"`
+	Pattern    string                 `json:"pattern"`
+	ApplyTo    string                 `json:"apply-to"`
+	Definition map[string]interface{} `json:"definition"`
+	Priority   int                    `json:"priority"`
 }
 
 // ChannelDetails model channel_details in RabbitConsumer

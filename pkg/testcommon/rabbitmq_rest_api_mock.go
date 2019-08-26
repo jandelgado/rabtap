@@ -413,9 +413,10 @@ const (
 `
 
 	// result of GET /api/queues
-	// Queue direct-q1: policy = DLX and EffectivePolicyDefitions set
-	// Queue direct-q2: policy = DLX and EffectivePolicyDefitions not set
-	// Other queues: policy = null, EffectivePolicyDefinitions not set
+	// DLX-policies:
+	//   DLX yes: Queue direct-q1: EffectivePolicyDefitions set
+	//   DLX yes: Queue topic-q1: EffectivePolicyDefinitions not set, Arguments set
+	//   Other queues: None set
 	queueResult = `
 [
     {
@@ -443,7 +444,8 @@ const (
         "auto_delete": false,
         "durable": true,
 		"effective_policy_definition": {
-			"dead-letter-exchange": "mydlx"
+			"dead-letter-exchange": "mydlx",
+			"some-other-value": 1234
 		},
         "vhost": "/",
         "name": "direct-q1",
@@ -491,7 +493,6 @@ const (
         "recoverable_slaves": null,
         "consumers": 4,
         "exclusive_consumer_tag": null,
-        "policy": "DLX",
         "consumer_utilisation": null,
         "memory": 29840
     },
@@ -565,7 +566,6 @@ const (
         "recoverable_slaves": null,
         "consumers": 0,
         "exclusive_consumer_tag": null,
-        "policy": "DLX",
         "consumer_utilisation": null,
         "memory": 29840
     },
@@ -895,6 +895,10 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "topic-q1",
+		"arguments": {
+			"x-dead-letter-exchange": "mydlx",
+		 	"some-other-value": 1234
+		},
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -1219,7 +1223,8 @@ const (
       "priority" : 0,
       "name" : "DLX",
       "definition" : {
-         "dead-letter-exchange" : "mydlx"
+         "dead-letter-exchange" : "mydlx",
+		 "some-other-value": 1234
       },
       "vhost" : "/",
       "apply-to" : "queues"

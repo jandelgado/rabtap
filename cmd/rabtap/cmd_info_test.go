@@ -63,7 +63,7 @@ func Example_cmdInfoByExchangeInTextFormat() {
 	//     │   │   ├── some_consumer (consumer user='guest', prefetch=0, chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
 	//     │   │   │   └── '172.17.0.1:40874 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:40874')
 	//     │   │   └── another_consumer w/ faulty channel (consumer user='', prefetch=0, chan='')
-	//     │   └── direct-q2 (queue, key='direct-q2', running, [D|DLX])
+	//     │   └── direct-q2 (queue, key='direct-q2', running, [D])
 	//     ├── test-fanout (exchange, type 'fanout', [D])
 	//     │   ├── fanout-q1 (queue, idle since 2017-05-25 19:14:32, [D])
 	//     │   └── fanout-q2 (queue, idle since 2017-05-25 19:14:32, [D])
@@ -71,7 +71,7 @@ func Example_cmdInfoByExchangeInTextFormat() {
 	//     │   ├── header-q1 (queue, key='headers-q1', idle since 2017-05-25 19:14:53, [D])
 	//     │   └── header-q2 (queue, key='headers-q2', idle since 2017-05-25 19:14:47, [D])
 	//     └── test-topic (exchange, type 'topic', [D])
-	//         ├── topic-q1 (queue, key='topic-q1', idle since 2017-05-25 19:14:17, [D|AD|EX])
+	//         ├── topic-q1 (queue, key='topic-q1', idle since 2017-05-25 19:14:17, [D|AD|EX|DLX])
 	//         └── topic-q2 (queue, key='topic-q2', idle since 2017-05-25 19:14:21, [D])
 
 }
@@ -153,9 +153,9 @@ const expectedResultDotByExchange = `digraph broker {
 "boundqueue_direct-q1" [shape="record"; label="{ { Q | direct-q1 } | { D  | | |<dlx> DLX  } }"];
 
 "boundqueue_direct-q1":dlx -> "exchange_mydlx";
-"boundqueue_direct-q2" [shape="record"; label="{ { Q | direct-q2 } | { D  | | |<dlx> DLX  } }"];
+"boundqueue_direct-q2" [shape="record"; label="{ { Q | direct-q2 } | { D  | | | } }"];
 
-"boundqueue_direct-q2":dlx -> "exchange_mydlx";
+
 "exchange_test-fanout" [shape="record"; label="{ { E | test-fanout } |fanout | { D  | | } }"];
 
 "exchange_test-fanout" -> "boundqueue_fanout-q1" [fontsize=10; headport=n; label=""];
@@ -183,9 +183,9 @@ const expectedResultDotByExchange = `digraph broker {
 "exchange_test-topic" -> "boundqueue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
 "exchange_test-topic" -> "boundqueue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
 
-"boundqueue_topic-q1" [shape="record"; label="{ { Q | topic-q1 } | { D  | AD  | EX  | } }"];
+"boundqueue_topic-q1" [shape="record"; label="{ { Q | topic-q1 } | { D  | AD  | EX  |<dlx> DLX  } }"];
 
-
+"boundqueue_topic-q1":dlx -> "exchange_mydlx";
 "boundqueue_topic-q2" [shape="record"; label="{ { Q | topic-q2 } | { D  | | | } }"];
 
 }`
@@ -211,7 +211,7 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 			out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
-	//	fmt.Print(result)
+	// fmt.Print(result)
 	assert.Equal(t, strings.Trim(expectedResultDotByExchange, " \n"),
 		strings.Trim(result, " \n"))
 }

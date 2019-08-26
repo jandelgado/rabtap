@@ -35,6 +35,7 @@ type dotRendererTpl struct {
 type brokerInfoRendererDot struct {
 	config   BrokerInfoRendererConfig
 	template dotRendererTpl
+	rendered map[string]bool // keeps track of rendered elements
 }
 
 type dotNode struct {
@@ -67,7 +68,9 @@ func newDotRendererTpl() dotRendererTpl {
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
 		dotTplExchange: `
-{{ q .Name }} [shape="record"; label="{ { E | {{ .Exchange.Name }} } | {{- .Exchange.Type }} | {
+{{ q .Name }} [shape="record"; label="{ { E | 
+              {{- if eq .Exchange.Name "" }} (default) {{else}} {{ .Exchange.Name }} {{end}} } | 
+			  {{- .Exchange.Type }} | {
 			  {{- if .Exchange.Durable }} D {{ end }} | 
 			  {{- if .Exchange.AutoDelete }} AD {{ end }} | 
 			  {{- if .Exchange.Internal }} I {{ end }} } }"];
@@ -82,17 +85,20 @@ func newDotRendererTpl() dotRendererTpl {
 			  {{- if .Queue.Exclusive }} EX {{ end }} | 
 			  {{- if .Queue.HasDlx }} DLX {{ end }} } }"];
 
+{{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplBoundQueue: `
+{{- if not .Skip }}
 {{ q .Name }} [shape="record"; label="{ { Q | {{ .Queue.Name }} } | {
 			  {{- if .Queue.Durable }} D {{ end }} | 
 			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
 			  {{- if .Queue.Exclusive }} EX {{ end }} | 
 			  {{- if .Queue.HasDlx }}<dlx> DLX {{ end }} } }"];
 
-{{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}};{{ end -}}
+{{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
+{{- end}}
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
@@ -156,14 +162,15 @@ func (s brokerInfoRendererDot) renderQueueElementAsString(name string, children 
 	return resolveTemplate("queue-dotTpl", s.template.dotTplQueue, args, funcMap)
 }
 
-func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
+func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding, skip bool) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
 		Binding  rabtap.RabbitBinding
 		Queue    rabtap.RabbitQueue
-	}{name, children, s.config, binding, queue}
+		Skip     bool
+	}{name, children, s.config, binding, queue, skip}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
 	return resolveTemplate("bound-queue-dotTpl", s.template.dotTplBoundQueue, args, funcMap)
 }
@@ -219,7 +226,10 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}) dotNode {
 		queue := boundQueue.Queue
 		binding := boundQueue.Binding
 		name := fmt.Sprintf("boundqueue_%s", queue.Name)
-		node = dotNode{name, s.renderBoundQueueElementAsString(name, children, queue, binding), binding.RoutingKey}
+		// don't render bound queue nodes more than once
+		_, skip := s.rendered[name]
+		s.rendered[name] = true
+		node = dotNode{name, s.renderBoundQueueElementAsString(name, children, queue, binding, skip), binding.RoutingKey}
 	case *connectionNode:
 		conn := n.(*connectionNode)
 		name := fmt.Sprintf("connection_%s", conn.Connection.Name)
@@ -237,6 +247,7 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}) dotNode {
 // Render renders the given tree in graphviz dot format. See
 // https://www.graphviz.org/doc/info/lang.html
 func (s *brokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
+	s.rendered = map[string]bool{}
 	res := s.renderNode(rootNode)
 	fmt.Fprintf(out, res.Text)
 	return nil

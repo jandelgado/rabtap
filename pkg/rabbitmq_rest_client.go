@@ -137,6 +137,24 @@ func (s RabbitHTTPClient) Policies() ([]RabbitPolicy, error) {
 	return *res.(*[]RabbitPolicy), err
 }
 
+// fixQueueEffectivePolicyDefinitions creates EffectivePolicyDefinitions
+// attributes in RabbitQueues array since older API versions (3.6) do not provide
+// this attribute.
+func fixQueueEffectivePolicyDefinitions(policies []RabbitPolicy, queues []RabbitQueue) {
+	for qi, q := range queues {
+		if q.Policy == nil {
+			continue
+		}
+		if queues[qi].EffectivePolicyDefinition != nil {
+			continue
+		}
+		if i := FindPolicyByName(policies, q.Vhost, *q.Policy); i != -1 {
+			policy := policies[i]
+			queues[qi].EffectivePolicyDefinition = policy.Definition
+		}
+	}
+}
+
 // BrokerInfo gets all resources of the broker in parallel
 // TODO use a ctx to for timeout/cancellation
 func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
@@ -149,7 +167,13 @@ func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
 	g.Go(func() (err error) { r.Consumers, err = s.Consumers(); return })
 	g.Go(func() (err error) { r.Bindings, err = s.Bindings(); return })
 	g.Go(func() (err error) { r.Policies, err = s.Policies(); return })
-	return r, g.Wait()
+	err := g.Wait()
+	if err != nil {
+		return r, err
+	}
+	// Workaround for 3.6 API
+	fixQueueEffectivePolicyDefinitions(r.Policies, r.Queues)
+	return r, nil
 }
 
 // CloseConnection closes a connection by DELETING the associated resource

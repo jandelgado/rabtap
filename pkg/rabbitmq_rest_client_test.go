@@ -336,3 +336,55 @@ func TestQueueDlxAccessorMethodsWhenDefinedInPolicy(t *testing.T) {
 	assert.True(t, qWithDlx.HasDlx())
 	assert.Equal(t, "mydlx", qWithDlx.Dlx())
 }
+
+func TestFixQueueEffectivePolicySetAttributeIfMissingAndPolicyDefined(t *testing.T) {
+
+	newDlxPolicy := map[string]interface{}{"dead-letter-exchange": "mydlx"}
+	policies := []RabbitPolicy{{Name: "DLX",
+		Vhost:      "/",
+		Definition: newDlxPolicy}}
+
+	dlx := "DLX"
+	queues := []RabbitQueue{{Vhost: "/",
+		Policy:                    &dlx,
+		EffectivePolicyDefinition: nil}}
+
+	fixQueueEffectivePolicyDefinitions(policies, queues)
+
+	// expect EffectivePolicyDefinition taken from policy "DLX"
+	assert.Equal(t, "mydlx",
+		queues[0].EffectivePolicyDefinition["dead-letter-exchange"].(string))
+}
+
+func TestFixQueueEffectivePolicyDoesNotChangeExistingAttribute(t *testing.T) {
+
+	newDlxPolicy := map[string]interface{}{"dead-letter-exchange": "mynewdlx"}
+	policies := []RabbitPolicy{{Name: "DLX",
+		Vhost:      "/",
+		Definition: newDlxPolicy}}
+
+	dlxPolicy := map[string]interface{}{"dead-letter-exchange": "mydlx"}
+	dlx := "DLX"
+	queues := []RabbitQueue{{Vhost: "/",
+		Policy:                    &dlx,
+		EffectivePolicyDefinition: dlxPolicy}}
+
+	fixQueueEffectivePolicyDefinitions(policies, queues)
+
+	// since queues[0] already has a EffectivePolicyDefinition, we don't expect a change
+	assert.Equal(t, "mydlx",
+		queues[0].EffectivePolicyDefinition["dead-letter-exchange"].(string))
+}
+
+func TestFixQueueEffectivePolicyPassesWithoutPolicy(t *testing.T) {
+
+	dlxPolicy := map[string]interface{}{"dead-letter-exchange": "mydlx"}
+	queues := []RabbitQueue{{Vhost: "/",
+		Policy:                    nil,
+		EffectivePolicyDefinition: dlxPolicy}}
+
+	fixQueueEffectivePolicyDefinitions([]RabbitPolicy{}, queues)
+
+	assert.Equal(t, "mydlx",
+		queues[0].EffectivePolicyDefinition["dead-letter-exchange"].(string))
+}

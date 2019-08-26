@@ -92,6 +92,7 @@ type BrokerInfo struct {
 	Queues      []RabbitQueue
 	Consumers   []RabbitConsumer
 	Bindings    []RabbitBinding
+	Policies    []RabbitPolicy
 }
 
 // Overview returns the /overview resource of the RabbitMQ REST API
@@ -130,6 +131,26 @@ func (s RabbitHTTPClient) Bindings() ([]RabbitBinding, error) {
 	return *res.(*[]RabbitBinding), err
 }
 
+// Policies returns the /policies resource of the RabbitMQ REST API
+func (s RabbitHTTPClient) Policies() ([]RabbitPolicy, error) {
+	res, err := s.getResource(httpRequest{"policies", reflect.TypeOf([]RabbitPolicy{})})
+	return *res.(*[]RabbitPolicy), err
+}
+
+func fixQueueEffectivePolicyDefinitions(policies []RabbitPolicy, queues []RabbitQueue) {
+	// create EffectivePolicyDefinitions in RabbitQueues array since older API
+	// versions do not provide this attribute.
+	for qi, q := range queues {
+		if q.Policy == nil {
+			continue
+		}
+		if i := FindPolicyByName(policies, q.Vhost, *q.Policy); i != -1 {
+			policy := policies[i]
+			queues[qi].EffectivePolicyDefinition = policy.Definition
+		}
+	}
+}
+
 // BrokerInfo gets all resources of the broker in parallel
 // TODO use a ctx to for timeout/cancellation
 func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
@@ -141,7 +162,17 @@ func (s RabbitHTTPClient) BrokerInfo() (BrokerInfo, error) {
 	g.Go(func() (err error) { r.Queues, err = s.Queues(); return })
 	g.Go(func() (err error) { r.Consumers, err = s.Consumers(); return })
 	g.Go(func() (err error) { r.Bindings, err = s.Bindings(); return })
-	return r, g.Wait()
+	g.Go(func() (err error) { r.Policies, err = s.Policies(); return })
+	err := g.Wait()
+
+	if err != nil {
+		return r, err
+	}
+
+	// make older RabbitMQ API version compatbile (pre 3.7)
+	fixQueueEffectivePolicyDefinitions(r.Policies, r.Queues)
+
+	return r, nil
 }
 
 // CloseConnection closes a connection by DELETING the associated resource
@@ -204,6 +235,18 @@ func FindBindingsForExchange(exchange RabbitExchange, bindings []RabbitBinding) 
 //     }
 //     return -1
 // }
+
+// FindPolicyByName searches in the policies array for a policy with the given
+// name and vhost. index is returned or -1 if nothing is found.
+func FindPolicyByName(policies []RabbitPolicy,
+	vhost, policyName string) int {
+	for i, policy := range policies {
+		if policy.Name == policyName && policy.Vhost == vhost {
+			return i
+		}
+	}
+	return -1
+}
 
 // FindConnectionByName searches in the connections array for a connection with the given
 // name and vhost. index is returned or -1 if nothing is found.
@@ -473,7 +516,7 @@ type RabbitQueue struct {
 	//	RecoverableSlaves    interface{} `json:"recoverable_slaves"`
 	Consumers int `json:"consumers"`
 	//	ExclusiveConsumerTag interface{} `json:"exclusive_consumer_tag"`
-	//	Policy               interface{} `json:"policy"`
+	Policy *string `json:"policy,omitempty"`
 	//	ConsumerUtilisation  interface{} `json:"consumer_utilisation"`
 	// TODO use cusom marshaller and parese into time.Time
 	IdleSince string `json:"idle_since"`
@@ -528,6 +571,16 @@ type RabbitExchange struct {
 			Rate float64 `json:"rate"`
 		} `json:"publish_in_details"`
 	} `json:"message_stats,omitempty"`
+}
+
+// RabbitPolicy models the /policies resource of the rabbitmq http api
+type RabbitPolicy struct {
+	Vhost      string            `json:"vhost"`
+	Name       string            `json:"name"`
+	Pattern    string            `json:"pattern"`
+	ApplyTo    string            `json:"apply-to"`
+	Definition map[string]string `json:"definition"`
+	Priority   int               `json:"priority"`
 }
 
 // ChannelDetails model channel_details in RabbitConsumer

@@ -70,6 +70,8 @@ func mockStdGetHandler(w http.ResponseWriter, r *http.Request) {
 		result = overviewResult
 	case "/consumers":
 		result = consumerResult
+	case "/policies":
+		result = policyResult
 	case "/channels":
 		result = channelResult
 	case "/connections":
@@ -411,6 +413,9 @@ const (
 `
 
 	// result of GET /api/queues
+	// Queue direct-q1: policy = DLX and EffectivePolicyDefitions set
+	// Queue direct-q2: policy = DLX and EffectivePolicyDefitions not set
+	// Other queues: policy = null, EffectivePolicyDefinitions not set
 	queueResult = `
 [
     {
@@ -486,7 +491,7 @@ const (
         "recoverable_slaves": null,
         "consumers": 4,
         "exclusive_consumer_tag": null,
-        "policy": null,
+        "policy": "DLX",
         "consumer_utilisation": null,
         "memory": 29840
     },
@@ -560,7 +565,7 @@ const (
         "recoverable_slaves": null,
         "consumers": 0,
         "exclusive_consumer_tag": null,
-        "policy": null,
+        "policy": "DLX",
         "consumer_utilisation": null,
         "memory": 29840
     },
@@ -1207,6 +1212,20 @@ const (
     }
 ]`
 
+	policyResult = `
+[
+   {
+      "pattern" : "myqueue",
+      "priority" : 0,
+      "name" : "DLX",
+      "definition" : {
+         "dead-letter-exchange" : "mydlx"
+      },
+      "vhost" : "/",
+      "apply-to" : "queues"
+   }
+]
+	`
 	channelResult = `
 
 [

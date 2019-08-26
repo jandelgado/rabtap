@@ -245,6 +245,22 @@ func TestFindQueueByNameNotFound(t *testing.T) {
 	assert.Equal(t, -1, FindQueueByName(queues, "/", "not-available"))
 }
 
+func TestFindPolicyByName(t *testing.T) {
+	policies := []RabbitPolicy{
+		{Name: "pol0", Vhost: "vhost"},
+		{Name: "pol1", Vhost: "vhost"},
+	}
+	assert.Equal(t, 1, FindPolicyByName(policies, "vhost", "pol1"))
+}
+
+func TestFindPolicyByNameNotFound(t *testing.T) {
+	policies := []RabbitPolicy{
+		{Name: "pol0", Vhost: "vhost"},
+		{Name: "pol1", Vhost: "vhost"},
+	}
+	assert.Equal(t, -1, FindPolicyByName(policies, "vhost", "not-available"))
+}
+
 func TestFindConnectionByName(t *testing.T) {
 	conns := []RabbitConnection{
 		{Name: "c1", Vhost: "vhost"},

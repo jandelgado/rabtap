@@ -4,6 +4,7 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,18 @@ import (
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestCustomArrayOrObjectUnmarshaler(t *testing.T) {
+	type Obj struct {
+		//		*PossibleEmpty
+		Value string `json:"value"`
+	}
+
+	var obj Obj
+	err := json.Unmarshal([]byte(`{"Obj": {"value": "hello"}}`), &obj)
+	assert.Nil(t, err)
+	assert.Equal(t, "hello", obj.Value)
+}
 
 func TestGetAllResources(t *testing.T) {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)

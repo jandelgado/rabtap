@@ -64,7 +64,7 @@ const (
 	    {{- QueueColor .Queue.Name }} (queue,
 		{{- if .Config.ShowStats }}
 		{{- .Queue.Consumers  }} cons, (
-		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
+		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessageStats.PublishDetails.Rate}}/s) msg, (
 		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
 		{{- end }}
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
@@ -75,7 +75,7 @@ const (
 		{{- with .Binding.Arguments}} args='{{ KeyColor .}}',{{end}}
 		{{- if .Config.ShowStats }}
 		{{- .Queue.Consumers  }} cons, (
-		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
+		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessageStats.PublishDetails.Rate}}/s) msg, (
 		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
 		{{- end }}
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}

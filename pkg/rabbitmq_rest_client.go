@@ -274,6 +274,28 @@ func FindConsumerByQueue(consumers []RabbitConsumer,
 	return -1
 }
 
+// KeyValueMap is a simple key-value map storing JSON objects.
+type KeyValueMap map[string]interface{}
+
+// UnmarshalJSON is a custom unmarshaler as a WORKAROUND for RabbitMQ API
+// returning "[]" instead of null.  To make sure deserialization does not
+// break, we catch this case, and return an empty ChannelDetails struct.
+// see e.g. https://github.com/rabbitmq/rabbitmq-management/issues/424
+// https://github.com/rabbitmq/rabbitmq-management/issues/75
+// This problem re-appeared with  3.7.13 where e.g. Queue.EffectivePolicyDefition
+// is returned as [].
+func (d *KeyValueMap) UnmarshalJSON(data []byte) error {
+	// alias KeyValueMap to avoid recursion when callung Unmarshal
+	type Alias KeyValueMap
+	var aux *Alias
+	aux = (*Alias)(d)
+	if data[0] == '[' {
+		// JSON array detected
+		return nil
+	}
+	return json.Unmarshal(data, aux)
+}
+
 // RabbitConnection models the /connections resource of the rabbitmq http api
 type RabbitConnection struct {
 	ReductionsDetails struct {
@@ -454,6 +476,28 @@ type RabbitOverview struct {
 
 // RabbitQueue models the /queues resource of the rabbitmq http api
 type RabbitQueue struct {
+	ConsumerDetails []struct {
+		Arguments      KeyValueMap `json:"arguments"`
+		ChannelDetails struct {
+			PeerHost       string `json:"peer_host"`
+			PeerPort       int    `json:"peer_port"`
+			ConnectionName string `json:"connection_name"`
+			User           string `json:"user"`
+			Number         int    `json:"number"`
+			Node           string `json:"node"`
+			Name           string `json:"name"`
+		} `json:"channel_details"`
+		PrefetchCount int    `json:"prefetch_count"`
+		AckRequired   bool   `json:"ack_required"`
+		Exclusive     bool   `json:"exclusive"`
+		ConsumerTag   string `json:"consumer_tag"`
+		Queue         struct {
+			Vhost string `json:"vhost"`
+			Name  string `json:"name"`
+		} `json:"queue"`
+	} `json:"consumer_details"`
+	//Incoming        []interface{} `json:"incoming"`
+	//Deliveries      []interface{} `json:"deliveries"`
 	MessagesDetails struct {
 		Rate float64 `json:"rate"`
 	} `json:"messages_details"`
@@ -469,31 +513,66 @@ type RabbitQueue struct {
 	ReductionsDetails struct {
 		Rate float64 `json:"rate"`
 	} `json:"reductions_details"`
-	Reductions                int                    `json:"reductions"`
-	Node                      string                 `json:"node"`
-	Arguments                 map[string]interface{} `json:"arguments,omitempty"`
-	Exclusive                 bool                   `json:"exclusive"`
-	AutoDelete                bool                   `json:"auto_delete"`
-	Durable                   bool                   `json:"durable"`
-	EffectivePolicyDefinition map[string]interface{} `json:"effective_policy_definition"`
-	Vhost                     string                 `json:"vhost"`
-	Name                      string                 `json:"name"`
-	MessageBytesPagedOut      int                    `json:"message_bytes_paged_out"`
-	MessagesPagedOut          int                    `json:"messages_paged_out"`
-	BackingQueueStatus        struct {
-		Mode string `json:"mode"`
-		Q1   int    `json:"q1"`
-		Q2   int    `json:"q2"`
-		//		Delta             []interface{} `json:"delta"`
-		Q3  int `json:"q3"`
-		Q4  int `json:"q4"`
-		Len int `json:"len"`
-		//		TargetRAMCount    int     `json:"target_ram_count"`	// string or int -> need further research here when attr is in need ("infinity")
-		NextSeqID         int     `json:"next_seq_id"`
-		AvgIngressRate    float64 `json:"avg_ingress_rate"`
-		AvgEgressRate     float64 `json:"avg_egress_rate"`
-		AvgAckIngressRate float64 `json:"avg_ack_ingress_rate"`
+	Reductions   int `json:"reductions"`
+	MessageStats struct {
+		DeliverGetDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"deliver_get_details"`
+		DeliverGet int `json:"deliver_get"`
+		AckDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"ack_details"`
+		Ack              int `json:"ack"`
+		RedeliverDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"redeliver_details"`
+		Redeliver           int `json:"redeliver"`
+		DeliverNoAckDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"deliver_no_ack_details"`
+		DeliverNoAck   int `json:"deliver_no_ack"`
+		DeliverDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"deliver_details"`
+		Deliver         int `json:"deliver"`
+		GetNoAckDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"get_no_ack_details"`
+		GetNoAck   int `json:"get_no_ack"`
+		GetDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"get_details"`
+		Get            int `json:"get"`
+		PublishDetails struct {
+			Rate float64 `json:"rate"`
+		} `json:"publish_details"`
+		Publish float64 `json:"publish"`
+	} `json:"message_stats"`
+	Node                 string      `json:"node"`
+	Arguments            KeyValueMap `json:"arguments,omitempty"`
+	Exclusive            bool        `json:"exclusive"`
+	AutoDelete           bool        `json:"auto_delete"`
+	Durable              bool        `json:"durable"`
+	Vhost                string      `json:"vhost"`
+	Name                 string      `json:"name"`
+	MessageBytesPagedOut int         `json:"message_bytes_paged_out"`
+	MessagesPagedOut     int         `json:"messages_paged_out"`
+	BackingQueueStatus   struct {
 		AvgAckEgressRate  float64 `json:"avg_ack_egress_rate"`
+		AvgAckIngressRate float64 `json:"avg_ack_ingress_rate"`
+		AvgEgressRate     float64 `json:"avg_egress_rate"`
+		AvgIngressRate    float64 `json:"avg_ingress_rate"`
+		//Delta             []interface{} `json:"delta"`
+		Len           int    `json:"len"`
+		MirrorSeen    int    `json:"mirror_seen"`
+		MirrorSenders int    `json:"mirror_senders"`
+		Mode          string `json:"mode"`
+		NextSeqID     int    `json:"next_seq_id"`
+		Q1            int    `json:"q1"`
+		Q2            int    `json:"q2"`
+		Q3            int    `json:"q3"`
+		Q4            int    `json:"q4"`
+		//TargetRAMCount    int           `json:"target_ram_count"`
 	} `json:"backing_queue_status"`
 	//	HeadMessageTimestamp       interface{} `json:"head_message_timestamp"`
 	MessageBytesPersistent     int `json:"message_bytes_persistent"`
@@ -513,14 +592,18 @@ type RabbitQueue struct {
 		MaxHeapSize     int `json:"max_heap_size"`
 	} `json:"garbage_collection"`
 	State string `json:"state"`
-	//	RecoverableSlaves    interface{} `json:"recoverable_slaves"`
-	Consumers int `json:"consumers"`
-	//	ExclusiveConsumerTag interface{} `json:"exclusive_consumer_tag"`
-	Policy *string `json:"policy,omitempty"`
-	//	ConsumerUtilisation  interface{} `json:"consumer_utilisation"`
+	//RecoverableSlaves         interface{}   `json:"recoverable_slaves"`
+	//SynchronisedSlaveNodes    []interface{} `json:"synchronised_slave_nodes"`
+	//SlaveNodes                []interface{} `json:"slave_nodes"`
+	Memory int `json:"memory"`
+	//ConsumerUtilisation       int                    `json:"consumer_utilisation"`
+	Consumers                 int         `json:"consumers"`
+	ExclusiveConsumerTag      string      `json:"exclusive_consumer_tag"`
+	EffectivePolicyDefinition KeyValueMap `json:"effective_policy_definition,omitempty"`
+	OperatorPolicy            KeyValueMap `json:"operator_policy"`
 	// TODO use cusom marshaller and parese into time.Time
-	IdleSince string `json:"idle_since"`
-	Memory    int    `json:"memory"`
+	IdleSince string  `json:"idle_since"`
+	Policy    *string `json:"policy,omitempty"`
 }
 
 // HasDlx returns true if the given queue has an associated DLX, either defined
@@ -556,20 +639,20 @@ type RabbitBinding struct {
 	DestinationType string `json:"destination_type"`
 	RoutingKey      string `json:"routing_key"`
 	//Arguments       struct {
-	Arguments map[string]interface{} `json:"arguments,omitempty"`
+	Arguments KeyValueMap `json:"arguments,omitempty"`
 	//} `json:"arguments"`
 	PropertiesKey string `json:"properties_key"`
 }
 
 // RabbitExchange models the /exchanges resource of the rabbitmq http api
 type RabbitExchange struct {
-	Name       string                 `json:"name"`
-	Vhost      string                 `json:"vhost"`
-	Type       string                 `json:"type"`
-	Durable    bool                   `json:"durable"`
-	AutoDelete bool                   `json:"auto_delete"`
-	Internal   bool                   `json:"internal"`
-	Arguments  map[string]interface{} `json:"arguments,omitempty"`
+	Name       string      `json:"name"`
+	Vhost      string      `json:"vhost"`
+	Type       string      `json:"type"`
+	Durable    bool        `json:"durable"`
+	AutoDelete bool        `json:"auto_delete"`
+	Internal   bool        `json:"internal"`
+	Arguments  KeyValueMap `json:"arguments,omitempty"`
 	//Arguments  struct {
 	//} `json:"arguments"`
 	MessageStats struct {
@@ -586,16 +669,19 @@ type RabbitExchange struct {
 
 // RabbitPolicy models the /policies resource of the rabbitmq http api
 type RabbitPolicy struct {
-	Vhost      string                 `json:"vhost"`
-	Name       string                 `json:"name"`
-	Pattern    string                 `json:"pattern"`
-	ApplyTo    string                 `json:"apply-to"`
-	Definition map[string]interface{} `json:"definition"`
-	Priority   int                    `json:"priority"`
+	Vhost      string      `json:"vhost"`
+	Name       string      `json:"name"`
+	Pattern    string      `json:"pattern"`
+	ApplyTo    string      `json:"apply-to"`
+	Definition KeyValueMap `json:"definition"`
+	Priority   int         `json:"priority"`
 }
+
+type PossibleEmpty struct{}
 
 // ChannelDetails model channel_details in RabbitConsumer
 type ChannelDetails struct {
+	*PossibleEmpty
 	PeerHost       string `json:"peer_host"`
 	PeerPort       int    `json:"peer_port"`
 	ConnectionName string `json:"connection_name"`
@@ -609,9 +695,10 @@ type ChannelDetails struct {
 // returning "[]" instead of null.  To make sure deserialization does not
 // break, we catch this case, and return an empty ChannelDetails struct.
 // see e.g. https://github.com/rabbitmq/rabbitmq-management/issues/424
-func (d *ChannelDetails) UnmarshalJSON(data []byte) error {
+// https://github.com/rabbitmq/rabbitmq-management/issues/75
+func (d *PossibleEmpty) UnmarshalJSON(data []byte) error {
 	// akias ChannelDetails to avoid recursion when callung Unmarshal
-	type Alias ChannelDetails
+	type Alias PossibleEmpty
 	aux := &struct {
 		*Alias
 	}{

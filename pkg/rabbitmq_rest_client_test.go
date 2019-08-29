@@ -16,18 +16,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCustomArrayOrObjectUnmarshaler(t *testing.T) {
-	type Obj struct {
-		//		*PossibleEmpty
-		Value string `json:"value"`
-	}
-
-	var obj Obj
-	err := json.Unmarshal([]byte(`{"Obj": {"value": "hello"}}`), &obj)
+func TestCustomKeyValueObjectUnmarshaler(t *testing.T) {
+	var obj KeyValueMap
+	err := json.Unmarshal([]byte(`{"key": "value"}`), &obj)
 	assert.Nil(t, err)
-	assert.Equal(t, "hello", obj.Value)
+	assert.Equal(t, "value", obj["key"])
 }
 
+func TestCustomKeyValueObjectUnmarshalerÁrrayReturnsNil(t *testing.T) {
+	var obj KeyValueMap
+	err := json.Unmarshal([]byte(`[]`), &obj)
+	assert.Nil(t, err)
+	assert.Nil(t, obj)
+}
 func TestGetAllResources(t *testing.T) {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()

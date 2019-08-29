@@ -677,11 +677,8 @@ type RabbitPolicy struct {
 	Priority   int         `json:"priority"`
 }
 
-type PossibleEmpty struct{}
-
 // ChannelDetails model channel_details in RabbitConsumer
 type ChannelDetails struct {
-	*PossibleEmpty
 	PeerHost       string `json:"peer_host"`
 	PeerPort       int    `json:"peer_port"`
 	ConnectionName string `json:"connection_name"`
@@ -696,9 +693,9 @@ type ChannelDetails struct {
 // break, we catch this case, and return an empty ChannelDetails struct.
 // see e.g. https://github.com/rabbitmq/rabbitmq-management/issues/424
 // https://github.com/rabbitmq/rabbitmq-management/issues/75
-func (d *PossibleEmpty) UnmarshalJSON(data []byte) error {
+func (d *ChannelDetails) UnmarshalJSON(data []byte) error {
 	// akias ChannelDetails to avoid recursion when callung Unmarshal
-	type Alias PossibleEmpty
+	type Alias ChannelDetails
 	aux := &struct {
 		*Alias
 	}{

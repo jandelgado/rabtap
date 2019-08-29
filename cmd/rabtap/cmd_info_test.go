@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -124,39 +125,41 @@ const expectedResultDotByExchange = `digraph broker {
 "vhost_/" -> "exchange_test-headers"[headport=n];
 "vhost_/" -> "exchange_test-topic"[headport=n];
 
-"exchange_amq.direct" [shape="record"; label="{ { E | amq.direct } |direct | { D  | | } }"];
+"exchange_amq.direct" [shape="record"; label="{ { E | amq.direct  } |direct | { D  | | } }"];
 
 
-"exchange_amq.fanout" [shape="record"; label="{ { E | amq.fanout } |fanout | { D  | | } }"];
+"exchange_amq.fanout" [shape="record"; label="{ { E | amq.fanout  } |fanout | { D  | | } }"];
 
 
-"exchange_amq.headers" [shape="record"; label="{ { E | amq.headers } |headers | { D  | | } }"];
+"exchange_amq.headers" [shape="record"; label="{ { E | amq.headers  } |headers | { D  | | } }"];
 
 
-"exchange_amq.match" [shape="record"; label="{ { E | amq.match } |headers | { D  | | } }"];
+"exchange_amq.match" [shape="record"; label="{ { E | amq.match  } |headers | { D  | | } }"];
 
 
-"exchange_amq.rabbitmq.log" [shape="record"; label="{ { E | amq.rabbitmq.log } |topic | { D  | | I  } }"];
+"exchange_amq.rabbitmq.log" [shape="record"; label="{ { E | amq.rabbitmq.log  } |topic | { D  | | I  } }"];
 
 
-"exchange_amq.rabbitmq.trace" [shape="record"; label="{ { E | amq.rabbitmq.trace } |topic | { D  | | I  } }"];
+"exchange_amq.rabbitmq.trace" [shape="record"; label="{ { E | amq.rabbitmq.trace  } |topic | { D  | | I  } }"];
 
 
-"exchange_amq.topic" [shape="record"; label="{ { E | amq.topic } |topic | { D  | | } }"];
+"exchange_amq.topic" [shape="record"; label="{ { E | amq.topic  } |topic | { D  | | } }"];
 
 
-"exchange_test-direct" [shape="record"; label="{ { E | test-direct } |direct | { D  | AD  | I  } }"];
+"exchange_test-direct" [shape="record"; label="{ { E | test-direct  } |direct | { D  | AD  | I  } }"];
 
 "exchange_test-direct" -> "boundqueue_direct-q1" [fontsize=10; headport=n; label="direct-q1"];
 "exchange_test-direct" -> "boundqueue_direct-q2" [fontsize=10; headport=n; label="direct-q2"];
 
 "boundqueue_direct-q1" [shape="record"; label="{ { Q | direct-q1 } | { D  | | |<dlx> DLX  } }"];
 
-"boundqueue_direct-q1":dlx -> "exchange_mydlx";
+"boundqueue_direct-q1":dlx -> "exchange_mydlx" [style="dashed"];
+
 "boundqueue_direct-q2" [shape="record"; label="{ { Q | direct-q2 } | { D  | | | } }"];
 
 
-"exchange_test-fanout" [shape="record"; label="{ { E | test-fanout } |fanout | { D  | | } }"];
+
+"exchange_test-fanout" [shape="record"; label="{ { E | test-fanout  } |fanout | { D  | | } }"];
 
 "exchange_test-fanout" -> "boundqueue_fanout-q1" [fontsize=10; headport=n; label=""];
 "exchange_test-fanout" -> "boundqueue_fanout-q2" [fontsize=10; headport=n; label=""];
@@ -164,10 +167,12 @@ const expectedResultDotByExchange = `digraph broker {
 "boundqueue_fanout-q1" [shape="record"; label="{ { Q | fanout-q1 } | { D  | | | } }"];
 
 
+
 "boundqueue_fanout-q2" [shape="record"; label="{ { Q | fanout-q2 } | { D  | | | } }"];
 
 
-"exchange_test-headers" [shape="record"; label="{ { E | test-headers } |headers | { D  | AD  | } }"];
+
+"exchange_test-headers" [shape="record"; label="{ { E | test-headers  } |headers | { D  | AD  | } }"];
 
 "exchange_test-headers" -> "boundqueue_header-q1" [fontsize=10; headport=n; label="headers-q1"];
 "exchange_test-headers" -> "boundqueue_header-q2" [fontsize=10; headport=n; label="headers-q2"];
@@ -175,18 +180,22 @@ const expectedResultDotByExchange = `digraph broker {
 "boundqueue_header-q1" [shape="record"; label="{ { Q | header-q1 } | { D  | | | } }"];
 
 
+
 "boundqueue_header-q2" [shape="record"; label="{ { Q | header-q2 } | { D  | | | } }"];
 
 
-"exchange_test-topic" [shape="record"; label="{ { E | test-topic } |topic | { D  | | } }"];
+
+"exchange_test-topic" [shape="record"; label="{ { E | test-topic  } |topic | { D  | | } }"];
 
 "exchange_test-topic" -> "boundqueue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
 "exchange_test-topic" -> "boundqueue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
 
 "boundqueue_topic-q1" [shape="record"; label="{ { Q | topic-q1 } | { D  | AD  | EX  |<dlx> DLX  } }"];
 
-"boundqueue_topic-q1":dlx -> "exchange_mydlx";
+"boundqueue_topic-q1":dlx -> "exchange_mydlx" [style="dashed"];
+
 "boundqueue_topic-q2" [shape="record"; label="{ { Q | topic-q2 } | { D  | | | } }"];
+
 
 }`
 
@@ -211,7 +220,7 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 			out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
-	// fmt.Print(result)
+	//fmt.Print(result)
 	assert.Equal(t, strings.Trim(expectedResultDotByExchange, " \n"),
 		strings.Trim(result, " \n"))
 }
@@ -232,7 +241,7 @@ const expectedResultDotByConnection = `digraph broker {
 "consumer_some_consumer" -> "queue_direct-q1"
 "queue_direct-q1" [shape="record"; label="{ { Q | direct-q1 } | { D  | | | DLX  } }"];
 
-}`
+"queue_direct-q1":dlx -> "exchange_mydlx" [style="dashed"];}`
 
 func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 
@@ -255,7 +264,7 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 			out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
-	// fmt.Print(result)
+	fmt.Print(result)
 	assert.Equal(t, strings.Trim(expectedResultDotByConnection, " \n"),
 		strings.Trim(result, " \n"))
 }

@@ -32,9 +32,19 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 				return nil
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %#+v", message)
-			// let the receiveFunc do the actual message processing
-			if err := messageReceiveFunc(message); err != nil {
-				log.Error(err)
+			tmpCh := make(rabtap.TapChannel)
+			go func() {
+				m := <-tmpCh
+				// let the receiveFunc do the actual message processing
+				if err := messageReceiveFunc(m); err != nil {
+					log.Error(err)
+				}
+			}()
+			select {
+			case tmpCh <- message:
+			case <-ctx.Done():
+				log.Debugf("subscribe: cancel (messageReceiveFunc)")
+				return nil
 			}
 		}
 	}

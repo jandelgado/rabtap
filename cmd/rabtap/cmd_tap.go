@@ -28,8 +28,7 @@ func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig 
 		tap := rabtap.NewAmqpTap(config.AmqpURI, tlsConfig, log)
 		taps = append(taps, tap)
 		g.Go(func() error {
-			err := tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel)
-			return err
+			return tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel)
 		})
 	}
 	g.Go(func() error {

@@ -66,37 +66,7 @@ func (s *AmqpSubscriber) createWorkerFunc(
 		// messageLoop expects Fanin object, which expects array of channels.
 		var channels []interface{}
 		fanin := NewFanin(append(channels, ch))
-		return s.messageLoop(ctx, tapCh, fanin), nil
-	}
-}
-
-// messageLoop forwards incoming amqp messages from the fanin to the provided
-// tapCh.
-// TODO need not be "method"
-// TODO pass chan instead of Fanin and using fanin.Ch
-func (s *AmqpSubscriber) messageLoop(ctx context.Context, tapCh TapChannel,
-	fanin *Fanin) ReconnectAction {
-
-	for {
-
-		select {
-		case message, more := <-fanin.Ch:
-			if !more {
-				return doReconnect
-			}
-
-			amqpMessage, _ := message.(amqp.Delivery)
-			// Avoid blocking write to tapCh when e.g. on the other end of the
-			// channel the user pressed Ctrl+S to stop console output
-			select {
-			case tapCh <- NewTapMessage(&amqpMessage, time.Now()):
-			case <-ctx.Done():
-				return doNotReconnect
-			}
-
-		case <-ctx.Done():
-			return doNotReconnect
-		}
+		return amqpMessageLoop(ctx, tapCh, fanin.Ch), nil
 	}
 }
 

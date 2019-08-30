@@ -62,43 +62,69 @@ func newDotRendererTpl() dotRendererTpl {
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}
 }`,
 
-		dotTplVhost: `{{ q .Name }} [shape="box", label="Virtual host {{ .Vhost }}"];
+		dotTplVhost: `{{ q .Name }} [shape="box", label="Virtual host\n{{ .Vhost }}"];
 
+{ rank = same; {{ range $i, $e := .Children }}{{ q $e.Name }}; {{ end -}} };
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name -}} [headport=n]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
-		dotTplExchange: `
-{{ q .Name }} [shape="record"; label="{ { E | 
-              {{- if eq .Exchange.Name "" }} (default) {{else}} {{ .Exchange.Name }} {{end}} } | 
-			  {{- .Exchange.Type }} | {
-			  {{- if .Exchange.Durable }} D {{ end }} | 
-			  {{- if .Exchange.AutoDelete }} AD {{ end }} | 
-			  {{- if .Exchange.Internal }} I {{ end }} } }"];
+		//         dotTplExchange: `
+		// {{ q .Name }} [shape="record"; label="{ { E | {{ .Exchange.Type }} } | {
+		//               {{- if eq .Exchange.Name "" }} (default) {{else}} {{ .Exchange.Name }} {{end}} } | {
+		//               {{- if .Exchange.Durable }} D {{ end }} |
+		//               {{- if .Exchange.AutoDelete }} AD {{ end }} |
+		//               {{- if .Exchange.Internal }} I {{ end }} } } }"];
+		dotTplExchange: `{{ q .Name }} [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%%'> E </TD><TD colspan='2' balign='center'>{{ .Exchange.Type }}</TD></TR>
+              <TR><TD colspan='3' align='text'><B>{{- if eq .Exchange.Name "" }}(default){{else}}{{ .Exchange.Name }}{{end}}</B></TD></TR>
+			  <TR><TD WIDTH='33%%'>{{- if .Exchange.Durable }} D {{ else }} &nbsp; {{ end }}</TD>
+				  <TD WIDTH='33%%'>{{- if .Exchange.AutoDelete }} AD {{ end }}</TD>
+				  <TD WIDTH='33%%'>{{- if .Exchange.Internal }} I {{ end }}</TD></TR>
+		    </TABLE> >];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }} [fontsize=10; headport=n; label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{ end -}}
+	{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }} [fontsize=10; label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplQueue: `
-{{ q .Name }} [shape="record"; label="{ { Q | {{ .Queue.Name }} } | {
-			  {{- if .Queue.Durable }} D {{ end }} | 
-			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
-			  {{- if .Queue.Exclusive }} EX {{ end }} | 
-			  {{- if .Queue.HasDlx }} DLX {{ end }} } }"];
+{{ q .Name }} [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='4' WIDTH='25%%'> Q</TD><TD><B>{{ .Queue.Name }}</B></TD></TR>
+			   <TR><TD WIDTH='25%%'>{{- if .Queue.Durable }} D {{else}} &nbsp; {{ end }}</TD> 
+			       <TD WIDTH='25%%'>{{- if .Queue.AutoDelete }} AD {{ end }} </TD>
+			       <TD WIDTH='25%%'>{{- if .Queue.Exclusive }} EX {{ end }} </TD>
+			       <TD  WIDTH='25%%' PORT='dlx'>{{- if .Queue.HasDlx }}<dlx> DLX {{ end }}</TD></TR>
+				</TABLE> >];
 
 {{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
+		//         dotTplQueue: `
+		// {{ q .Name }} [shape="record"; label="{ { Q | {{ .Queue.Name }} } | {
+		//               {{- if .Queue.Durable }} D {{ end }} |
+		//               {{- if .Queue.AutoDelete }} AD {{ end }} |
+		//               {{- if .Queue.Exclusive }} EX {{ end }} |
+		//               {{- if .Queue.HasDlx }}<dlx> DLX {{ end }} } }"];
+
+		// {{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
+		// {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
+		// {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
+
 		dotTplBoundQueue: `
 {{- if not .Skip }}
-{{ q .Name }} [shape="record"; label="{ { Q | {{ .Queue.Name }} } | {
-			  {{- if .Queue.Durable }} D {{ end }} | 
-			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
-			  {{- if .Queue.Exclusive }} EX {{ end }} | 
-			  {{- if .Queue.HasDlx }}<dlx> DLX {{ end }} } }"];
+{{ q .Name }} [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%%'> Q</TD><TD colspan='3'><B>{{ .Queue.Name }}</B></TD></TR>
+			   <TR><TD WIDTH='25%%'>{{- if .Queue.Durable }} D {{else}} &nbsp; {{ end }}</TD> 
+			       <TD WIDTH='25%%'>{{- if .Queue.AutoDelete }} AD {{ end }} </TD>
+			       <TD WIDTH='25%%'>{{- if .Queue.Exclusive }} EX {{ end }} </TD>
+			       <TD  WIDTH='25%%' PORT='dlx'>{{- if .Queue.HasDlx }} DLX {{ end }}</TD></TR>
+				</TABLE> >];
 
 {{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
 {{- end}}
+
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 

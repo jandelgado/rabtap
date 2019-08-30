@@ -27,7 +27,6 @@ func expectNilOnChan(t *testing.T, ch <-chan interface{}) {
 
 func TestFaninReceivesFromMultipleChannels(t *testing.T) {
 
-	// create fanin of 3 int channels
 	chan1 := make(chan int)
 	chan2 := make(chan int)
 	chan3 := make(chan int)

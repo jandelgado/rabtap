@@ -57,7 +57,7 @@ func (s *AmqpTap) createWorkerFunc(
 		fanin := NewFanin(amqpChs)
 		defer func() { _ = fanin.Stop() }()
 
-		action := s.messageLoop(ctx, tapCh, fanin)
+		action := amqpMessageLoop(ctx, tapCh, fanin.Ch)
 
 		return action, nil
 	}

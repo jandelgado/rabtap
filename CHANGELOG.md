@@ -1,9 +1,11 @@
 
 # Changelog for rabtap
 
-## v1.20 (2019-08-xx)
+## v1.20 (2019-08-30)
 
-* fix: typo in connection node of dot output
+* fix: avoid blocking write during tap, subscribe which can lead to ctrl+c
+  to not work when e.g. ctrl+s is pressed during tap or subscribe.
+* refactorings
 
 ## v1.19 (2019-08-18)
 

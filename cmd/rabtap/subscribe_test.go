@@ -60,7 +60,7 @@ func TestMessageReceiveLoop(t *testing.T) {
 		done <- true
 		return nil
 	}
-	go messageReceiveLoop(ctx, messageChan, receiveFunc)
+	go func() { _ = messageReceiveLoop(ctx, messageChan, receiveFunc) }()
 
 	messageChan <- rabtap.TapMessage{}
 	<-done // TODO add timeout

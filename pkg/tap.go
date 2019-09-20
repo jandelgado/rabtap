@@ -96,9 +96,7 @@ func (s *AmqpTap) setupTap(session Session,
 	tapExchange := getTapExchangeNameForExchange(exchangeConfig.Exchange, id[:12])
 	tapQueue := getTapQueueNameForExchange(exchangeConfig.Exchange, id[:12])
 
-	var err error
-
-	err = s.createExchangeToExchangeBinding(session,
+	err := s.createExchangeToExchangeBinding(session,
 		exchangeConfig.Exchange,
 		exchangeConfig.BindingKey,
 		tapExchange)
@@ -156,9 +154,10 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 		s.logger.Printf("tap: bind to exchange %s failed with %v", exchangeName, err)
 		// bind failed, so we must also delete our tap-exchange since it
 		// will not be auto-deleted when no binding exists.
-		session.NewChannel()
-		err2 := RemoveExchange(session, tapExchangeName, false)
-		s.logger.Printf("delete exchange: %v", err2)
+		// TODO handle errors
+		_ = session.NewChannel()
+		err3 := RemoveExchange(session, tapExchangeName, false)
+		s.logger.Printf("delete exchange: %v", err3)
 		return err
 	}
 	return nil
@@ -166,12 +165,5 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 
 func (s *AmqpTap) bindQueueToExchange(session Session,
 	exchangeName, bindingKey, queueName string) error {
-
-	var err error
-
-	err = BindQueueToExchange(session, queueName, bindingKey, exchangeName)
-	if err != nil {
-		return err
-	}
-	return nil
+	return BindQueueToExchange(session, queueName, bindingKey, exchangeName)
 }

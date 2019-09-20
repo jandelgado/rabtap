@@ -120,7 +120,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 		// runs as long as readerFunc returns messages. Unfortunately, we
 		// can not stop a blocking read on a file like we do with channels
 		// and select.
-		publishMessageStream(publishChannel, cmd.exchange,
+		_ = publishMessageStream(publishChannel, cmd.exchange,
 			cmd.routingKey, cmd.readerFunc)
 	}()
 

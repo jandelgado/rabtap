@@ -20,7 +20,8 @@ script:
 - GO111MODULE=on "./pre-commit"
 - GO111MODULE=on make test
 - GO111MODULE=on make build-all
-- goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+- 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN; fi'
+- 'if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then goveralls -coverprofile=coverage.out -service=travis-ci ; fi'
 
 before_deploy:
 - zip rabtap-${TRAVIS_TAG}-windows-amd64.zip bin/rabtap-win-amd64.exe README.md

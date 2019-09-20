@@ -13,7 +13,7 @@ before_install:
 
 script:
 - sudo rabbitmq-plugins enable rabbitmq_management
-- "./pre-commit"
+- GO111MODULE=on "./pre-commit"
 - GO111MODULE=on make test
 - GO111MODULE=on make build-all
 - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN; fi'

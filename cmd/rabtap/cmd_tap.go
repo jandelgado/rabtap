@@ -23,10 +23,10 @@ func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig 
 	// with the main thread, which does the actual message processing
 	tapMessageChannel := make(rabtap.TapChannel)
 
-	taps := []*rabtap.AmqpTap{}
+	// taps := []*rabtap.AmqpTap{}
 	for _, config := range tapConfig {
 		tap := rabtap.NewAmqpTap(config.AmqpURI, tlsConfig, log)
-		taps = append(taps, tap)
+		// taps = append(taps, tap)
 		g.Go(func() error {
 			return tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel)
 		})

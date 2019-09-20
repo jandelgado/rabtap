@@ -8,16 +8,12 @@ addons:
       - rabbitmq-server
 
 before_install:
-- go get -u golang.org/x/lint/golint
-- go get github.com/gordonklaus/ineffassign
-- go get github.com/fzipp/gocyclo
-- go get github.com/client9/misspell/cmd/misspell
-- go get golang.org/x/tools/cmd/cover
+- go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 - go get github.com/mattn/goveralls
 
 script:
 - sudo rabbitmq-plugins enable rabbitmq_management
-- GO111MODULE=on "./pre-commit"
+- "./pre-commit"
 - GO111MODULE=on make test
 - GO111MODULE=on make build-all
 - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN; fi'

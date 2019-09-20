@@ -76,7 +76,7 @@ func (s *Fanin) loop() error {
 			// allow a blocking write to s.Ch to be terminated
 			select {
 			case s.Ch <- message.Interface():
-			case _ = <-s.channels[0].Chan.Interface().(<-chan struct{}):
+			case <-s.channels[0].Chan.Interface().(<-chan struct{}):
 			}
 		}
 	}

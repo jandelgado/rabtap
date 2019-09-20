@@ -30,5 +30,5 @@ func cmdInfo(cmd CmdInfoArg) {
 	renderer := NewBrokerInfoRenderer(cmd.renderConfig)
 
 	tree, _ := treeBuilder.BuildTree(cmd.rootNode, brokerInfo)
-	renderer.Render(tree, os.Stdout)
+	failOnError(renderer.Render(tree, os.Stdout), "rendering failed", os.Exit)
 }

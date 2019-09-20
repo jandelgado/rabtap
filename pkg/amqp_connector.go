@@ -6,13 +6,8 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"time"
 
 	"github.com/sirupsen/logrus"
-)
-
-const (
-	reconnectDelayTime = 2000 * time.Millisecond
 )
 
 // ReconnectAction signals if connection should be reconnected or not.

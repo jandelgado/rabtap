@@ -48,3 +48,13 @@ func TestJSONFormatterValidObject(t *testing.T) {
 	formattedMessage := JSONMessageFormatter{}.Format(rabtap.NewTapMessage(&message, time.Now()))
 	assert.Equal(t, "{\n  \"a\": 1\n}", formattedMessage)
 }
+
+func TestJSONFormatterEmptyValue(t *testing.T) {
+	// An empty buffer effectively should be returned unmodified
+	message := amqp.Delivery{
+		Body: []byte(""),
+	}
+	formattedMessage := JSONMessageFormatter{}.Format(rabtap.NewTapMessage(&message, time.Now()))
+	// message is expected to be returned untouched
+	assert.Equal(t, "", formattedMessage)
+}

@@ -20,12 +20,15 @@ var (
 )
 
 // Format validates and formats a message in JSON format. The body can be a
-// simple JSON object or an array of JSON objecs. If the message is not valid
-// JSON, it will returned unformatted as-is.
+// simple JSON object or an array of JSON objects. If the message is not valid
+// JSON, it will be returned unformatted as-is.
 func (s JSONMessageFormatter) Format(message rabtap.TapMessage) string {
 
 	var formatted []byte
 	originalMessage := strings.TrimSpace(string(message.AmqpMessage.Body))
+	if len(originalMessage) == 0 {
+		return string(message.AmqpMessage.Body)
+	}
 	if originalMessage[0] == '[' {
 		// try to unmarshal array to JSON objects
 		var arrayJSONObj []map[string]interface{}

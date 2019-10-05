@@ -2,6 +2,7 @@ tags
 *~
 bin/
 vendor/
+assets/
 cmd/testgen/testgen
 cmd/rabtap/main
 *.out

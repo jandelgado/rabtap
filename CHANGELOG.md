@@ -1,6 +1,10 @@
 
 # Changelog for rabtap
 
+## v1.26 (to be released)
+
+* drop travis-ci, using github-action now (#49)
+
 ## v1.25 (2020-10-30)
 
 * fix: rabtap info: workaround for RabbitMQ API returning an `"undefined"`

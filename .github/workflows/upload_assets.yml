@@ -1,0 +1,41 @@
+on:
+  release:
+    types: [created]
+
+name: Upload release assets after release is created
+jobs:
+  build:
+    name: create assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: build
+        run: |
+          make assets
+      - name: upload artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: assets
+          path: assets/
+
+  upload:
+    name: Upload release assets
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Download build artefacts
+        uses: actions/download-artifact@v1
+        with:
+          name: assets
+          path: assets/
+      - name: Upload release assets
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: './assets/*'

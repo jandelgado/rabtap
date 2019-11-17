@@ -137,7 +137,7 @@ type commonArgs struct {
 	Verbose     bool
 	InsecureTLS bool
 	NoColor     bool
-	JSONFormat  bool   // output in JSON
+	Format      string // output format subscribe, tap: "raw", "json"
 	AmqpURI     string // pub, queue, exchange: amqp broker to use
 }
 
@@ -210,11 +210,15 @@ func parseAPIURI(args map[string]interface{}) (string, error) {
 }
 
 func parseCommonArgs(args map[string]interface{}) commonArgs {
+	format := "raw"
+	if args["--json"].(bool) {
+		format = "json"
+	}
 	return commonArgs{
 		Verbose:     args["--verbose"].(bool),
 		InsecureTLS: args["--insecure"].(bool),
 		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != ""),
-		JSONFormat:  args["--json"].(bool)}
+		Format:      format}
 }
 
 func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {

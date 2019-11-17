@@ -71,23 +71,29 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		var err error
 		file, err = os.Open(*args.PubFile)
 		failOnError(err, "error opening "+*args.PubFile, os.Exit)
+		defer file.Close()
 	}
-	readerFunc := createMessageReaderFunc(args.JSONFormat, file)
-	err := cmdPublish(ctx, CmdPublishArg{
+	readerFunc, err := createMessageReaderFunc(args.Format, file)
+	failOnError(err, "options", os.Exit)
+	err = cmdPublish(ctx, CmdPublishArg{
 		amqpURI:    args.AmqpURI,
 		exchange:   args.PubExchange,
 		routingKey: args.PubRoutingKey,
 		tlsConfig:  getTLSConfig(args.InsecureTLS),
 		readerFunc: readerFunc})
-	file.Close()
 	failOnError(err, "error publishing message", os.Exit)
 }
 
 func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
-	messageReceiveFunc := createMessageReceiveFunc(
-		NewColorableWriter(os.Stdout), args.JSONFormat,
-		args.SaveDir, args.NoColor)
-	err := cmdSubscribe(ctx, CmdSubscribeArg{
+	opts := MessageReceiveFuncOptions{
+		noColor:    args.NoColor,
+		format:     args.Format,
+		optSaveDir: args.SaveDir,
+	}
+	messageReceiveFunc, err := createMessageReceiveFunc(
+		NewColorableWriter(os.Stdout), opts)
+	failOnError(err, "options", os.Exit)
+	err = cmdSubscribe(ctx, CmdSubscribeArg{
 		amqpURI:            args.AmqpURI,
 		queue:              args.QueueName,
 		AutoAck:            args.AutoAck,
@@ -97,9 +103,14 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 }
 
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
-	messageReceiveFunc := createMessageReceiveFunc(
-		NewColorableWriter(os.Stdout), args.JSONFormat,
-		args.SaveDir, args.NoColor)
+	opts := MessageReceiveFuncOptions{
+		noColor:    args.NoColor,
+		format:     args.Format,
+		optSaveDir: args.SaveDir,
+	}
+	messageReceiveFunc, err := createMessageReceiveFunc(
+		NewColorableWriter(os.Stdout), opts)
+	failOnError(err, "options", os.Exit)
 	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS),
 		messageReceiveFunc)
 }

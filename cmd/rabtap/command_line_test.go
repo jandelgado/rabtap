@@ -123,7 +123,7 @@ func TestCliInsecureLongOpt(t *testing.T) {
 	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
 	assert.Equal(t, "binding", args.TapConfig[0].Exchanges[0].BindingKey)
 	assert.Nil(t, args.SaveDir)
-	assert.False(t, args.JSONFormat)
+	assert.Equal(t, "raw", args.Format)
 	assert.True(t, args.InsecureTLS)
 }
 
@@ -138,7 +138,7 @@ func TestCliVerboseOpt(t *testing.T) {
 	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
 	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
 	assert.Equal(t, "binding", args.TapConfig[0].Exchanges[0].BindingKey)
-	assert.True(t, args.JSONFormat)
+	assert.Equal(t, "json", args.Format)
 	assert.Nil(t, args.SaveDir)
 	assert.True(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
@@ -251,7 +251,7 @@ func TestCliPubCmdFromFile(t *testing.T) {
 	assert.Equal(t, "exchange", args.PubExchange)
 	assert.Equal(t, "file", *args.PubFile)
 	assert.Equal(t, "key", args.PubRoutingKey)
-	assert.False(t, args.JSONFormat)
+	assert.Equal(t, "raw", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
@@ -286,7 +286,7 @@ func TestCliPubCmdFromStdinWithRoutingKey(t *testing.T) {
 	assert.Equal(t, "broker1", args.AmqpURI)
 	assert.Equal(t, "exchange1", args.PubExchange)
 	assert.Nil(t, args.PubFile)
-	assert.True(t, args.JSONFormat)
+	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }

@@ -17,13 +17,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCreateMessageReceiveFuncReturnsErrorWithInvalidFormat(t *testing.T) {
+	testDir := "test"
+
+	var b bytes.Buffer
+	opts := MessageReceiveFuncOptions{
+		format:     "invalud",
+		optSaveDir: &testDir,
+		noColor:    false,
+	}
+	_, err := createMessageReceiveFunc(&b, opts)
+	assert.NotNil(t, err)
+}
+
 func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 	testDir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
 	defer os.RemoveAll(testDir)
 
 	var b bytes.Buffer
-	rcvFunc := createMessageReceiveFunc(&b, false, &testDir, false)
+	opts := MessageReceiveFuncOptions{
+		format:     "raw",
+		optSaveDir: &testDir,
+		noColor:    false,
+	}
+	rcvFunc, err := createMessageReceiveFunc(&b, opts)
+	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
 	_ = rcvFunc(message)
@@ -39,7 +58,13 @@ func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
 	defer os.RemoveAll(testDir)
 
 	var b bytes.Buffer
-	rcvFunc := createMessageReceiveFunc(&b, true, &testDir, false)
+	opts := MessageReceiveFuncOptions{
+		format:     "json",
+		optSaveDir: &testDir,
+		noColor:    false,
+	}
+	rcvFunc, err := createMessageReceiveFunc(&b, opts)
+	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
 	_ = rcvFunc(message)

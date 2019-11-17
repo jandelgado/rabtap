@@ -14,6 +14,12 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
+type MessageReceiveFuncOptions struct {
+	format     string // currently: raw, json
+	noColor    bool
+	optSaveDir *string
+}
+
 // MessageReceiveFunc processes receiced messages from a tap.
 type MessageReceiveFunc func(rabtap.TapMessage) error
 
@@ -53,14 +59,13 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 // createMessageReceiveFuncJSON returns a function that processes received
 // messages as JSON messages
 // TODO make testable (filename creation) and write test
-func createMessageReceiveFuncJSON(out io.Writer, optSaveDir *string,
-	_ /* noColor */ bool) MessageReceiveFunc {
+func createMessageReceiveFuncJSON(out io.Writer, opts MessageReceiveFuncOptions) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
 		err := WriteMessageJSON(out, message)
-		if err != nil || optSaveDir == nil {
+		if err != nil || opts.optSaveDir == nil {
 			return err
 		}
-		filename := path.Join(*optSaveDir,
+		filename := path.Join(*opts.optSaveDir,
 			fmt.Sprintf("rabtap-%d.json", time.Now().UnixNano()))
 		return SaveMessageToJSONFile(filename, message)
 	}
@@ -69,25 +74,26 @@ func createMessageReceiveFuncJSON(out io.Writer, optSaveDir *string,
 // createMessageReceiveFuncRaw returns a function that processes received
 // messages as "raw" messages
 // TODO make testable (filename creation) and write test
-func createMessageReceiveFuncRaw(out io.Writer, optSaveDir *string,
-	noColor bool) MessageReceiveFunc {
+func createMessageReceiveFuncRaw(out io.Writer, opts MessageReceiveFuncOptions) MessageReceiveFunc {
 
 	return func(message rabtap.TapMessage) error {
-		err := PrettyPrintMessage(out, message, noColor)
-		if err != nil || optSaveDir == nil {
+		err := PrettyPrintMessage(out, message, opts.noColor)
+		if err != nil || opts.optSaveDir == nil {
 			return err
 		}
-		basename := path.Join(*optSaveDir,
+		basename := path.Join(*opts.optSaveDir,
 			fmt.Sprintf("rabtap-%d", time.Now().UnixNano()))
 		return SaveMessageToRawFile(basename, message)
 	}
 }
 
-func createMessageReceiveFunc(out io.Writer, jsonFormat bool,
-	optSaveDir *string, noColor bool) MessageReceiveFunc {
+func createMessageReceiveFunc(out io.Writer, opts MessageReceiveFuncOptions) (MessageReceiveFunc, error) {
 
-	if jsonFormat {
-		return createMessageReceiveFuncJSON(out, optSaveDir, noColor)
+	switch opts.format {
+	case "json":
+		return createMessageReceiveFuncJSON(out, opts), nil
+	case "raw":
+		return createMessageReceiveFuncRaw(out, opts), nil
 	}
-	return createMessageReceiveFuncRaw(out, optSaveDir, noColor)
+	return nil, fmt.Errorf("invalid format %s", opts.format)
 }

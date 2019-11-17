@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -63,17 +64,20 @@ func readNextMessageFromJSONStream(decoder *json.Decoder) (amqp.Publishing, bool
 }
 
 // createMessageReaderFunc returns a function that reads messages from the
-// the given reader in JSON or raw-format TODO drop boolean param
-func createMessageReaderFunc(jsonFormat bool, reader io.ReadCloser) MessageReaderFunc {
-	if jsonFormat {
+// the given reader in JSON or raw-format
+func createMessageReaderFunc(format string, reader io.ReadCloser) (MessageReaderFunc, error) {
+	switch format {
+	case "json":
 		decoder := json.NewDecoder(reader)
 		return func() (amqp.Publishing, bool, error) {
 			return readNextMessageFromJSONStream(decoder)
-		}
+		}, nil
+	case "raw":
+		return func() (amqp.Publishing, bool, error) {
+			return readSingleMessageFromRawFile(reader)
+		}, nil
 	}
-	return func() (amqp.Publishing, bool, error) {
-		return readSingleMessageFromRawFile(reader)
-	}
+	return nil, fmt.Errorf("invaild format %s", format)
 }
 
 // publishMessages reads messages with the provided readNextMessageFunc and
@@ -131,9 +135,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 
 	if err := g.Wait(); err != nil {
 		log.Errorf("publish failed with %v", err)
-		log.Debug("cmd_publish_end with error")
 		return err
 	}
-	log.Debug("cmd_publish_end ok")
 	return nil
 }

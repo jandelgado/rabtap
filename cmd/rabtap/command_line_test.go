@@ -58,6 +58,29 @@ func TestCliTapSingleUri(t *testing.T) {
 	assert.False(t, args.NoColor)
 }
 
+func TestParsePubSubFormatArgDefaultsToRaw(t *testing.T) {
+	fmt, err := parsePubSubFormatArg(map[string]interface{}{})
+	assert.Nil(t, err)
+	assert.Equal(t, "raw", fmt)
+}
+
+func TestParsePubSubFormatArgDetectsValidOptions(t *testing.T) {
+	fmt, err := parsePubSubFormatArg(map[string]interface{}{"--format": "json"})
+	assert.Nil(t, err)
+	assert.Equal(t, "json", fmt)
+}
+
+func TestParsePubSubFormatArgDetectsDeprecatedOptions(t *testing.T) {
+	fmt, err := parsePubSubFormatArg(map[string]interface{}{"--json": true})
+	assert.Nil(t, err)
+	assert.Equal(t, "json", fmt)
+}
+
+func TestParsePubSubFormatArgRaisesErrorForInvalidOption(t *testing.T) {
+	_, err := parsePubSubFormatArg(map[string]interface{}{"--format": "invalid"})
+	assert.NotNil(t, err)
+}
+
 func TestCliTapSingleUriFromEnv(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	os.Setenv(key, "URI")
@@ -110,7 +133,7 @@ func TestCliTapWithMultipleUris(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliInsecureLongOpt(t *testing.T) {
+func TestCliInsecureLongOptInTapCommand(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=broker", "exchange:binding",
 			"--insecure"})
@@ -129,7 +152,7 @@ func TestCliInsecureLongOpt(t *testing.T) {
 
 func TestCliVerboseOpt(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"tap", "--uri=broker", "exchange:binding", "-v", "--json"})
+		[]string{"tap", "--uri=broker", "exchange:binding", "-v"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(args.TapConfig))
@@ -138,7 +161,6 @@ func TestCliVerboseOpt(t *testing.T) {
 	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
 	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
 	assert.Equal(t, "binding", args.TapConfig[0].Exchanges[0].BindingKey)
-	assert.Equal(t, "json", args.Format)
 	assert.Nil(t, args.SaveDir)
 	assert.True(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
@@ -157,7 +179,7 @@ func TestCliInfoCmd(t *testing.T) {
 	assert.False(t, args.ShowStats)
 	assert.False(t, args.ShowConsumers)
 	assert.Equal(t, "byExchange", args.InfoMode)
-	assert.Equal(t, "text", args.InfoFormat)
+	assert.Equal(t, "text", args.Format)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
 	assert.False(t, args.OmitEmptyExchanges)
@@ -178,7 +200,7 @@ func TestCliInfoCmdOutputAsDotFile(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, InfoCmd, args.Cmd)
-	assert.Equal(t, "dot", args.InfoFormat)
+	assert.Equal(t, "dot", args.Format)
 }
 
 func TestCliInfoCmdFailsWithInvalidMode(t *testing.T) {
@@ -251,7 +273,6 @@ func TestCliPubCmdFromFile(t *testing.T) {
 	assert.Equal(t, "exchange", args.PubExchange)
 	assert.Equal(t, "file", *args.PubFile)
 	assert.Equal(t, "key", args.PubRoutingKey)
-	assert.Equal(t, "raw", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
@@ -277,7 +298,21 @@ func TestCliPubCmdMissingUri(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestCliPubCmdFromStdinWithRoutingKey(t *testing.T) {
+func TestCliPubCmdFromStdinWithRoutingKeyJsonFormat(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--format=json"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, PubCmd, args.Cmd)
+	assert.Equal(t, "broker1", args.AmqpURI)
+	assert.Equal(t, "exchange1", args.PubExchange)
+	assert.Nil(t, args.PubFile)
+	assert.Equal(t, "json", args.Format)
+	assert.False(t, args.Verbose)
+	assert.False(t, args.InsecureTLS)
+}
+
+func TestCliPubCmdFromStdinWithRoutingKeyJsonFormatDeprecated(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--json"})
 

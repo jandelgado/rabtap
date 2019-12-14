@@ -59,7 +59,7 @@ func startCmdInfo(args CommandLineArgs, title string) {
 			QueueFilter:         queueFilter,
 			OmitEmptyExchanges:  args.OmitEmptyExchanges},
 		renderConfig: BrokerInfoRendererConfig{
-			Format:    args.InfoFormat,
+			Format:    args.Format,
 			ShowStats: args.ShowStats,
 			NoColor:   args.NoColor},
 		out: NewColorableWriter(os.Stdout)})

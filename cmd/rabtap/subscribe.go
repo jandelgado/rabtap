@@ -117,8 +117,14 @@ func createMessageReceiveFunc(out io.Writer, opts MessageReceiveFuncOptions) (Me
 	saveFunc := NullMessageReceiveFunc
 
 	switch opts.format {
+	case "json-nopp":
+		fallthrough
 	case "json":
-		printFunc = createMessageReceiveFuncJSON(out, JSONMarshalIndent)
+		if opts.format == "json" {
+			printFunc = createMessageReceiveFuncJSON(out, JSONMarshalIndent)
+		} else {
+			printFunc = createMessageReceiveFuncJSON(out, JSONMarshal)
+		}
 		if opts.optSaveDir != nil {
 			saveFunc = createMessageReceiveFuncWriteToJSONFile(*opts.optSaveDir, JSONMarshalIndent)
 		}

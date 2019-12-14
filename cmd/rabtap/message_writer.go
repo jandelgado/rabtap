@@ -56,7 +56,6 @@ func CreateTimestampFilename(t time.Time) string {
 // NewRabtapPersistentMessage creates RabtapPersistentMessage object
 // from a rabtap.TapMessage
 func NewRabtapPersistentMessage(message rabtap.TapMessage) RabtapPersistentMessage {
-
 	m := message.AmqpMessage
 	return RabtapPersistentMessage{
 		Headers:                  m.Headers,
@@ -116,7 +115,8 @@ func WriteMessage(out io.Writer, message rabtap.TapMessage, marshaller marshalFu
 	if err != nil {
 		return err
 	}
-	_, err = out.Write(data)
+	nl := []byte("\n")
+	_, err = out.Write(append(data, nl...))
 	return err
 }
 

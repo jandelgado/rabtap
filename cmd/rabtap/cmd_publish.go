@@ -67,6 +67,8 @@ func readNextMessageFromJSONStream(decoder *json.Decoder) (amqp.Publishing, bool
 // the given reader in JSON or raw-format
 func createMessageReaderFunc(format string, reader io.ReadCloser) (MessageReaderFunc, error) {
 	switch format {
+	case "json-nopp":
+		fallthrough
 	case "json":
 		decoder := json.NewDecoder(reader)
 		return func() (amqp.Publishing, bool, error) {

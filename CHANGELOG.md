@@ -1,6 +1,14 @@
 
 # Changelog for rabtap
 
+## v1.21 (2019-12-14)
+
+* new option: `--format FORMAT` which controls output format in `tap`, 
+ `subscribe` commands. `--format json` is equivalent to `--json`, which is
+  now deprecated.
+* new format: `--format json-nopp` wich is not-pretty-printed JSON
+* new options for commands `tap` and `subscribe`: 
+
 ## v1.20 (2019-08-30)
 
 * fix: avoid blocking write during tap, subscribe which can lead to ctrl+c

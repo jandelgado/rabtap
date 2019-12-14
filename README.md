@@ -23,6 +23,7 @@ and exchanges, inspect broker.
 * [Usage](#usage)
     * [Basic commands](#basic-commands)
     * [Broker URI specification](#broker-uri-specification)
+    * [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
     * [Environment variables](#environment-variables)
         * [Default RabbitMQ broker](#default-rabbitmq-broker)
         * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
@@ -32,8 +33,8 @@ and exchanges, inspect broker.
         * [Wire-tapping messages](#wire-tapping-messages)
             * [Connect to multiple brokers](#connect-to-multiple-brokers)
             * [Message recorder](#message-recorder)
-        * [Publish messages](#publish-messages)
         * [Messages consumer (subscribe)](#messages-consumer-subscribe)
+        * [Publish messages](#publish-messages)
         * [Poor mans shovel](#poor-mans-shovel)
         * [Close connection](#close-connection)
         * [Queue commands](#queue-commands)
@@ -120,89 +121,6 @@ compile from source.
 ## Usage
 
 ```
-rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
-
-Usage:
-  rabtap -h|--help
-  rabtap tap EXCHANGES [--uri URI] [--saveto DIR] [-jknv]
-  rabtap (tap --uri URI EXCHANGES)... [--saveto DIR] [-jknv]
-  rabtap info [--api APIURI] [--consumers] [--stats]
-              [--filter EXPR] [--omit-empty] [--show-default]
-              [--mode MODE] [--format FORMAT] [-knv]
-  rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
-  rabtap sub QUEUE [--uri URI] [--saveto DIR] [--no-auto-ack] [-jkvn]
-  rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
-  rabtap exchange rm EXCHANGE [--uri URI] [-kv]
-  rabtap queue create QUEUE [--uri URI] [-adkv]
-  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
-  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
-  rabtap queue rm QUEUE [--uri URI] [-kv]
-  rabtap queue purge QUEUE [--uri URI] [-kv]
-  rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
-  rabtap --version
-
-Options:
- EXCHANGES            comma-separated list of exchanges and binding keys,
-                      e.g. amq.topic:# or exchange1:key1,exchange2:key2.
- EXCHANGE             name of an exchange, e.g. amq.direct.
- FILE                 file to publish in pub mode. If omitted, stdin will
-                      be read.
- QUEUE                name of a queue.
- CONNECTION           name of a connection.
- -a, --autodelete     create auto delete exchange/queue.
- --api APIURI         connect to given API server. If APIURI is omitted,
-                      the environment variable RABTAP_APIURI will be used.
- -b, --bindingkey KEY binding key to use in bind queue command.
- --by-connection      output of info command starts with connections.
- --consumers          include consumers and connections in output of info command.
- -d, --durable        create durable exchange/queue.
- --filter EXPR        Predicate for info command to filter queues [default: true]
-                      (see README.md for details)
- -h, --help           print this help.
- -j, --json           print/save/publish message metadata and body to a
-                      single JSON file. JSON body is base64 encoded. Otherwise
-                      metadata and body (as-is) are saved separately.
- -k, --insecure       allow insecure TLS connections (no certificate check).
- --mode=MODE          mode for info command. One of "byConnection", "byExchange".
-                      [default: byExchange]
- -n, --no-color       don't colorize output (also environment variable NO_COLOR)
- --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
-                      unacked messages on the broker which will be requeued
-                      when the channel is closed.
- -o, --omit-empty     don't show echanges without bindings in info command.
- --format=FORMAT      output format for info command. One of "text", "dot".
-                      [default: text]
- --reason=REASON      reason why the connection was closed
-                      [default: closed by rabtap].
- -r, --routingkey KEY routing key to use in publish mode.
- --saveto DIR         also save messages and metadata to DIR.
- --show-default       include default exchange in output info command.
- --stats              include statistics in output of info command.
- -t, --type TYPE      exchange type [default: fanout].
- --uri URI            connect to given AQMP broker. If omitted, the
-                      environment variable RABTAP_AMQPURI will be used.
- -v, --verbose        enable verbose mode.
- --version            show version information and exit.
-
-Examples:
-  rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
-  rabtap tap --uri amqp://guest:guest@localhost/ amq.topic:#,amq.fanout:
-  rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
-  rabtap info --api http://guest:guest@localhost:15672/api
-
-  # use RABTAP_AMQPURI environment variable to specify broker instead of --uri
-  export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
-  rabtap queue create JDQ
-  rabtap queue bind JDQ to amq.topic --bindingkey=key
-  echo "Hello" | rabtap pub amq.topic --routingkey "key"
-  rabtap sub JDQ
-  rabtap queue rm JDQ
-
-  # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
-  export RABTAP_APIURI=http://guest:guest@localhost:15672/api
-  rabtap info
-  rabtap info --filter "binding.Source == 'amq.topic'" -o
-  rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 ```
 
 ### Basic commands
@@ -243,6 +161,24 @@ Examples:
 Note that according to [RFC3986](https://tools.ietf.org/html/rfc3986) it might be 
 necessary to escape certain characters like e.g. `?` (%3F) or `#` (%23) as otherwise 
 parsing of the URI may fail with an error.
+
+### Format specification for tap and sub command
+
+The `--format FORMAT` option controls the output of the `tap` and `sub`
+commands when writing messages to the console and optionally to the filesystem
+(i.e.  when `--saveto` is set).
+
+The `FORMAT` has the following effect on the output:
+
+| `FORMAT`        | Format on console                            | Format of saved messages (`--saveto DIR`)    |
+|-----------------|----------------------------------------------|----------------------------------------------|
+| `raw` (default) | Pretty-printed metadata + raw Message body   | Metadata as JSON-File + Body as-is           |
+| `json`          | Pretty-printed JSON wiht base64 encoded body | Pretty-printed JSON with base64 encoded body |
+| `json-nopp`     | Single line JSON wiht base64 encoded body    | Pretty-printed JSON with base64 encoded body |
+
+Notes: 
+* the `--json` option is now deprecated. Use `--format json` instead
+* `nopp` stands for `no pretty-print`
 
 ### Environment variables
 
@@ -358,27 +294,16 @@ the `amq.fanout` exchange on `broker2`.
 All tapped messages can be also be saved for later analysis or replay. Rabtap
 supports saving of messages in two formats: raw body and metadata in separate
 files or [JSON message format](#json-message-format) with embedded metadata and
-message the body base64 encoded (`--json` option). Examples:
+message the body base64 encode. Examples:
 
 * `$ rabtap tap amq.topic:# --saveto /tmp` - saves messages as pair of
   files consisting of raw message body and JSON meta data file to `/tmp`
   directory.
-* `$ rabtap tap amq.topic:# --saveto /tmp --json` - saves messages as JSON
-  files to `/tmp` directory.
+* `$ rabtap tap amq.topic:# --saveto /tmp --format json` - saves messages as 
+  JSON files to `/tmp` directory.
 
 Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` +
-`<extension>`.
-
-#### Publish messages
-
-The `pub` command allows to send messages to an exchange, specifying a
-routing key.
-
-* `$ rabtap pub amq.direct -r routingKey message.json --json`  - publish
-  message(s) in JSON format to exchange `amq.direct` with routing key
-  `routingKey`.
-* `$ rabtap pub amqp.direct -r routingKey --json < message.json` - same
-  as above, but read message(s) from stdin.
+`<extension>`. 
 
 #### Messages consumer (subscribe)
 
@@ -386,26 +311,41 @@ The `sub` command reads messages from a queue.  Note that unlike `tap`, `sub`
 will consume messages that are in effect removed from the specified queue.
 Example:
 
-* `$ rabtap sub somequeue -j`
+* `$ rabtap sub somequeue --format json`
 
 Will consume messages from queue `somequeue` and print out messages in JSON
-format (`-j`). Example assumes that `RABTAP_AMQPURI` environment variable is
-set.
+format (this is equivalent to using the now deprecated `--json` option). The
+Example assumes that `RABTAP_AMQPURI` environment variable is set, as the 
+`--uri AMQPURI` parameter is omitted.
 
+#### Publish messages
+
+The `pub` command is used to publish messages to an exchange with a routing
+key.  Messages can be published either in raw format, in which they are send
+as-is, or in [JSON-format, as described here](#json-message-format), which
+includes message metadata and the body in a single JSON document.
+
+* `$ echo hello | rabtap pub amq.fanout` - publish "hello" to 
+  exchange amqp.fanout
+* `$ rabtap pub amq.direct -r routingKey message.json --format json`  - publish
+  message(s) in JSON format to exchange `amq.direct` with routing key
+  `routingKey`.
+* `$ rabtap pub amq.direct -r routingKey --json < message.json` - same
+  as above, but read message(s) from stdin.
 
 #### Poor mans shovel
 
 Rabtap instances can be connected through a pipe and messages will be read on
 one side and published to the other. Note that for publish to work in streaming
-mode, the JSON mode (`--json`) must be used on both sides, so that messages are
-encapsulated in JSON messages.
+mode, the JSON mode (`--format json`) must be used on both sides, so that
+messages are encapsulated in JSON messages.
 
 The example taps messages on `broker1` and publishes the messages to the
 `amq.direct` exchange on `broker2`
 
 ```console
-$ rabtap tap --uri amqp://broker1 my-topic-exchange:# --json | \
-  rabtap pub --uri amqp://broker2 amq.direct -r routingKey --json
+$ rabtap tap --uri amqp://broker1 my-topic-exchange:# --format json | \
+  rabtap pub --uri amqp://broker2 amq.direct -r routingKey --format json
 ```
 
 #### Close connection
@@ -475,7 +415,7 @@ $ rabtap queue purge myqueue
 
 ## JSON message format
 
-When using the `--json` option, messages are print/read as a stream of JSON
+When using the `--format json` option, messages are print/read as a stream of JSON
 messages in the following format:
 
 ```json
@@ -503,7 +443,7 @@ messages in the following format:
 ...
 ```
 
-Note that in JSON mode, the `Body` is base64 encoded.
+Note that in JSON mode, the `Body` is base64 encoded. 
 
 ## Filtering output of info command
 

@@ -34,6 +34,21 @@ var testMessage = &amqp.Delivery{
 	Body:            []byte("simple test message."),
 }
 
+func TestJSONMarshalIndentMarshalsToIndentedJSON(t *testing.T) {
+	data, err := JSONMarshalIndent(map[string]string{"Test": "ABC"})
+	assert.Nil(t, err)
+	assert.Equal(t, `{
+  "Test": "ABC"
+}`, string(data))
+
+}
+
+func TestJSONMarshalMarshalsToSingleLineJSON(t *testing.T) {
+	data, err := JSONMarshal(map[string]string{"Test": "ABC"})
+	assert.Nil(t, err)
+	assert.Equal(t, `{"Test":"ABC"}`, string(data))
+}
+
 // TestSaveMessageToFiles tests the SaveMessagesToFiles() function by
 // writing to and reading from temporary files.
 func TestSaveMessageToRawFile(t *testing.T) {
@@ -45,7 +60,7 @@ func TestSaveMessageToRawFile(t *testing.T) {
 	// testdir.
 	basename := filepath.Join(testdir, "test")
 	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
-	err = SaveMessageToRawFile(basename, rabtap.NewTapMessage(testMessage, createdTs))
+	err = SaveMessageToRawFiles(basename, rabtap.NewTapMessage(testMessage, createdTs), JSONMarshalIndent)
 	assert.Nil(t, err)
 
 	// check contents of message body .dat file
@@ -74,7 +89,7 @@ func TestSaveMessageToRawFile(t *testing.T) {
 func TestSaveMessageToFilesToInvalidDir(t *testing.T) {
 	// use nonexisting path
 	filename := filepath.Join("/thispathshouldnotexist", "test")
-	err := SaveMessageToRawFile(filename, rabtap.NewTapMessage(testMessage, time.Now()))
+	err := SaveMessageToRawFiles(filename, rabtap.NewTapMessage(testMessage, time.Now()), JSONMarshalIndent)
 	assert.NotNil(t, err)
 }
 
@@ -87,11 +102,12 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 
 	filename := filepath.Join(testdir, "test")
 	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
-	err = SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, createdTs))
+	err = SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, createdTs), JSONMarshalIndent)
 	assert.Nil(t, err)
 
 	contents, err := ioutil.ReadFile(filename)
 	assert.Nil(t, err)
+
 	// deserialize from .json file
 	var jsonActual RabtapPersistentMessage
 	err = json.Unmarshal(contents, &jsonActual)
@@ -108,7 +124,7 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 func TestSaveMessageToFileToInvalidDir(t *testing.T) {
 	// use nonexisting path
 	filename := filepath.Join("/thispathshouldnotexist", "test")
-	err := SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, time.Now()))
+	err := SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, time.Now()), JSONMarshalIndent)
 	assert.NotNil(t, err)
 }
 
@@ -118,11 +134,13 @@ func TestCreateTimestampFilename(t *testing.T) {
 	assert.Equal(t, "2009-11-10T23_01_02.000000003Z", filename)
 }
 
-func ExampleWriteMessageJSON() {
+func ExampleWriteMessage() {
 
 	// serialize with message body, Body will be base64 encoded.
 	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
-	err := WriteMessageJSON(os.Stdout, rabtap.NewTapMessage(testMessage, createdTs))
+	err := WriteMessage(os.Stdout,
+		rabtap.NewTapMessage(testMessage, createdTs),
+		JSONMarshalIndent)
 	if err != nil {
 		log.Fatal(err)
 	}

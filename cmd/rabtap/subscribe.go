@@ -56,44 +56,79 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 	}
 }
 
-// createMessageReceiveFuncJSON returns a function that processes received
-// messages as JSON messages
-// TODO make testable (filename creation) and write test
-func createMessageReceiveFuncJSON(out io.Writer, opts MessageReceiveFuncOptions) MessageReceiveFunc {
+// NullMessageReceiveFunc is used a sentinel to terminal a chain of
+// MessageReceiveFuncs
+func NullMessageReceiveFunc(rabtap.TapMessage) error {
+	return nil
+}
+
+func chainedMessageReceiveFunc(first MessageReceiveFunc, second MessageReceiveFunc) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
-		err := WriteMessageJSON(out, message)
-		if err != nil || opts.optSaveDir == nil {
+		if err := first(message); err != nil {
 			return err
 		}
-		filename := path.Join(*opts.optSaveDir,
-			fmt.Sprintf("rabtap-%d.json", time.Now().UnixNano()))
-		return SaveMessageToJSONFile(filename, message)
+		return second(message)
 	}
 }
 
-// createMessageReceiveFuncRaw returns a function that processes received
-// messages as "raw" messages
+// createMessageReceiveFuncWriteToJSONFile return receive func that writes the
+// message and metadata to separate files in the provided directory using the
+// provided marshaller.
 // TODO make testable (filename creation) and write test
-func createMessageReceiveFuncRaw(out io.Writer, opts MessageReceiveFuncOptions) MessageReceiveFunc {
-
+func createMessageReceiveFuncWriteToRawFiles(dir string, marshaller marshalFunc) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
-		err := PrettyPrintMessage(out, message, opts.noColor)
-		if err != nil || opts.optSaveDir == nil {
-			return err
-		}
-		basename := path.Join(*opts.optSaveDir,
+		basename := path.Join(dir,
 			fmt.Sprintf("rabtap-%d", time.Now().UnixNano()))
-		return SaveMessageToRawFile(basename, message)
+		return SaveMessageToRawFiles(basename, message, marshaller)
+	}
+}
+
+// createMessageReceiveFuncWriteToJSONFile return receive func that writes the
+// message to a file in the provided directory using the provided marshaller.
+// TODO make testable (filename creation) and write test
+func createMessageReceiveFuncWriteToJSONFile(dir string, marshaller marshalFunc) MessageReceiveFunc {
+	return func(message rabtap.TapMessage) error {
+		filename := path.Join(dir,
+			fmt.Sprintf("rabtap-%d.json", time.Now().UnixNano()))
+		return SaveMessageToJSONFile(filename, message, marshaller)
+	}
+}
+
+// createMessageReceiveFuncJSON returns a function that prints messages as
+// JSON to the provided writer
+// messages as JSON messages
+func createMessageReceiveFuncJSON(out io.Writer, marshaller marshalFunc) MessageReceiveFunc {
+	return func(message rabtap.TapMessage) error {
+		return WriteMessage(out, message, marshaller)
+	}
+}
+
+// createMessageReceiveFuncPrettyPrint returns a function that pretty prints
+// received messaged to the provided writer
+func createMessageReceiveFuncPrettyPrint(out io.Writer, noColor bool) MessageReceiveFunc {
+	return func(message rabtap.TapMessage) error {
+		return PrettyPrintMessage(out, message, noColor)
 	}
 }
 
 func createMessageReceiveFunc(out io.Writer, opts MessageReceiveFuncOptions) (MessageReceiveFunc, error) {
 
+	var printFunc MessageReceiveFunc
+	saveFunc := NullMessageReceiveFunc
+
 	switch opts.format {
 	case "json":
-		return createMessageReceiveFuncJSON(out, opts), nil
+		printFunc = createMessageReceiveFuncJSON(out, JSONMarshalIndent)
+		if opts.optSaveDir != nil {
+			saveFunc = createMessageReceiveFuncWriteToJSONFile(*opts.optSaveDir, JSONMarshalIndent)
+		}
 	case "raw":
-		return createMessageReceiveFuncRaw(out, opts), nil
+		printFunc = createMessageReceiveFuncPrettyPrint(out, opts.noColor)
+		if opts.optSaveDir != nil {
+			saveFunc = createMessageReceiveFuncWriteToRawFiles(*opts.optSaveDir, JSONMarshalIndent)
+		}
+	default:
+		return nil, fmt.Errorf("invalid format %s", opts.format)
 	}
-	return nil, fmt.Errorf("invalid format %s", opts.format)
+	return chainedMessageReceiveFunc(printFunc, saveFunc), nil
 }

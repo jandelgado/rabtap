@@ -22,7 +22,7 @@ func TestCreateMessageReceiveFuncReturnsErrorWithInvalidFormat(t *testing.T) {
 
 	var b bytes.Buffer
 	opts := MessageReceiveFuncOptions{
-		format:     "invalud",
+		format:     "invalid",
 		optSaveDir: &testDir,
 		noColor:    false,
 	}
@@ -45,11 +45,13 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
-	_ = rcvFunc(message)
+	err = rcvFunc(message)
+	assert.Nil(t, err)
 
 	assert.True(t, strings.Contains(b.String(), "Testmessage"))
 
-	// TODO make created filename predicatable and check written file
+	// TODO make contents of created filename predicatable (Timestamp, Name)
+	//      and check written file
 }
 
 func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
@@ -67,11 +69,13 @@ func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
 	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
-	_ = rcvFunc(message)
+	err = rcvFunc(message)
+	assert.Nil(t, err)
 
 	assert.True(t, strings.Contains(b.String(), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))
 
-	// TODO make created filename predicatable and check written file
+	// TODO make contents of created filename predicatable (Timestamp, Name)
+	//      and check written file
 }
 
 func TestMessageReceiveLoop(t *testing.T) {

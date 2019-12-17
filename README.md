@@ -240,6 +240,10 @@ Examples:
 * `amqps://guest:guest@my-broker.dev:5671/`
 * `amqps://guest:guest@my-broker.dev:5671/vhost`
 
+Note that according to [RFC3986](https://tools.ietf.org/html/rfc3986) it might be 
+necessary to escape certain characters like e.g. `?` (%3F) or `#` (%23) as otherwise 
+parsing of the URI may fail with an error.
+
 ### Environment variables
 
 Use environment variables to specify standard values for broker and api endpoint.

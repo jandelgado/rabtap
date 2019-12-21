@@ -22,11 +22,13 @@ func TestCreateMessageReceiveFuncReturnsErrorWithInvalidFormat(t *testing.T) {
 
 	var b bytes.Buffer
 	opts := MessageReceiveFuncOptions{
+		out:        &b,
 		format:     "invalid",
 		optSaveDir: &testDir,
 		noColor:    false,
+		silent:     false,
 	}
-	_, err := createMessageReceiveFunc(&b, opts)
+	_, err := createMessageReceiveFunc(opts)
 	assert.NotNil(t, err)
 }
 
@@ -37,11 +39,13 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 
 	var b bytes.Buffer
 	opts := MessageReceiveFuncOptions{
+		out:        &b,
 		format:     "raw",
 		optSaveDir: &testDir,
 		noColor:    false,
+		silent:     false,
 	}
-	rcvFunc, err := createMessageReceiveFunc(&b, opts)
+	rcvFunc, err := createMessageReceiveFunc(opts)
 	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
@@ -54,6 +58,25 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 	//      and check written file
 }
 
+func TestCreateMessageReceiveFuncWritesNothingWhenSilentOptionIsSet(t *testing.T) {
+	var b bytes.Buffer
+	opts := MessageReceiveFuncOptions{
+		out:        &b,
+		format:     "raw",
+		optSaveDir: nil,
+		noColor:    false,
+		silent:     true,
+	}
+	rcvFunc, err := createMessageReceiveFunc(opts)
+	assert.Nil(t, err)
+	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
+
+	err = rcvFunc(message)
+	assert.Nil(t, err)
+
+	assert.Equal(t, b.String(), "")
+}
+
 func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
 	testDir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
@@ -61,11 +84,13 @@ func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
 
 	var b bytes.Buffer
 	opts := MessageReceiveFuncOptions{
+		out:        &b,
 		format:     "json",
 		optSaveDir: &testDir,
 		noColor:    false,
+		silent:     false,
 	}
-	rcvFunc, err := createMessageReceiveFunc(&b, opts)
+	rcvFunc, err := createMessageReceiveFunc(opts)
 	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 

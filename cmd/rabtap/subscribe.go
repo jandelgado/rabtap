@@ -15,8 +15,10 @@ import (
 )
 
 type MessageReceiveFuncOptions struct {
-	format     string // currently: raw, json
+	out        io.Writer
+	format     string // currently: raw, json, json-nopp
 	noColor    bool
+	silent     bool
 	optSaveDir *string
 }
 
@@ -111,30 +113,50 @@ func createMessageReceiveFuncPrettyPrint(out io.Writer, noColor bool) MessageRec
 	}
 }
 
-func createMessageReceiveFunc(out io.Writer, opts MessageReceiveFuncOptions) (MessageReceiveFunc, error) {
+func createMessageReceivePrintFunc(format string, out io.Writer, noColor bool, silent bool) (MessageReceiveFunc, error) {
+	if silent {
+		return NullMessageReceiveFunc, nil
+	}
 
-	var printFunc MessageReceiveFunc
-	saveFunc := NullMessageReceiveFunc
+	switch format {
+	case "json-nopp":
+		return createMessageReceiveFuncJSON(out, JSONMarshal), nil
+	case "json":
+		return createMessageReceiveFuncJSON(out, JSONMarshalIndent), nil
+	case "raw":
+		return createMessageReceiveFuncPrettyPrint(out, noColor), nil
+	default:
+		return nil, fmt.Errorf("invalid format %s", format)
+	}
+}
 
-	switch opts.format {
+func createMessageReceiveSaveFunc(format string, optSaveDir *string) (MessageReceiveFunc, error) {
+	if optSaveDir == nil {
+		return NullMessageReceiveFunc, nil
+	}
+
+	switch format {
 	case "json-nopp":
 		fallthrough
 	case "json":
-		if opts.format == "json" {
-			printFunc = createMessageReceiveFuncJSON(out, JSONMarshalIndent)
-		} else {
-			printFunc = createMessageReceiveFuncJSON(out, JSONMarshal)
-		}
-		if opts.optSaveDir != nil {
-			saveFunc = createMessageReceiveFuncWriteToJSONFile(*opts.optSaveDir, JSONMarshalIndent)
-		}
+		return createMessageReceiveFuncWriteToJSONFile(*optSaveDir, JSONMarshalIndent), nil
 	case "raw":
-		printFunc = createMessageReceiveFuncPrettyPrint(out, opts.noColor)
-		if opts.optSaveDir != nil {
-			saveFunc = createMessageReceiveFuncWriteToRawFiles(*opts.optSaveDir, JSONMarshalIndent)
-		}
+		return createMessageReceiveFuncWriteToRawFiles(*optSaveDir, JSONMarshalIndent), nil
 	default:
-		return nil, fmt.Errorf("invalid format %s", opts.format)
+		return nil, fmt.Errorf("invalid format %s", format)
 	}
-	return chainedMessageReceiveFunc(printFunc, saveFunc), nil
+}
+
+// createMessageReceiveFunc returns a MessageReceiveFunc which is invoked on
+// receival of a message during tap and subscribe. Depending on the options
+// set, function that optionally prints to the proviced io.Writer and
+// optionally to the provided directory is returned.
+func createMessageReceiveFunc(opts MessageReceiveFuncOptions) (MessageReceiveFunc, error) {
+
+	printFunc, err := createMessageReceivePrintFunc(opts.format, opts.out, opts.noColor, opts.silent)
+	if err != nil {
+		return printFunc, err
+	}
+	saveFunc, err := createMessageReceiveSaveFunc(opts.format, opts.optSaveDir)
+	return chainedMessageReceiveFunc(printFunc, saveFunc), err
 }

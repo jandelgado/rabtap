@@ -86,12 +86,13 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 
 func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	opts := MessageReceiveFuncOptions{
+		out:        NewColorableWriter(os.Stdout),
 		noColor:    args.NoColor,
 		format:     args.Format,
+		silent:     args.Silent,
 		optSaveDir: args.SaveDir,
 	}
-	messageReceiveFunc, err := createMessageReceiveFunc(
-		NewColorableWriter(os.Stdout), opts)
+	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 	err = cmdSubscribe(ctx, CmdSubscribeArg{
 		amqpURI:            args.AmqpURI,
@@ -104,12 +105,13 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	opts := MessageReceiveFuncOptions{
+		out:        NewColorableWriter(os.Stdout),
 		noColor:    args.NoColor,
 		format:     args.Format,
+		silent:     args.Silent,
 		optSaveDir: args.SaveDir,
 	}
-	messageReceiveFunc, err := createMessageReceiveFunc(
-		NewColorableWriter(os.Stdout), opts)
+	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS),
 		messageReceiveFunc)

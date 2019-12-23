@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -16,6 +17,35 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestChainMessageReceiveFuncCallsBothFunctions(t *testing.T) {
+	firstCalled := false
+	secondCalled := false
+	first := func(_ rabtap.TapMessage) error { firstCalled = true; return nil }
+	second := func(_ rabtap.TapMessage) error { secondCalled = true; return nil }
+
+	chained := chainedMessageReceiveFunc(first, second)
+	err := chained(rabtap.TapMessage{})
+
+	assert.Nil(t, err)
+	assert.True(t, firstCalled)
+	assert.True(t, secondCalled)
+}
+
+func TestChainMessageReceiveFuncDoesNotCallSecondOnErrorOnFirst(t *testing.T) {
+	firstCalled := false
+	secondCalled := false
+	expectedErr := errors.New("first failed")
+	first := func(_ rabtap.TapMessage) error { firstCalled = true; return expectedErr }
+	second := func(_ rabtap.TapMessage) error { secondCalled = true; return nil }
+
+	chained := chainedMessageReceiveFunc(first, second)
+	err := chained(rabtap.TapMessage{})
+
+	assert.Equal(t, expectedErr, err)
+	assert.True(t, firstCalled)
+	assert.False(t, secondCalled)
+}
 
 func TestCreateMessageReceiveFuncReturnsErrorWithInvalidFormat(t *testing.T) {
 	testDir := "test"

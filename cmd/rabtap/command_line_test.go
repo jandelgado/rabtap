@@ -44,6 +44,11 @@ func TestParseAmqpURIUseEnvironment(t *testing.T) {
 	assert.Equal(t, "URI", uri)
 }
 
+func TestParseCommandLineArgsFailsWithInvalidSpec(t *testing.T) {
+	_, err := parseCommandLineArgsWithSpec("invalid spec", []string{"invalid"})
+	assert.NotNil(t, err)
+}
+
 func TestCliTapSingleUri(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=broker1", "exchange1:binding1"})

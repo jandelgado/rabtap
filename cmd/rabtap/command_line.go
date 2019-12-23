@@ -180,11 +180,7 @@ func getAmqpURI(amqpURIs []string, i int) string {
 	if i >= len(amqpURIs) {
 		return os.Getenv("RABTAP_AMQPURI")
 	}
-	amqpURI := amqpURIs[i]
-	if amqpURI == "" {
-		return os.Getenv("RABTAP_AMQPURI")
-	}
-	return amqpURI
+	return amqpURIs[i]
 }
 
 func parseAmqpURI(args map[string]interface{}) (string, error) {
@@ -421,10 +417,8 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
-// ParseCommandLineArgs parses command line arguments into an object of
-// type CommandLineArgs.
-func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
-	args, err := docopt.ParseArgs(usage, cliArgs, RabtapAppVersion)
+func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArgs, error) {
+	args, err := docopt.ParseArgs(spec, cliArgs, RabtapAppVersion)
 	if err != nil {
 		return CommandLineArgs{}, err
 	}
@@ -445,4 +439,10 @@ func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
 		return parseConnCmdArgs(args)
 	}
 	return CommandLineArgs{}, fmt.Errorf("command missing")
+}
+
+// ParseCommandLineArgs parses command line arguments into an object of
+// type CommandLineArgs.
+func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
+	return parseCommandLineArgsWithSpec(usage, cliArgs)
 }

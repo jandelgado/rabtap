@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"time"
 
 	//"net/http"
 	//_ "net/http/pprof"
@@ -38,6 +39,12 @@ func failOnError(err error, msg string, exitFunc func(int)) {
 		log.Errorf("%s: %s", msg, err)
 		exitFunc(1)
 	}
+}
+
+// defaultFilenameProvider returns the default filename to use when messages
+// are saved to files during tap or subscribe.
+func defaultFilenameProvider() string {
+	return fmt.Sprintf("rabtap-%d.json", time.Now().UnixNano())
 }
 
 func getTLSConfig(insecureTLS bool) *tls.Config {
@@ -86,11 +93,12 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 
 func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	opts := MessageReceiveFuncOptions{
-		out:        NewColorableWriter(os.Stdout),
-		noColor:    args.NoColor,
-		format:     args.Format,
-		silent:     args.Silent,
-		optSaveDir: args.SaveDir,
+		out:              NewColorableWriter(os.Stdout),
+		noColor:          args.NoColor,
+		format:           args.Format,
+		silent:           args.Silent,
+		optSaveDir:       args.SaveDir,
+		filenameProvider: defaultFilenameProvider,
 	}
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
@@ -105,11 +113,12 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	opts := MessageReceiveFuncOptions{
-		out:        NewColorableWriter(os.Stdout),
-		noColor:    args.NoColor,
-		format:     args.Format,
-		silent:     args.Silent,
-		optSaveDir: args.SaveDir,
+		out:              NewColorableWriter(os.Stdout),
+		noColor:          args.NoColor,
+		format:           args.Format,
+		silent:           args.Silent,
+		optSaveDir:       args.SaveDir,
+		filenameProvider: defaultFilenameProvider,
 	}
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)

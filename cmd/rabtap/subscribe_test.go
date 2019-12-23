@@ -1,13 +1,17 @@
-// Copyright (C) 2017 Jan Delgado
+// test for the message subscriber
+// TODO cleaner separation between component and unit test
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -48,15 +52,8 @@ func TestChainMessageReceiveFuncDoesNotCallSecondOnErrorOnFirst(t *testing.T) {
 }
 
 func TestCreateMessageReceiveFuncReturnsErrorWithInvalidFormat(t *testing.T) {
-	testDir := "test"
-
-	var b bytes.Buffer
 	opts := MessageReceiveFuncOptions{
-		out:        &b,
-		format:     "invalid",
-		optSaveDir: &testDir,
-		noColor:    false,
-		silent:     false,
+		format: "invalid",
 	}
 	_, err := createMessageReceiveFunc(opts)
 	assert.NotNil(t, err)
@@ -69,11 +66,12 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 
 	var b bytes.Buffer
 	opts := MessageReceiveFuncOptions{
-		out:        &b,
-		format:     "raw",
-		optSaveDir: &testDir,
-		noColor:    false,
-		silent:     false,
+		out:              &b,
+		format:           "raw",
+		optSaveDir:       &testDir,
+		noColor:          false,
+		silent:           false,
+		filenameProvider: func() string { return "tapfilename" },
 	}
 	rcvFunc, err := createMessageReceiveFunc(opts)
 	assert.Nil(t, err)
@@ -84,11 +82,19 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 
 	assert.True(t, strings.Contains(b.String(), "Testmessage"))
 
-	// TODO make contents of created filename predicatable (Timestamp, Name)
-	//      and check written file
+	// check contents of written file(s)
+	contents, err := ioutil.ReadFile(path.Join(testDir, "tapfilename.dat"))
+	assert.Nil(t, err)
+	assert.Equal(t, "Testmessage", string(contents))
+
+	// TODO check contents of JSON metadata "tapfilename.json"
+	contents, err = ioutil.ReadFile(path.Join(testDir, "tapfilename.json"))
+	var metadata map[string]interface{}
+	err = json.Unmarshal(contents, &metadata)
+	assert.Nil(t, err)
 }
 
-func TestCreateMessageReceiveFuncWritesNothingWhenSilentOptionIsSet(t *testing.T) {
+func TestCreateMessageReceiveFuncPrintsNothingWhenSilentOptionIsSet(t *testing.T) {
 	var b bytes.Buffer
 	opts := MessageReceiveFuncOptions{
 		out:        &b,
@@ -107,18 +113,13 @@ func TestCreateMessageReceiveFuncWritesNothingWhenSilentOptionIsSet(t *testing.T
 	assert.Equal(t, b.String(), "")
 }
 
-func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "")
-	require.Nil(t, err)
-	defer os.RemoveAll(testDir)
-
+func TestCreateMessageReceiveFuncJSON(t *testing.T) {
 	var b bytes.Buffer
 	opts := MessageReceiveFuncOptions{
-		out:        &b,
-		format:     "json",
-		optSaveDir: &testDir,
-		noColor:    false,
-		silent:     false,
+		out:              &b,
+		format:           "json",
+		optSaveDir:       nil,
+		filenameProvider: func() string { return "tapfilename" },
 	}
 	rcvFunc, err := createMessageReceiveFunc(opts)
 	assert.Nil(t, err)
@@ -127,13 +128,44 @@ func TestCreateMessageReceiveFuncJSONToFile(t *testing.T) {
 	err = rcvFunc(message)
 	assert.Nil(t, err)
 
+	assert.True(t, strings.Count(b.String(), "\n") > 1)
 	assert.True(t, strings.Contains(b.String(), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))
 
-	// TODO make contents of created filename predicatable (Timestamp, Name)
-	//      and check written file
 }
 
-func TestMessageReceiveLoop(t *testing.T) {
+func TestCreateMessageReceiveFuncJSONNoPPToFile(t *testing.T) {
+	// message is written as json (no pretty print) to writer and
+	// as json to file.
+
+	testDir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(testDir)
+
+	var b bytes.Buffer
+	opts := MessageReceiveFuncOptions{
+		out:              &b,
+		format:           "json-nopp",
+		optSaveDir:       &testDir,
+		filenameProvider: func() string { return "tapfilename" },
+	}
+	rcvFunc, err := createMessageReceiveFunc(opts)
+	assert.Nil(t, err)
+	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
+
+	err = rcvFunc(message)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 1, strings.Count(b.String(), "\n"))
+	assert.True(t, strings.Contains(b.String(), ",\"Body\":\"VGVzdG1lc3NhZ2U=\""))
+
+	contents, err := ioutil.ReadFile(path.Join(testDir, "tapfilename.json"))
+	assert.Nil(t, err)
+	assert.True(t, strings.Count(string(contents), "\n") > 1)
+	assert.True(t, strings.Contains(string(contents), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))
+
+}
+
+func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	messageChan := make(rabtap.TapChannel)
 	done := make(chan bool)
@@ -150,4 +182,13 @@ func TestMessageReceiveLoop(t *testing.T) {
 	<-done // TODO add timeout
 	cancel()
 	assert.Equal(t, 1, received)
+}
+
+func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
+	ctx := context.Background()
+	messageChan := make(rabtap.TapChannel)
+
+	close(messageChan)
+	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc)
+	assert.Nil(t, err)
 }

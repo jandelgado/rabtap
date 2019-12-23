@@ -9,17 +9,20 @@ import (
 	"fmt"
 	"io"
 	"path"
-	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
+// FilenameProvider returns a filename to save a subscribed message to.
+type FilenameProvider func() string
+
 type MessageReceiveFuncOptions struct {
-	out        io.Writer
-	format     string // currently: raw, json, json-nopp
-	noColor    bool
-	silent     bool
-	optSaveDir *string
+	out              io.Writer
+	format           string // currently: raw, json, json-nopp
+	noColor          bool
+	silent           bool
+	optSaveDir       *string
+	filenameProvider FilenameProvider
 }
 
 // MessageReceiveFunc processes receiced messages from a tap.
@@ -76,38 +79,34 @@ func chainedMessageReceiveFunc(first MessageReceiveFunc, second MessageReceiveFu
 // createMessageReceiveFuncWriteToJSONFile return receive func that writes the
 // message and metadata to separate files in the provided directory using the
 // provided marshaller.
-// TODO make testable (filename creation) and write test
-func createMessageReceiveFuncWriteToRawFiles(dir string, marshaller marshalFunc) MessageReceiveFunc {
+func createMessageReceiveFuncWriteToRawFiles(dir string, marshaller marshalFunc, filenameProvider FilenameProvider) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
-		basename := path.Join(dir,
-			fmt.Sprintf("rabtap-%d", time.Now().UnixNano()))
+		basename := path.Join(dir, filenameProvider())
 		return SaveMessageToRawFiles(basename, message, marshaller)
 	}
 }
 
 // createMessageReceiveFuncWriteToJSONFile return receive func that writes the
 // message to a file in the provided directory using the provided marshaller.
-// TODO make testable (filename creation) and write test
-func createMessageReceiveFuncWriteToJSONFile(dir string, marshaller marshalFunc) MessageReceiveFunc {
+func createMessageReceiveFuncWriteToJSONFile(dir string, marshaller marshalFunc, filenameProvider FilenameProvider) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
-		filename := path.Join(dir,
-			fmt.Sprintf("rabtap-%d.json", time.Now().UnixNano()))
+		filename := path.Join(dir, filenameProvider()+".json")
 		return SaveMessageToJSONFile(filename, message, marshaller)
 	}
 }
 
-// createMessageReceiveFuncJSON returns a function that prints messages as
+// createMessageReceiveFuncPrintJSON returns a function that prints messages as
 // JSON to the provided writer
 // messages as JSON messages
-func createMessageReceiveFuncJSON(out io.Writer, marshaller marshalFunc) MessageReceiveFunc {
+func createMessageReceiveFuncPrintJSON(out io.Writer, marshaller marshalFunc) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
 		return WriteMessage(out, message, marshaller)
 	}
 }
 
-// createMessageReceiveFuncPrettyPrint returns a function that pretty prints
+// createMessageReceiveFuncPrintPretty returns a function that pretty prints
 // received messaged to the provided writer
-func createMessageReceiveFuncPrettyPrint(out io.Writer, noColor bool) MessageReceiveFunc {
+func createMessageReceiveFuncPrintPretty(out io.Writer, noColor bool) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
 		return PrettyPrintMessage(out, message, noColor)
 	}
@@ -120,17 +119,17 @@ func createMessageReceivePrintFunc(format string, out io.Writer, noColor bool, s
 
 	switch format {
 	case "json-nopp":
-		return createMessageReceiveFuncJSON(out, JSONMarshal), nil
+		return createMessageReceiveFuncPrintJSON(out, JSONMarshal), nil
 	case "json":
-		return createMessageReceiveFuncJSON(out, JSONMarshalIndent), nil
+		return createMessageReceiveFuncPrintJSON(out, JSONMarshalIndent), nil
 	case "raw":
-		return createMessageReceiveFuncPrettyPrint(out, noColor), nil
+		return createMessageReceiveFuncPrintPretty(out, noColor), nil
 	default:
 		return nil, fmt.Errorf("invalid format %s", format)
 	}
 }
 
-func createMessageReceiveSaveFunc(format string, optSaveDir *string) (MessageReceiveFunc, error) {
+func createMessageReceiveSaveFunc(format string, optSaveDir *string, filenameProvider FilenameProvider) (MessageReceiveFunc, error) {
 	if optSaveDir == nil {
 		return NullMessageReceiveFunc, nil
 	}
@@ -139,9 +138,9 @@ func createMessageReceiveSaveFunc(format string, optSaveDir *string) (MessageRec
 	case "json-nopp":
 		fallthrough
 	case "json":
-		return createMessageReceiveFuncWriteToJSONFile(*optSaveDir, JSONMarshalIndent), nil
+		return createMessageReceiveFuncWriteToJSONFile(*optSaveDir, JSONMarshalIndent, filenameProvider), nil
 	case "raw":
-		return createMessageReceiveFuncWriteToRawFiles(*optSaveDir, JSONMarshalIndent), nil
+		return createMessageReceiveFuncWriteToRawFiles(*optSaveDir, JSONMarshalIndent, filenameProvider), nil
 	default:
 		return nil, fmt.Errorf("invalid format %s", format)
 	}
@@ -157,6 +156,6 @@ func createMessageReceiveFunc(opts MessageReceiveFuncOptions) (MessageReceiveFun
 	if err != nil {
 		return printFunc, err
 	}
-	saveFunc, err := createMessageReceiveSaveFunc(opts.format, opts.optSaveDir)
+	saveFunc, err := createMessageReceiveSaveFunc(opts.format, opts.optSaveDir, opts.filenameProvider)
 	return chainedMessageReceiveFunc(printFunc, saveFunc), err
 }

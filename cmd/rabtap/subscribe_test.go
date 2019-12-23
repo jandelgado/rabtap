@@ -89,6 +89,7 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 
 	// TODO check contents of JSON metadata "tapfilename.json"
 	contents, err = ioutil.ReadFile(path.Join(testDir, "tapfilename.json"))
+	assert.Nil(t, err)
 	var metadata map[string]interface{}
 	err = json.Unmarshal(contents, &metadata)
 	assert.Nil(t, err)

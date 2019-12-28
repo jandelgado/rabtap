@@ -71,7 +71,7 @@ func TestParsePubSubFormatArgDefaultsToRaw(t *testing.T) {
 }
 
 func TestParsePubSubFormatArgDetectsValidOptions(t *testing.T) {
-	fmt, err := parsePubSubFormatArg(map[string]interface{}{"--output": "json"})
+	fmt, err := parsePubSubFormatArg(map[string]interface{}{"--format": "json"})
 	assert.Nil(t, err)
 	assert.Equal(t, "json", fmt)
 }
@@ -83,7 +83,7 @@ func TestParsePubSubFormatArgDetectsDeprecatedOptions(t *testing.T) {
 }
 
 func TestParsePubSubFormatArgRaisesErrorForInvalidOption(t *testing.T) {
-	_, err := parsePubSubFormatArg(map[string]interface{}{"--output": "invalid"})
+	_, err := parsePubSubFormatArg(map[string]interface{}{"--format": "invalid"})
 	assert.NotNil(t, err)
 }
 
@@ -144,7 +144,7 @@ func TestCliTapWithMultipleUris(t *testing.T) {
 func TestCliAllOptsInTapCommand(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=broker", "exchange:binding", "--silent", "--verbose",
-			"--output=json-nopp", "--insecure"})
+			"--format=json-nopp", "--insecure"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(args.TapConfig))
@@ -190,7 +190,7 @@ func TestCliInfoCmdShowByConnection(t *testing.T) {
 
 func TestCliInfoCmdOutputAsDotFile(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"info", "--api=uri", "--output=dot"})
+		[]string{"info", "--api=uri", "--format=dot"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, InfoCmd, args.Cmd)
@@ -206,7 +206,7 @@ func TestCliInfoCmdFailsWithInvalidMode(t *testing.T) {
 
 func TestCliInfoCmdFailsWithInvalidFormat(t *testing.T) {
 	_, err := ParseCommandLineArgs(
-		[]string{"info", "--api=uri", "--output=INVALID"})
+		[]string{"info", "--api=uri", "--format=INVALID"})
 
 	assert.NotNil(t, err)
 }
@@ -294,7 +294,7 @@ func TestCliPubCmdMissingUri(t *testing.T) {
 
 func TestCliPubCmdFromStdinWithRoutingKeyJsonFormat(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--output=json"})
+		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--format=json"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)

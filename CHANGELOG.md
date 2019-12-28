@@ -3,15 +3,13 @@
 
 ## v1.21 (2019-12-14)
 
-* new option: `--output FORMAT` which controls output format in `tap`, 
+* new option: `--format FORMAT` which controls output format in `tap`, 
  `subscribe` commands. `--format json` is equivalent to `--json`, which is
   now deprecated
-* new output format: `--output json-nopp` which is not-pretty-printed JSON in
+* new output format: `--format json-nopp` which is not-pretty-printed JSON in
   `tap` and `subscribe` commands
 * new option `--silent` for commands `tap` and `subscribe` which suppresses
   message output to stdout
-* changed: the `--format=FORMAT` option of the `info` command was renamed
-  to `--output=FORMAT`
 * short `-o` otpion for the info command `--omit-empty` is no longer supported
 
 ## v1.20 (2019-08-30)

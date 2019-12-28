@@ -24,11 +24,11 @@ const (
 Usage:
   rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
-              [--show-default] [--mode=MODE] [--output=FORMAT] [-knv]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--output=FORMAT] [-jknsv]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--output=FORMAT] [-jknsv]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--output=FORMAT] [--no-auto-ack] [-jksvn]
-  rabtap pub [--uri=URI] EXCHANGE [FILE] [--routingkey=KEY] [--output=FORMAT] [-jkv]
+              [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
+  rabtap pub [--uri=URI] EXCHANGE [FILE] [--routingkey=KEY] [--format=FORMAT] [-jkv]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
   rabtap queue create QUEUE [--uri=URI] [-adkv]
@@ -54,6 +54,11 @@ Options:
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
  --filter=EXPR        Predicate for info command to filter queues [default: true]
+ --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
+                      and optionally to file (when --saveto DIR is given). 
+					  Valid options are: "raw", "json", "json-nopp". Default: raw
+					  * for info command: controls generated output format. Valid 
+					  options are: "text", "dot". Default: text
  -h, --help           print this help.
  -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
@@ -64,11 +69,6 @@ Options:
                       unacked messages on the broker which will be requeued
                       when the channel is closed.
  --omit-empty         don't show echanges without bindings in info command.
- -o, --output=FORMAT  * for tap, pub, sub command: format to write/read messages to console
-                      and optionally to file (when --saveto DIR is given). 
-					  Valid options are: "raw", "json", "json-nopp". Default: raw
-					  * for info command: controls generated output format. Valid 
-					  options are: "text", "dot". Default: text
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  -r, --routingkey=KEY routing key to use in publish mode.
  --saveto=DIR         also save messages and metadata to DIR.
@@ -229,11 +229,11 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result.InfoMode = mode
 
 	format := "text"
-	if args["--output"] != nil {
-		format = args["--output"].(string)
+	if args["--format"] != nil {
+		format = args["--format"].(string)
 	}
 	if format != "text" && format != "dot" {
-		return result, errors.New("--output=FORMAT must be one of {text, dot}")
+		return result, errors.New("--format=FORMAT must be one of {text, dot}")
 	}
 	result.Format = format
 
@@ -260,21 +260,21 @@ func parseConnCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
-// parsePubSubFormatArg parse --output=FORMAT option for pub, sub, tap command.
+// parsePubSubFormatArg parse --format=FORMAT option for pub, sub, tap command.
 func parsePubSubFormatArg(args map[string]interface{}) (string, error) {
 	format := "raw"
 
-	if args["--output"] != nil {
-		format = args["--output"].(string)
+	if args["--format"] != nil {
+		format = args["--format"].(string)
 	}
 
-	// deprecated --json option equals "--output=json"
+	// deprecated --json option equals "--format=json"
 	if args["--json"] != nil && args["--json"].(bool) {
 		format = "json"
 	}
 
 	if format != "json" && format != "json-nopp" && format != "raw" {
-		return "", errors.New("--output=FORMAT must be one of {raw,json,json-nopp}")
+		return "", errors.New("--format=FORMAT must be one of {raw,json,json-nopp}")
 	}
 	return format, nil
 }

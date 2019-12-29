@@ -23,6 +23,7 @@ and exchanges, inspect broker.
 * [Usage](#usage)
     * [Basic commands](#basic-commands)
     * [Broker URI specification](#broker-uri-specification)
+    * [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
     * [Environment variables](#environment-variables)
         * [Default RabbitMQ broker](#default-rabbitmq-broker)
         * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
@@ -32,8 +33,8 @@ and exchanges, inspect broker.
         * [Wire-tapping messages](#wire-tapping-messages)
             * [Connect to multiple brokers](#connect-to-multiple-brokers)
             * [Message recorder](#message-recorder)
-        * [Publish messages](#publish-messages)
         * [Messages consumer (subscribe)](#messages-consumer-subscribe)
+        * [Publish messages](#publish-messages)
         * [Poor mans shovel](#poor-mans-shovel)
         * [Close connection](#close-connection)
         * [Queue commands](#queue-commands)
@@ -124,62 +125,60 @@ rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
-  rabtap tap EXCHANGES [--uri URI] [--saveto DIR] [-jknv]
-  rabtap (tap --uri URI EXCHANGES)... [--saveto DIR] [-jknv]
-  rabtap info [--api APIURI] [--consumers] [--stats]
-              [--filter EXPR] [--omit-empty] [--show-default]
-              [--mode MODE] [--format FORMAT] [-knv]
-  rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
-  rabtap sub QUEUE [--uri URI] [--saveto DIR] [--no-auto-ack] [-jkvn]
-  rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
-  rabtap exchange rm EXCHANGE [--uri URI] [-kv]
-  rabtap queue create QUEUE [--uri URI] [-adkv]
-  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
-  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
-  rabtap queue rm QUEUE [--uri URI] [-kv]
-  rabtap queue purge QUEUE [--uri URI] [-kv]
-  rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
+  rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
+              [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
+  rabtap pub [--uri=URI] EXCHANGE [FILE] [--routingkey=KEY] [--format=FORMAT] [-jkv]
+  rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
+  rabtap queue create QUEUE [--uri=URI] [-adkv]
+  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue rm QUEUE [--uri=URI] [-kv]
+  rabtap queue purge QUEUE [--uri=URI] [-kv]
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
   rabtap --version
 
 Options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
- FILE                 file to publish in pub mode. If omitted, stdin will
-                      be read.
+ FILE                 file to publish in pub mode. If omitted, stdin will be read.
  QUEUE                name of a queue.
  CONNECTION           name of a connection.
  -a, --autodelete     create auto delete exchange/queue.
- --api APIURI         connect to given API server. If APIURI is omitted,
+ --api=APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
- -b, --bindingkey KEY binding key to use in bind queue command.
+ -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
- --filter EXPR        Predicate for info command to filter queues [default: true]
-                      (see README.md for details)
+ --filter=EXPR        Predicate for info command to filter queues [default: true]
+ --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
+                      and optionally to file (when --saveto DIR is given). 
+                      Valid options are: "raw", "json", "json-nopp". Default: raw
+                      * for info command: controls generated output format. Valid 
+                      options are: "text", "dot". Default: text
  -h, --help           print this help.
- -j, --json           print/save/publish message metadata and body to a
-                      single JSON file. JSON body is base64 encoded. Otherwise
-                      metadata and body (as-is) are saved separately.
+ -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
-                      [default: byExchange]
- -n, --no-color       don't colorize output (also environment variable NO_COLOR)
+                      [default: byExchange].
+ -n, --no-color       don't colorize output (also environment variable NO_COLOR).
  --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
                       unacked messages on the broker which will be requeued
                       when the channel is closed.
- -o, --omit-empty     don't show echanges without bindings in info command.
- --format=FORMAT      output format for info command. One of "text", "dot".
-                      [default: text]
- --reason=REASON      reason why the connection was closed
-                      [default: closed by rabtap].
- -r, --routingkey KEY routing key to use in publish mode.
- --saveto DIR         also save messages and metadata to DIR.
+ --omit-empty         don't show echanges without bindings in info command.
+ --reason=REASON      reason why the connection was closed [default: closed by rabtap].
+ -r, --routingkey=KEY routing key to use in publish mode.
+ --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
+ -s, --silent         suppress message output to stdout.
  --stats              include statistics in output of info command.
- -t, --type TYPE      exchange type [default: fanout].
- --uri URI            connect to given AQMP broker. If omitted, the
+ -t, --type=TYPE      exchange type [default: fanout].
+ --uri=URI            connect to given AQMP broker. If omitted, the
                       environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
  --version            show version information and exit.
@@ -244,6 +243,24 @@ Note that according to [RFC3986](https://tools.ietf.org/html/rfc3986) it might b
 necessary to escape certain characters like e.g. `?` (%3F) or `#` (%23) as otherwise 
 parsing of the URI may fail with an error.
 
+### Format specification for tap and sub command
+
+The `--format=FORMAT` option controls the format of the `tap` and `sub`
+commands when writing messages to the console and optionally to the filesystem
+(i.e.  when `--saveto` is set).
+
+The `FORMAT` parameter has the following effect on the output:
+
+| `FORMAT`        | Format on console                            | Format of saved messages (`--saveto DIR`)    |
+|-----------------|----------------------------------------------|----------------------------------------------|
+| `raw` (default) | Pretty-printed metadata + raw Message body   | Metadata as JSON-File + Body as-is           |
+| `json`          | Pretty-printed JSON wiht base64 encoded body | Pretty-printed JSON with base64 encoded body |
+| `json-nopp`     | Single line JSON wiht base64 encoded body    | Pretty-printed JSON with base64 encoded body |
+
+Notes: 
+* the `--json` option is now deprecated. Use `--format=json` instead
+* `nopp` stands for `no pretty-print`
+
 ### Environment variables
 
 Use environment variables to specify standard values for broker and api endpoint.
@@ -290,7 +307,7 @@ topolgy related information from the broker.
 The `--mode MODE` option controls how the output is structured. Valid options
 for `MODE` are `byExchange` (default) or `byConnection`.
 
-The `--format FORMAT` option controls the format of generated output. Valid
+The `--format=FORMAT` option controls the format of generated output. Valid
 options are `text` for console text format (default) or `dot` to output the
 tree structure in dot format for visualization with graphviz.
 
@@ -358,27 +375,16 @@ the `amq.fanout` exchange on `broker2`.
 All tapped messages can be also be saved for later analysis or replay. Rabtap
 supports saving of messages in two formats: raw body and metadata in separate
 files or [JSON message format](#json-message-format) with embedded metadata and
-message the body base64 encoded (`--json` option). Examples:
+message the body base64 encode. Examples:
 
 * `$ rabtap tap amq.topic:# --saveto /tmp` - saves messages as pair of
   files consisting of raw message body and JSON meta data file to `/tmp`
   directory.
-* `$ rabtap tap amq.topic:# --saveto /tmp --json` - saves messages as JSON
-  files to `/tmp` directory.
+* `$ rabtap tap amq.topic:# --saveto /tmp --format json` - saves messages as 
+  JSON files to `/tmp` directory.
 
 Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` +
-`<extension>`.
-
-#### Publish messages
-
-The `pub` command allows to send messages to an exchange, specifying a
-routing key.
-
-* `$ rabtap pub amq.direct -r routingKey message.json --json`  - publish
-  message(s) in JSON format to exchange `amq.direct` with routing key
-  `routingKey`.
-* `$ rabtap pub amqp.direct -r routingKey --json < message.json` - same
-  as above, but read message(s) from stdin.
+`<extension>`. 
 
 #### Messages consumer (subscribe)
 
@@ -386,26 +392,41 @@ The `sub` command reads messages from a queue.  Note that unlike `tap`, `sub`
 will consume messages that are in effect removed from the specified queue.
 Example:
 
-* `$ rabtap sub somequeue -j`
+* `$ rabtap sub somequeue --format json`
 
 Will consume messages from queue `somequeue` and print out messages in JSON
-format (`-j`). Example assumes that `RABTAP_AMQPURI` environment variable is
-set.
+format (this is equivalent to using the now deprecated `--json` option). The
+Example assumes that `RABTAP_AMQPURI` environment variable is set, as the 
+`--uri AMQPURI` parameter is omitted.
 
+#### Publish messages
+
+The `pub` command is used to publish messages to an exchange with a routing
+key.  Messages can be published either in raw format, in which they are send
+as-is, or in [JSON-format, as described here](#json-message-format), which
+includes message metadata and the body in a single JSON document.
+
+* `$ echo hello | rabtap pub amq.fanout` - publish "hello" to 
+  exchange amqp.fanout
+* `$ rabtap pub amq.direct -r routingKey message.json --format json`  - publish
+  message(s) in JSON format to exchange `amq.direct` with routing key
+  `routingKey`.
+* `$ rabtap pub amq.direct -r routingKey --json < message.json` - same
+  as above, but read message(s) from stdin.
 
 #### Poor mans shovel
 
 Rabtap instances can be connected through a pipe and messages will be read on
 one side and published to the other. Note that for publish to work in streaming
-mode, the JSON mode (`--json`) must be used on both sides, so that messages are
-encapsulated in JSON messages.
+mode, the JSON mode (`--format json`) must be used on both sides, so that
+messages are encapsulated in JSON messages.
 
 The example taps messages on `broker1` and publishes the messages to the
 `amq.direct` exchange on `broker2`
 
 ```console
-$ rabtap tap --uri amqp://broker1 my-topic-exchange:# --json | \
-  rabtap pub --uri amqp://broker2 amq.direct -r routingKey --json
+$ rabtap tap --uri amqp://broker1 my-topic-exchange:# --format json | \
+  rabtap pub --uri amqp://broker2 amq.direct -r routingKey --format json
 ```
 
 #### Close connection
@@ -475,7 +496,7 @@ $ rabtap queue purge myqueue
 
 ## JSON message format
 
-When using the `--json` option, messages are print/read as a stream of JSON
+When using the `--format json` option, messages are print/read as a stream of JSON
 messages in the following format:
 
 ```json
@@ -503,13 +524,13 @@ messages in the following format:
 ...
 ```
 
-Note that in JSON mode, the `Body` is base64 encoded.
+Note that in JSON mode, the `Body` is base64 encoded. 
 
 ## Filtering output of info command
 
 When your brokers topology is complex, the output of the `info` command can
-become very bloated. The `--filter` helps you to narrow output to
-the desired information.
+become very bloated. The `--filter` helps you to narrow output to the desired
+information.
 
 ### Filtering expressions
 
@@ -561,22 +582,22 @@ transformed to golang types.
 
 ```go
 type Exchange struct {
-	Name       string
-	Vhost      string
-	Type       string
-	Durable    bool
-	AutoDelete bool
-	Internal   bool
-	MessageStats struct {
-		PublishOut
-		PublishOutDetails struct {
-			Rate float64
-		}
-		PublishIn        int
-		PublishInDetails struct {
-			Rate float64
-		}
-	}
+    Name       string
+    Vhost      string
+    Type       string
+    Durable    bool
+    AutoDelete bool
+    Internal   bool
+    MessageStats struct {
+        PublishOut
+        PublishOutDetails struct {
+            Rate float64
+        }
+        PublishIn        int
+        PublishInDetails struct {
+            Rate float64
+        }
+    }
 }
 ```
 
@@ -584,63 +605,63 @@ type Exchange struct {
 
 ```go
 type Queue struct {
-	MessagesDetails struct {
-		Rate float64
-	}
-	Messages
-	MessagesUnacknowledgedDetails struct {
-		Rate float64
-	}
-	MessagesUnacknowledged int
-	MessagesReadyDetails   struct {
-		Rate float64
-	}
-	MessagesReady     int
-	ReductionsDetails struct {
-		Rate float64
-	}
-	Reductions int
-	Node       string
-	Exclusive            bool
-	AutoDelete           bool
-	Durable              bool
-	Vhost                string
-	Name                 string
-	MessageBytesPagedOut int
-	MessagesPagedOut     int
-	BackingQueueStatus   struct {
-		Mode string
-		Q1   int
-		Q2   int
-		Q3  int
-		Q4  int
-		Len int
-		NextSeqID         int
-		AvgIngressRate    float64
-		AvgEgressRate     float64
-		AvgAckIngressRate float64
-		AvgAckEgressRate  float64
-	}
-	MessageBytesPersistent     int
-	MessageBytesRAM            int
-	MessageBytesUnacknowledged int
-	MessageBytesReady          int
-	MessageBytes               int
-	MessagesPersistent         int
-	MessagesUnacknowledgedRAM  int
-	MessagesReadyRAM           int
-	MessagesRAM                int
-	GarbageCollection          struct {
-		MinorGcs        int
-		FullsweepAfter  int
-		MinHeapSize     int
-		MinBinVheapSize int
-		MaxHeapSize     int
-	}
-	State string
-	Consumers int
-	IdleSince string
-	Memory    int
+    MessagesDetails struct {
+        Rate float64
+    }
+    Messages
+    MessagesUnacknowledgedDetails struct {
+        Rate float64
+    }
+    MessagesUnacknowledged int
+    MessagesReadyDetails   struct {
+        Rate float64
+    }
+    MessagesReady     int
+    ReductionsDetails struct {
+        Rate float64
+    }
+    Reductions int
+    Node       string
+    Exclusive            bool
+    AutoDelete           bool
+    Durable              bool
+    Vhost                string
+    Name                 string
+    MessageBytesPagedOut int
+    MessagesPagedOut     int
+    BackingQueueStatus   struct {
+        Mode string
+        Q1   int
+        Q2   int
+        Q3  int
+        Q4  int
+        Len int
+        NextSeqID         int
+        AvgIngressRate    float64
+        AvgEgressRate     float64
+        AvgAckIngressRate float64
+        AvgAckEgressRate  float64
+    }
+    MessageBytesPersistent     int
+    MessageBytesRAM            int
+    MessageBytesUnacknowledged int
+    MessageBytesReady          int
+    MessageBytes               int
+    MessagesPersistent         int
+    MessagesUnacknowledgedRAM  int
+    MessagesReadyRAM           int
+    MessagesRAM                int
+    GarbageCollection          struct {
+        MinorGcs        int
+        FullsweepAfter  int
+        MinHeapSize     int
+        MinBinVheapSize int
+        MaxHeapSize     int
+    }
+    State string
+    Consumers int
+    IdleSince string
+    Memory    int
 }
 ```
 
@@ -648,12 +669,12 @@ type Queue struct {
 
 ```go
 type Binding struct {
-	Source          string
-	Vhost           string
-	Destination     string
-	DestinationType string
-	RoutingKey      string
-	PropertiesKey string
+    Source          string
+    Vhost           string
+    Destination     string
+    DestinationType string
+    RoutingKey      string
+    PropertiesKey string
 }
 ```
 

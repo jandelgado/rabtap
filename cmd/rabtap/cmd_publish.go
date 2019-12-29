@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -63,17 +64,22 @@ func readNextMessageFromJSONStream(decoder *json.Decoder) (amqp.Publishing, bool
 }
 
 // createMessageReaderFunc returns a function that reads messages from the
-// the given reader in JSON or raw-format TODO drop boolean param
-func createMessageReaderFunc(jsonFormat bool, reader io.ReadCloser) MessageReaderFunc {
-	if jsonFormat {
+// the given reader in JSON or raw-format
+func createMessageReaderFunc(format string, reader io.ReadCloser) (MessageReaderFunc, error) {
+	switch format {
+	case "json-nopp":
+		fallthrough
+	case "json":
 		decoder := json.NewDecoder(reader)
 		return func() (amqp.Publishing, bool, error) {
 			return readNextMessageFromJSONStream(decoder)
-		}
+		}, nil
+	case "raw":
+		return func() (amqp.Publishing, bool, error) {
+			return readSingleMessageFromRawFile(reader)
+		}, nil
 	}
-	return func() (amqp.Publishing, bool, error) {
-		return readSingleMessageFromRawFile(reader)
-	}
+	return nil, fmt.Errorf("invaild format %s", format)
 }
 
 // publishMessages reads messages with the provided readNextMessageFunc and
@@ -113,27 +119,33 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 
 	g, ctx := errgroup.WithContext(ctx)
 
+	errChan := make(chan error)
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)
 	publishChannel := make(rabtap.PublishChannel)
 
 	go func() {
 		// runs as long as readerFunc returns messages. Unfortunately, we
 		// can not stop a blocking read on a file like we do with channels
-		// and select.
-		_ = publishMessageStream(publishChannel, cmd.exchange,
+		// and select. So we don't put the goroutine in the error group to
+		// avoid blocking when e.g. the user presses CTRL+S and then CTRL+C.
+		// TODO come up with better solution
+		errChan <- publishMessageStream(publishChannel, cmd.exchange,
 			cmd.routingKey, cmd.readerFunc)
 	}()
 
 	g.Go(func() error {
-		err := publisher.EstablishConnection(ctx, publishChannel)
-		return err
+		return publisher.EstablishConnection(ctx, publishChannel)
 	})
 
 	if err := g.Wait(); err != nil {
-		log.Errorf("publish failed with %v", err)
-		log.Debug("cmd_publish_end with error")
 		return err
 	}
-	log.Debug("cmd_publish_end ok")
+
+	select {
+	case err := <-errChan:
+		return err
+	default:
+	}
+
 	return nil
 }

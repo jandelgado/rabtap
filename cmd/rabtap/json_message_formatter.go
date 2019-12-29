@@ -19,9 +19,9 @@ var (
 	}()
 )
 
-// Format validates and formats a message in JSON format. The body can be a
-// simple JSON object or an array of JSON objects. If the message is not valid
-// JSON, it will be returned unformatted as-is.
+// Format tries to format a message in JSON format. The body can be a simple
+// JSON object or an array of JSON objects. If the message is not valid JSON,
+// it will be returned unformatted as-is.
 func (s JSONMessageFormatter) Format(message rabtap.TapMessage) string {
 
 	var formatted []byte

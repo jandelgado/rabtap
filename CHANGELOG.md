@@ -1,6 +1,17 @@
 
 # Changelog for rabtap
 
+## v1.21 (2019-12-14)
+
+* new option: `--format FORMAT` which controls output format in `tap`, 
+ `subscribe` commands. `--format json` is equivalent to `--json`, which is
+  now deprecated
+* new output format: `--format json-nopp` which is not-pretty-printed JSON in
+  `tap` and `subscribe` commands
+* new option `--silent` for commands `tap` and `subscribe` which suppresses
+  message output to stdout
+* short `-o` otpion for the info command `--omit-empty` is no longer supported
+
 ## v1.20 (2019-08-30)
 
 * fix: avoid blocking write during tap, subscribe which can lead to ctrl+c

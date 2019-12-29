@@ -1,4 +1,6 @@
-// Copyright (C) 2017 Jan Delgado
+// command line parsing for rabtap
+// TODO split in per-command parsers
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
@@ -11,7 +13,7 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
-// RabtapAppVersion hold the application version and is set during link
+// RabtapAppVersion holds the application version and is set during link
 // using "go -ldflags "-X main.RabtapAppVersion=a.b.c"
 var RabtapAppVersion = "(version not specified)"
 
@@ -21,62 +23,60 @@ const (
 
 Usage:
   rabtap -h|--help
-  rabtap tap EXCHANGES [--uri URI] [--saveto DIR] [-jknv]
-  rabtap (tap --uri URI EXCHANGES)... [--saveto DIR] [-jknv]
-  rabtap info [--api APIURI] [--consumers] [--stats]
-              [--filter EXPR] [--omit-empty] [--show-default]
-              [--mode MODE] [--format FORMAT] [-knv]
-  rabtap pub [--uri URI] EXCHANGE [FILE] [--routingkey=KEY] [-jkv]
-  rabtap sub QUEUE [--uri URI] [--saveto DIR] [--no-auto-ack] [-jkvn]
-  rabtap exchange create EXCHANGE [--uri URI] [--type TYPE] [-adkv]
-  rabtap exchange rm EXCHANGE [--uri URI] [-kv]
-  rabtap queue create QUEUE [--uri URI] [-adkv]
-  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
-  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri URI] [-kv]
-  rabtap queue rm QUEUE [--uri URI] [-kv]
-  rabtap queue purge QUEUE [--uri URI] [-kv]
-  rabtap conn close CONNECTION [--reason=REASON] [--api APIURI] [-kv]
+  rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
+              [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
+  rabtap pub [--uri=URI] EXCHANGE [FILE] [--routingkey=KEY] [--format=FORMAT] [-jkv]
+  rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
+  rabtap queue create QUEUE [--uri=URI] [-adkv]
+  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue rm QUEUE [--uri=URI] [-kv]
+  rabtap queue purge QUEUE [--uri=URI] [-kv]
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
   rabtap --version
 
 Options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
- FILE                 file to publish in pub mode. If omitted, stdin will
-                      be read.
+ FILE                 file to publish in pub mode. If omitted, stdin will be read.
  QUEUE                name of a queue.
  CONNECTION           name of a connection.
  -a, --autodelete     create auto delete exchange/queue.
- --api APIURI         connect to given API server. If APIURI is omitted,
+ --api=APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
- -b, --bindingkey KEY binding key to use in bind queue command.
+ -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
  -d, --durable        create durable exchange/queue.
- --filter EXPR        Predicate for info command to filter queues [default: true]
-                      (see README.md for details)
+ --filter=EXPR        Predicate for info command to filter queues [default: true]
+ --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
+                        and optionally to file (when --saveto DIR is given). 
+                        Valid options are: "raw", "json", "json-nopp". Default: raw
+                      * for info command: controls generated output format. Valid 
+                        options are: "text", "dot". Default: text
  -h, --help           print this help.
- -j, --json           print/save/publish message metadata and body to a
-                      single JSON file. JSON body is base64 encoded. Otherwise
-                      metadata and body (as-is) are saved separately.
+ -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
- -n, --no-color       don't colorize output (also environment variable NO_COLOR)
+ -n, --no-color       don't colorize output (also environment variable NO_COLOR).
  --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
                       unacked messages on the broker which will be requeued
                       when the channel is closed.
- -o, --omit-empty     don't show echanges without bindings in info command.
- --format=FORMAT      output format for info command. One of "text", "dot".
-                      [default: text]
- --reason=REASON      reason why the connection was closed
-                      [default: closed by rabtap].
- -r, --routingkey KEY routing key to use in publish mode.
- --saveto DIR         also save messages and metadata to DIR.
+ --omit-empty         don't show echanges without bindings in info command.
+ --reason=REASON      reason why the connection was closed [default: closed by rabtap].
+ -r, --routingkey=KEY routing key to use in publish mode.
+ --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
+ -s, --silent         suppress message output to stdout.
  --stats              include statistics in output of info command.
- -t, --type TYPE      exchange type [default: fanout].
- --uri URI            connect to given AQMP broker. If omitted, the
+ -t, --type=TYPE      exchange type [default: fanout].
+ --uri=URI            connect to given AQMP broker. If omitted, the
                       environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
  --version            show version information and exit.
@@ -137,7 +137,6 @@ type commonArgs struct {
 	Verbose     bool
 	InsecureTLS bool
 	NoColor     bool
-	JSONFormat  bool   // output in JSON
 	AmqpURI     string // pub, queue, exchange: amqp broker to use
 }
 
@@ -164,10 +163,11 @@ type CommandLineArgs struct {
 	QueueFilter         string  // info mode: optional filter predicate
 	OmitEmptyExchanges  bool    // info mode: do not show exchanges wo/ bindings
 	ShowDefaultExchange bool    // info mode: show default exchange
-	InfoFormat          string  // info mode: output format
+	Format              string  // output format, depends on command
 	Durable             bool    // queue create, exchange create
 	Autodelete          bool    // queue create, exchange create
 	SaveDir             *string // save mode: optional directory to stores files to
+	Silent              bool    // suppress message printing
 
 	ConnName    string // conn mode: name of connection
 	CloseReason string // conn mode: reason of close
@@ -180,11 +180,7 @@ func getAmqpURI(amqpURIs []string, i int) string {
 	if i >= len(amqpURIs) {
 		return os.Getenv("RABTAP_AMQPURI")
 	}
-	amqpURI := amqpURIs[i]
-	if amqpURI == "" {
-		return os.Getenv("RABTAP_AMQPURI")
-	}
-	return amqpURI
+	return amqpURIs[i]
 }
 
 func parseAmqpURI(args map[string]interface{}) (string, error) {
@@ -213,8 +209,7 @@ func parseCommonArgs(args map[string]interface{}) commonArgs {
 	return commonArgs{
 		Verbose:     args["--verbose"].(bool),
 		InsecureTLS: args["--insecure"].(bool),
-		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != ""),
-		JSONFormat:  args["--json"].(bool)}
+		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != "")}
 }
 
 func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
@@ -233,11 +228,14 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	result.InfoMode = mode
 
-	format := args["--format"].(string)
-	if format != "text" && format != "dot" {
-		return result, errors.New("--format FORMAT must be one of {text, dot}")
+	format := "text"
+	if args["--format"] != nil {
+		format = args["--format"].(string)
 	}
-	result.InfoFormat = format
+	if format != "text" && format != "dot" {
+		return result, errors.New("--format=FORMAT must be one of {text, dot}")
+	}
+	result.Format = format
 
 	var err error
 	if result.APIURI, err = parseAPIURI(args); err != nil {
@@ -262,14 +260,40 @@ func parseConnCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
+// parsePubSubFormatArg parse --format=FORMAT option for pub, sub, tap command.
+func parsePubSubFormatArg(args map[string]interface{}) (string, error) {
+	format := "raw"
+
+	if args["--format"] != nil {
+		format = args["--format"].(string)
+	}
+
+	// deprecated --json option equals "--format=json"
+	if args["--json"] != nil && args["--json"].(bool) {
+		format = "json"
+	}
+
+	if format != "json" && format != "json-nopp" && format != "raw" {
+		return "", errors.New("--format=FORMAT must be one of {raw,json,json-nopp}")
+	}
+	return format, nil
+}
+
 func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:        SubCmd,
 		commonArgs: parseCommonArgs(args),
 		AutoAck:    !args["--no-auto-ack"].(bool),
 		QueueName:  args["QUEUE"].(string),
+		Silent:     args["--silent"].(bool),
 	}
-	var err error
+
+	format, err := parsePubSubFormatArg(args)
+	if err != nil {
+		return result, err
+	}
+	result.Format = format
+
 	if args["--saveto"] != nil {
 		saveDir := args["--saveto"].(string)
 		result.SaveDir = &saveDir
@@ -338,7 +362,12 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		Cmd:        PubCmd,
 		commonArgs: parseCommonArgs(args)}
 
-	var err error
+	format, err := parsePubSubFormatArg(args)
+	if err != nil {
+		return result, err
+	}
+	result.Format = format
+
 	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
 		return result, err
 	}
@@ -357,7 +386,14 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:        TapCmd,
 		commonArgs: parseCommonArgs(args),
+		Silent:     args["--silent"].(bool),
 		TapConfig:  []rabtap.TapConfiguration{}}
+
+	format, err := parsePubSubFormatArg(args)
+	if err != nil {
+		return result, err
+	}
+	result.Format = format
 
 	if args["--saveto"] != nil {
 		saveDir := args["--saveto"].(string)
@@ -381,10 +417,8 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
-// ParseCommandLineArgs parses command line arguments into an object of
-// type CommandLineArgs.
-func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
-	args, err := docopt.ParseArgs(usage, cliArgs, RabtapAppVersion)
+func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArgs, error) {
+	args, err := docopt.ParseArgs(spec, cliArgs, RabtapAppVersion)
 	if err != nil {
 		return CommandLineArgs{}, err
 	}
@@ -405,4 +439,10 @@ func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
 		return parseConnCmdArgs(args)
 	}
 	return CommandLineArgs{}, fmt.Errorf("command missing")
+}
+
+// ParseCommandLineArgs parses command line arguments into an object of
+// type CommandLineArgs.
+func ParseCommandLineArgs(cliArgs []string) (CommandLineArgs, error) {
+	return parseCommandLineArgsWithSpec(usage, cliArgs)
 }

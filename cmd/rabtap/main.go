@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"time"
 
 	//"net/http"
 	//_ "net/http/pprof"
@@ -40,6 +41,12 @@ func failOnError(err error, msg string, exitFunc func(int)) {
 	}
 }
 
+// defaultFilenameProvider returns the default filename to use when messages
+// are saved to files during tap or subscribe.
+func defaultFilenameProvider() string {
+	return fmt.Sprintf("rabtap-%d.json", time.Now().UnixNano())
+}
+
 func getTLSConfig(insecureTLS bool) *tls.Config {
 	return &tls.Config{InsecureSkipVerify: insecureTLS}
 }
@@ -59,7 +66,7 @@ func startCmdInfo(args CommandLineArgs, title string) {
 			QueueFilter:         queueFilter,
 			OmitEmptyExchanges:  args.OmitEmptyExchanges},
 		renderConfig: BrokerInfoRendererConfig{
-			Format:    args.InfoFormat,
+			Format:    args.Format,
 			ShowStats: args.ShowStats,
 			NoColor:   args.NoColor},
 		out: NewColorableWriter(os.Stdout)})
@@ -71,23 +78,31 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		var err error
 		file, err = os.Open(*args.PubFile)
 		failOnError(err, "error opening "+*args.PubFile, os.Exit)
+		defer file.Close()
 	}
-	readerFunc := createMessageReaderFunc(args.JSONFormat, file)
-	err := cmdPublish(ctx, CmdPublishArg{
+	readerFunc, err := createMessageReaderFunc(args.Format, file)
+	failOnError(err, "options", os.Exit)
+	err = cmdPublish(ctx, CmdPublishArg{
 		amqpURI:    args.AmqpURI,
 		exchange:   args.PubExchange,
 		routingKey: args.PubRoutingKey,
 		tlsConfig:  getTLSConfig(args.InsecureTLS),
 		readerFunc: readerFunc})
-	file.Close()
 	failOnError(err, "error publishing message", os.Exit)
 }
 
 func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
-	messageReceiveFunc := createMessageReceiveFunc(
-		NewColorableWriter(os.Stdout), args.JSONFormat,
-		args.SaveDir, args.NoColor)
-	err := cmdSubscribe(ctx, CmdSubscribeArg{
+	opts := MessageReceiveFuncOptions{
+		out:              NewColorableWriter(os.Stdout),
+		noColor:          args.NoColor,
+		format:           args.Format,
+		silent:           args.Silent,
+		optSaveDir:       args.SaveDir,
+		filenameProvider: defaultFilenameProvider,
+	}
+	messageReceiveFunc, err := createMessageReceiveFunc(opts)
+	failOnError(err, "options", os.Exit)
+	err = cmdSubscribe(ctx, CmdSubscribeArg{
 		amqpURI:            args.AmqpURI,
 		queue:              args.QueueName,
 		AutoAck:            args.AutoAck,
@@ -97,9 +112,16 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 }
 
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
-	messageReceiveFunc := createMessageReceiveFunc(
-		NewColorableWriter(os.Stdout), args.JSONFormat,
-		args.SaveDir, args.NoColor)
+	opts := MessageReceiveFuncOptions{
+		out:              NewColorableWriter(os.Stdout),
+		noColor:          args.NoColor,
+		format:           args.Format,
+		silent:           args.Silent,
+		optSaveDir:       args.SaveDir,
+		filenameProvider: defaultFilenameProvider,
+	}
+	messageReceiveFunc, err := createMessageReceiveFunc(opts)
+	failOnError(err, "options", os.Exit)
 	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS),
 		messageReceiveFunc)
 }

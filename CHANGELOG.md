@@ -10,7 +10,8 @@
   `tap` and `subscribe` commands
 * new option `--silent` for commands `tap` and `subscribe` which suppresses
   message output to stdout
-* short `-o` otpion for the info command `--omit-empty` is no longer supported
+* short `-o` option for the info command `--omit-empty` is no longer supported
+* uniformly name test files `*_test.go` to improve external tool discoverbility
 
 ## v1.20 (2019-08-30)
 

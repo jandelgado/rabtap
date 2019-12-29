@@ -6,10 +6,8 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -109,10 +107,10 @@ func Example_cmdInfoByConnectionInTextFormat() {
 
 const expectedResultDotByExchange = `digraph broker {
 "root" [shape="record", label="{RabbitMQ 3.6.9 |http://rabbitmq/api |rabbit@08f57d1fe8ab }"];
-
 "root" -> "vhost_/";
-"vhost_/" [shape="box", label="Virtual host /"];
+"vhost_/" [shape="box", label="Virtual host\n/"];
 
+{ rank = same; "exchange_amq.direct"; "exchange_amq.fanout"; "exchange_amq.headers"; "exchange_amq.match"; "exchange_amq.rabbitmq.log"; "exchange_amq.rabbitmq.trace"; "exchange_amq.topic"; "exchange_test-direct"; "exchange_test-fanout"; "exchange_test-headers"; "exchange_test-topic"; };
 "vhost_/" -> "exchange_amq.direct"[headport=n];
 "vhost_/" -> "exchange_amq.fanout"[headport=n];
 "vhost_/" -> "exchange_amq.headers"[headport=n];
@@ -124,86 +122,189 @@ const expectedResultDotByExchange = `digraph broker {
 "vhost_/" -> "exchange_test-fanout"[headport=n];
 "vhost_/" -> "exchange_test-headers"[headport=n];
 "vhost_/" -> "exchange_test-topic"[headport=n];
+"exchange_amq.direct" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>direct</TD></TR>
+              <TR><TD colspan='3' align='text'><B>amq.direct</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'></TD></TR>
+		    </TABLE> >];
+	"exchange_amq.fanout" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>fanout</TD></TR>
+              <TR><TD colspan='3' align='text'><B>amq.fanout</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'></TD></TR>
+		    </TABLE> >];
+	"exchange_amq.headers" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>headers</TD></TR>
+              <TR><TD colspan='3' align='text'><B>amq.headers</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'></TD></TR>
+		    </TABLE> >];
+	"exchange_amq.match" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>headers</TD></TR>
+              <TR><TD colspan='3' align='text'><B>amq.match</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'></TD></TR>
+		    </TABLE> >];
+	"exchange_amq.rabbitmq.log" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>topic</TD></TR>
+              <TR><TD colspan='3' align='text'><B>amq.rabbitmq.log</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'> I </TD></TR>
+		    </TABLE> >];
+	"exchange_amq.rabbitmq.trace" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>topic</TD></TR>
+              <TR><TD colspan='3' align='text'><B>amq.rabbitmq.trace</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'> I </TD></TR>
+		    </TABLE> >];
+	"exchange_amq.topic" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>topic</TD></TR>
+              <TR><TD colspan='3' align='text'><B>amq.topic</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'></TD></TR>
+		    </TABLE> >];
+	"exchange_test-direct" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>direct</TD></TR>
+              <TR><TD colspan='3' align='text'><B>test-direct</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'> AD </TD>
+				  <TD WIDTH='33%'> I </TD></TR>
+		    </TABLE> >];
+	"exchange_test-direct" -> "boundqueue_direct-q1" [fontsize=10; label="direct-q1"];
+"exchange_test-direct" -> "boundqueue_direct-q2" [fontsize=10; label="direct-q2"];
 
-"exchange_amq.direct" [shape="record"; label="{ { E | amq.direct  } |direct | { D  | | } }"];
-
-
-"exchange_amq.fanout" [shape="record"; label="{ { E | amq.fanout  } |fanout | { D  | | } }"];
-
-
-"exchange_amq.headers" [shape="record"; label="{ { E | amq.headers  } |headers | { D  | | } }"];
-
-
-"exchange_amq.match" [shape="record"; label="{ { E | amq.match  } |headers | { D  | | } }"];
-
-
-"exchange_amq.rabbitmq.log" [shape="record"; label="{ { E | amq.rabbitmq.log  } |topic | { D  | | I  } }"];
-
-
-"exchange_amq.rabbitmq.trace" [shape="record"; label="{ { E | amq.rabbitmq.trace  } |topic | { D  | | I  } }"];
-
-
-"exchange_amq.topic" [shape="record"; label="{ { E | amq.topic  } |topic | { D  | | } }"];
-
-
-"exchange_test-direct" [shape="record"; label="{ { E | test-direct  } |direct | { D  | AD  | I  } }"];
-
-"exchange_test-direct" -> "boundqueue_direct-q1" [fontsize=10; headport=n; label="direct-q1"];
-"exchange_test-direct" -> "boundqueue_direct-q2" [fontsize=10; headport=n; label="direct-q2"];
-
-"boundqueue_direct-q1" [shape="record"; label="{ { Q | direct-q1 } | { D  | | |<dlx> DLX  } }"];
-
+"boundqueue_direct-q1" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%'> Q</TD><TD colspan='3'><B>direct-q1</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> </TD>
+			       <TD WIDTH='25%'> </TD>
+			       <TD  WIDTH='25%' PORT='dlx'> DLX </TD></TR>
+				</TABLE> >];
 "boundqueue_direct-q1":dlx -> "exchange_mydlx" [style="dashed"];
 
-"boundqueue_direct-q2" [shape="record"; label="{ { Q | direct-q2 } | { D  | | | } }"];
+"boundqueue_direct-q2" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%'> Q</TD><TD colspan='3'><B>direct-q2</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> </TD>
+			       <TD WIDTH='25%'> </TD>
+			       <TD  WIDTH='25%' PORT='dlx'></TD></TR>
+				</TABLE> >];
+
+"exchange_test-fanout" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>fanout</TD></TR>
+              <TR><TD colspan='3' align='text'><B>test-fanout</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'></TD></TR>
+		    </TABLE> >];
+	"exchange_test-fanout" -> "boundqueue_fanout-q1" [fontsize=10; label=""];
+"exchange_test-fanout" -> "boundqueue_fanout-q2" [fontsize=10; label=""];
+
+"boundqueue_fanout-q1" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%'> Q</TD><TD colspan='3'><B>fanout-q1</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> </TD>
+			       <TD WIDTH='25%'> </TD>
+			       <TD  WIDTH='25%' PORT='dlx'></TD></TR>
+				</TABLE> >];
 
 
+"boundqueue_fanout-q2" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%'> Q</TD><TD colspan='3'><B>fanout-q2</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> </TD>
+			       <TD WIDTH='25%'> </TD>
+			       <TD  WIDTH='25%' PORT='dlx'></TD></TR>
+				</TABLE> >];
 
-"exchange_test-fanout" [shape="record"; label="{ { E | test-fanout  } |fanout | { D  | | } }"];
+"exchange_test-headers" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>headers</TD></TR>
+              <TR><TD colspan='3' align='text'><B>test-headers</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'> AD </TD>
+				  <TD WIDTH='33%'></TD></TR>
+		    </TABLE> >];
+	"exchange_test-headers" -> "boundqueue_header-q1" [fontsize=10; label="headers-q1"];
+"exchange_test-headers" -> "boundqueue_header-q2" [fontsize=10; label="headers-q2"];
 
-"exchange_test-fanout" -> "boundqueue_fanout-q1" [fontsize=10; headport=n; label=""];
-"exchange_test-fanout" -> "boundqueue_fanout-q2" [fontsize=10; headport=n; label=""];
-
-"boundqueue_fanout-q1" [shape="record"; label="{ { Q | fanout-q1 } | { D  | | | } }"];
-
-
-
-"boundqueue_fanout-q2" [shape="record"; label="{ { Q | fanout-q2 } | { D  | | | } }"];
-
-
-
-"exchange_test-headers" [shape="record"; label="{ { E | test-headers  } |headers | { D  | AD  | } }"];
-
-"exchange_test-headers" -> "boundqueue_header-q1" [fontsize=10; headport=n; label="headers-q1"];
-"exchange_test-headers" -> "boundqueue_header-q2" [fontsize=10; headport=n; label="headers-q2"];
-
-"boundqueue_header-q1" [shape="record"; label="{ { Q | header-q1 } | { D  | | | } }"];
-
-
-
-"boundqueue_header-q2" [shape="record"; label="{ { Q | header-q2 } | { D  | | | } }"];
+"boundqueue_header-q1" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%'> Q</TD><TD colspan='3'><B>header-q1</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> </TD>
+			       <TD WIDTH='25%'> </TD>
+			       <TD  WIDTH='25%' PORT='dlx'></TD></TR>
+				</TABLE> >];
 
 
+"boundqueue_header-q2" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%'> Q</TD><TD colspan='3'><B>header-q2</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> </TD>
+			       <TD WIDTH='25%'> </TD>
+			       <TD  WIDTH='25%' PORT='dlx'></TD></TR>
+				</TABLE> >];
 
-"exchange_test-topic" [shape="record"; label="{ { E | test-topic  } |topic | { D  | | } }"];
+"exchange_test-topic" [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%'> E </TD><TD colspan='2' balign='center'>topic</TD></TR>
+              <TR><TD colspan='3' align='text'><B>test-topic</B></TD></TR>
+			  <TR><TD WIDTH='33%'> D </TD>
+				  <TD WIDTH='33%'></TD>
+				  <TD WIDTH='33%'></TD></TR>
+		    </TABLE> >];
+	"exchange_test-topic" -> "boundqueue_topic-q1" [fontsize=10; label="topic-q1"];
+"exchange_test-topic" -> "boundqueue_topic-q2" [fontsize=10; label="topic-q2"];
 
-"exchange_test-topic" -> "boundqueue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
-"exchange_test-topic" -> "boundqueue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
-
-"boundqueue_topic-q1" [shape="record"; label="{ { Q | topic-q1 } | { D  | AD  | EX  |<dlx> DLX  } }"];
-
+"boundqueue_topic-q1" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%'> Q</TD><TD colspan='3'><B>topic-q1</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> AD  </TD>
+			       <TD WIDTH='25%'> EX  </TD>
+			       <TD  WIDTH='25%' PORT='dlx'> DLX </TD></TR>
+				</TABLE> >];
 "boundqueue_topic-q1":dlx -> "exchange_mydlx" [style="dashed"];
 
-"boundqueue_topic-q2" [shape="record"; label="{ { Q | topic-q2 } | { D  | | | } }"];
-
+"boundqueue_topic-q2" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%'> Q</TD><TD colspan='3'><B>topic-q2</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> </TD>
+			       <TD WIDTH='25%'> </TD>
+			       <TD  WIDTH='25%' PORT='dlx'></TD></TR>
+				</TABLE> >];
 
 }`
 
 func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 
-	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
-	defer mock.Close()
-	url, _ := url.Parse(mock.URL)
+	api := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
+	defer api.Close()
+	url, _ := url.Parse(api.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
 	testfunc := func() {
@@ -220,34 +321,36 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 			out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
-	//fmt.Print(result)
-	assert.Equal(t, strings.Trim(expectedResultDotByExchange, " \n"),
-		strings.Trim(result, " \n"))
+	assert.Equal(t, expectedResultDotByExchange, result)
 }
 
 const expectedResultDotByConnection = `digraph broker {
 "root" [shape="record", label="{RabbitMQ 3.6.9 |http://rabbitmq/api |rabbit@08f57d1fe8ab }"];
-
 "root" -> "vhost_/";
-"vhost_/" [shape="box", label="Virtual host /"];
+"vhost_/" [shape="box", label="Virtual host\n/"];
 
+{ rank = same; "connection_172.17.0.1:40874 -> 172.17.0.2:5672"; };
 "vhost_/" -> "connection_172.17.0.1:40874 -> 172.17.0.2:5672"[headport=n];
 
 "connection_172.17.0.1:40874 -> 172.17.0.2:5672" [shape="record" label="{ Conn | 172.17.0.1:40874 -> 172.17.0.2:5672 }"];
-
 "connection_172.17.0.1:40874 -> 172.17.0.2:5672" -> "consumer_some_consumer"
 "consumer_some_consumer" [shape="record" label="{ Cons | some_consumer }"];
-
 "consumer_some_consumer" -> "queue_direct-q1"
-"queue_direct-q1" [shape="record"; label="{ { Q | direct-q1 } | { D  | | | DLX  } }"];
-
+"queue_direct-q1" [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='4' WIDTH='25%'> Q</TD><TD><B>direct-q1</B></TD></TR>
+			   <TR><TD WIDTH='25%'> D </TD> 
+			       <TD WIDTH='25%'> </TD>
+			       <TD WIDTH='25%'> </TD>
+			       <TD  WIDTH='25%' PORT='dlx'><dlx> DLX </TD></TR>
+				</TABLE> >];
 "queue_direct-q1":dlx -> "exchange_mydlx" [style="dashed"];}`
 
 func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 
-	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
-	defer mock.Close()
-	url, _ := url.Parse(mock.URL)
+	api := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
+	defer api.Close()
+	url, _ := url.Parse(api.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
 	testfunc := func() {
@@ -264,7 +367,5 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 			out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
-	fmt.Print(result)
-	assert.Equal(t, strings.Trim(expectedResultDotByConnection, " \n"),
-		strings.Trim(result, " \n"))
+	assert.Equal(t, expectedResultDotByConnection, result)
 }

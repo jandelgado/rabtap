@@ -57,7 +57,6 @@ func newDotRendererTpl() dotRendererTpl {
 {{ q .Name }} [shape="record", label="{RabbitMQ {{ .Overview.RabbitmqVersion }} | 
                {{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }} |
                {{- .Overview.ClusterName }} }"];
-
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}
 }`,
@@ -68,12 +67,6 @@ func newDotRendererTpl() dotRendererTpl {
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name -}} [headport=n]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
-		//         dotTplExchange: `
-		// {{ q .Name }} [shape="record"; label="{ { E | {{ .Exchange.Type }} } | {
-		//               {{- if eq .Exchange.Name "" }} (default) {{else}} {{ .Exchange.Name }} {{end}} } | {
-		//               {{- if .Exchange.Durable }} D {{ end }} |
-		//               {{- if .Exchange.AutoDelete }} AD {{ end }} |
-		//               {{- if .Exchange.Internal }} I {{ end }} } } }"];
 		dotTplExchange: `{{ q .Name }} [shape="none"; margin="0"; label=< 
 		    <TABLE border='0' cellborder='1' cellspacing='0'>
               <TR><TD colspan='1' WIDTH='33%%'> E </TD><TD colspan='2' balign='center'>{{ .Exchange.Type }}</TD></TR>
@@ -82,7 +75,6 @@ func newDotRendererTpl() dotRendererTpl {
 				  <TD WIDTH='33%%'>{{- if .Exchange.AutoDelete }} AD {{ end }}</TD>
 				  <TD WIDTH='33%%'>{{- if .Exchange.Internal }} I {{ end }}</TD></TR>
 		    </TABLE> >];
-
 	{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }} [fontsize=10; label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
@@ -95,21 +87,9 @@ func newDotRendererTpl() dotRendererTpl {
 			       <TD WIDTH='25%%'>{{- if .Queue.Exclusive }} EX {{ end }} </TD>
 			       <TD  WIDTH='25%%' PORT='dlx'>{{- if .Queue.HasDlx }}<dlx> DLX {{ end }}</TD></TR>
 				</TABLE> >];
-
 {{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
-
-		//         dotTplQueue: `
-		// {{ q .Name }} [shape="record"; label="{ { Q | {{ .Queue.Name }} } | {
-		//               {{- if .Queue.Durable }} D {{ end }} |
-		//               {{- if .Queue.AutoDelete }} AD {{ end }} |
-		//               {{- if .Queue.Exclusive }} EX {{ end }} |
-		//               {{- if .Queue.HasDlx }}<dlx> DLX {{ end }} } }"];
-
-		// {{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
-		// {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
-		// {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplBoundQueue: `
 {{- if not .Skip }}
@@ -121,26 +101,20 @@ func newDotRendererTpl() dotRendererTpl {
 			       <TD WIDTH='25%%'>{{- if .Queue.Exclusive }} EX {{ end }} </TD>
 			       <TD  WIDTH='25%%' PORT='dlx'>{{- if .Queue.HasDlx }} DLX {{ end }}</TD></TR>
 				</TABLE> >];
-
 {{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
 {{- end}}
-
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
-		// TODO add more details
 		dotTplConnection: `
 {{ q .Name }} [shape="record" label="{ Conn | {{ .Connection.Name }} }"];
-
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
-{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`, // TODO add more details
 
-		// TODO add more details
 		dotTplConsumer: `
 {{ q .Name }} [shape="record" label="{ Cons | {{ .Consumer.ConsumerTag}} }"];
-
 {{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
-{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`, // TODO add more details
 	}
 }
 

@@ -119,25 +119,33 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 
 	g, ctx := errgroup.WithContext(ctx)
 
+	errChan := make(chan error)
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)
 	publishChannel := make(rabtap.PublishChannel)
 
 	go func() {
 		// runs as long as readerFunc returns messages. Unfortunately, we
 		// can not stop a blocking read on a file like we do with channels
-		// and select.
-		_ = publishMessageStream(publishChannel, cmd.exchange,
+		// and select. So we don't put the goroutine in the error group to
+		// avoid blocking when e.g. the user presses CTRL+S and then CTRL+C.
+		// TODO come up with better solution
+		errChan <- publishMessageStream(publishChannel, cmd.exchange,
 			cmd.routingKey, cmd.readerFunc)
 	}()
 
 	g.Go(func() error {
-		err := publisher.EstablishConnection(ctx, publishChannel)
-		return err
+		return publisher.EstablishConnection(ctx, publishChannel)
 	})
 
 	if err := g.Wait(); err != nil {
-		log.Errorf("publish failed with %v", err)
 		return err
 	}
+
+	select {
+	case err := <-errChan:
+		return err
+	default:
+	}
+
 	return nil
 }

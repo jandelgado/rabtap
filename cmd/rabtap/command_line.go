@@ -55,10 +55,10 @@ Options:
  -d, --durable        create durable exchange/queue.
  --filter=EXPR        Predicate for info command to filter queues [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
-                      and optionally to file (when --saveto DIR is given). 
-					  Valid options are: "raw", "json", "json-nopp". Default: raw
-					  * for info command: controls generated output format. Valid 
-					  options are: "text", "dot". Default: text
+                        and optionally to file (when --saveto DIR is given). 
+                        Valid options are: "raw", "json", "json-nopp". Default: raw
+                      * for info command: controls generated output format. Valid 
+                        options are: "text", "dot". Default: text
  -h, --help           print this help.
  -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).

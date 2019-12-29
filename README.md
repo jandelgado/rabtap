@@ -158,9 +158,9 @@ Options:
  --filter=EXPR        Predicate for info command to filter queues [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
                       and optionally to file (when --saveto DIR is given). 
-					  Valid options are: "raw", "json", "json-nopp". Default: raw
-					  * for info command: controls generated output format. Valid 
-					  options are: "text", "dot". Default: text
+                      Valid options are: "raw", "json", "json-nopp". Default: raw
+                      * for info command: controls generated output format. Valid 
+                      options are: "text", "dot". Default: text
  -h, --help           print this help.
  -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
@@ -582,22 +582,22 @@ transformed to golang types.
 
 ```go
 type Exchange struct {
-	Name       string
-	Vhost      string
-	Type       string
-	Durable    bool
-	AutoDelete bool
-	Internal   bool
-	MessageStats struct {
-		PublishOut
-		PublishOutDetails struct {
-			Rate float64
-		}
-		PublishIn        int
-		PublishInDetails struct {
-			Rate float64
-		}
-	}
+    Name       string
+    Vhost      string
+    Type       string
+    Durable    bool
+    AutoDelete bool
+    Internal   bool
+    MessageStats struct {
+        PublishOut
+        PublishOutDetails struct {
+            Rate float64
+        }
+        PublishIn        int
+        PublishInDetails struct {
+            Rate float64
+        }
+    }
 }
 ```
 
@@ -605,63 +605,63 @@ type Exchange struct {
 
 ```go
 type Queue struct {
-	MessagesDetails struct {
-		Rate float64
-	}
-	Messages
-	MessagesUnacknowledgedDetails struct {
-		Rate float64
-	}
-	MessagesUnacknowledged int
-	MessagesReadyDetails   struct {
-		Rate float64
-	}
-	MessagesReady     int
-	ReductionsDetails struct {
-		Rate float64
-	}
-	Reductions int
-	Node       string
-	Exclusive            bool
-	AutoDelete           bool
-	Durable              bool
-	Vhost                string
-	Name                 string
-	MessageBytesPagedOut int
-	MessagesPagedOut     int
-	BackingQueueStatus   struct {
-		Mode string
-		Q1   int
-		Q2   int
-		Q3  int
-		Q4  int
-		Len int
-		NextSeqID         int
-		AvgIngressRate    float64
-		AvgEgressRate     float64
-		AvgAckIngressRate float64
-		AvgAckEgressRate  float64
-	}
-	MessageBytesPersistent     int
-	MessageBytesRAM            int
-	MessageBytesUnacknowledged int
-	MessageBytesReady          int
-	MessageBytes               int
-	MessagesPersistent         int
-	MessagesUnacknowledgedRAM  int
-	MessagesReadyRAM           int
-	MessagesRAM                int
-	GarbageCollection          struct {
-		MinorGcs        int
-		FullsweepAfter  int
-		MinHeapSize     int
-		MinBinVheapSize int
-		MaxHeapSize     int
-	}
-	State string
-	Consumers int
-	IdleSince string
-	Memory    int
+    MessagesDetails struct {
+        Rate float64
+    }
+    Messages
+    MessagesUnacknowledgedDetails struct {
+        Rate float64
+    }
+    MessagesUnacknowledged int
+    MessagesReadyDetails   struct {
+        Rate float64
+    }
+    MessagesReady     int
+    ReductionsDetails struct {
+        Rate float64
+    }
+    Reductions int
+    Node       string
+    Exclusive            bool
+    AutoDelete           bool
+    Durable              bool
+    Vhost                string
+    Name                 string
+    MessageBytesPagedOut int
+    MessagesPagedOut     int
+    BackingQueueStatus   struct {
+        Mode string
+        Q1   int
+        Q2   int
+        Q3  int
+        Q4  int
+        Len int
+        NextSeqID         int
+        AvgIngressRate    float64
+        AvgEgressRate     float64
+        AvgAckIngressRate float64
+        AvgAckEgressRate  float64
+    }
+    MessageBytesPersistent     int
+    MessageBytesRAM            int
+    MessageBytesUnacknowledged int
+    MessageBytesReady          int
+    MessageBytes               int
+    MessagesPersistent         int
+    MessagesUnacknowledgedRAM  int
+    MessagesReadyRAM           int
+    MessagesRAM                int
+    GarbageCollection          struct {
+        MinorGcs        int
+        FullsweepAfter  int
+        MinHeapSize     int
+        MinBinVheapSize int
+        MaxHeapSize     int
+    }
+    State string
+    Consumers int
+    IdleSince string
+    Memory    int
 }
 ```
 
@@ -669,12 +669,12 @@ type Queue struct {
 
 ```go
 type Binding struct {
-	Source          string
-	Vhost           string
-	Destination     string
-	DestinationType string
-	RoutingKey      string
-	PropertiesKey string
+    Source          string
+    Vhost           string
+    Destination     string
+    DestinationType string
+    RoutingKey      string
+    PropertiesKey string
 }
 ```
 

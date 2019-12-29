@@ -287,8 +287,7 @@ type KeyValueMap map[string]interface{}
 func (d *KeyValueMap) UnmarshalJSON(data []byte) error {
 	// alias KeyValueMap to avoid recursion when callung Unmarshal
 	type Alias KeyValueMap
-	var aux *Alias
-	aux = (*Alias)(d)
+	var aux *Alias = (*Alias)(d)
 	if data[0] == '[' {
 		// JSON array detected
 		return nil

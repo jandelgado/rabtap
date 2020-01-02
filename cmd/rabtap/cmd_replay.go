@@ -32,28 +32,36 @@ type replayMetadata struct {
 }
 
 type DirReader func(string) ([]os.FileInfo, error)
+type FileInfoPredicate func(fileinfo os.FileInfo) bool
 
-func filterMetadataFilenames(fileinfos []os.FileInfo) []string {
-	filenameRegexp := regexp.MustCompile(metadataFilePattern)
+// newRabtapFileInfoPredicate returns a FileInfoPredicate that matches
+// rabtap metadata files
+func newRabtapFileInfoPredicate() FileInfoPredicate {
+	filenameRe := regexp.MustCompile(metadataFilePattern)
+	return func(fi os.FileInfo) bool {
+		return fi.Mode().IsRegular() && filenameRe.MatchString(fi.Name())
+	}
+}
 
+func filterMetadataFilenames(fileinfos []os.FileInfo, pred FileInfoPredicate) []string {
 	var filenames []string
 	for _, fi := range fileinfos {
-		if fi.Mode().IsRegular() && filenameRegexp.MatchString(fi.Name()) {
+		if pred(fi) {
 			filenames = append(filenames, fi.Name())
 		}
 	}
 	return filenames
 }
 
-// findMetadataFilenames returns list of files looking like a rabtap
+// findMetadataFilenames returns list of filenames looking like a rabtap
 // persisted message/metadata files
-func findMetadataFilenames(dirname string, dirReader DirReader) ([]string, error) {
+func findMetadataFilenames(dirname string, dirReader DirReader, pred FileInfoPredicate) ([]string, error) {
 
 	fileinfos, err := dirReader(dirname)
 	if err != nil {
 		return nil, err
 	}
-	return filterMetadataFilenames(fileinfos), nil
+	return filterMetadataFilenames(fileinfos, pred), nil
 }
 
 func readRabtapPersistenMessage(filename string) (RabtapPersistentMessage, error) {
@@ -93,6 +101,31 @@ func readMetadataOfFiles(filenames []string) ([]replayMetadata, error) {
 	}
 
 	return metadata, nil
+}
+
+// readMessageBodyFromFile loads a message from a file as-is
+func readMessageBodyFromFile(filename string) ([]byte, error) {
+	return ioutil.ReadFile(filename)
+}
+
+// readMessageBodyFromJSON loads a message body from a persistet rabtap message
+// JSON 'Body' field
+func readMessageBodyFromJSON(filename string) ([]byte, error) {
+	msg, err := readRabtapPersistenMessage(filename)
+	if err != nil {
+		return nil, err
+	}
+	return msg.Body, nil
+}
+
+// readMessageBody tries to load a message body from a raw message file. If
+// the file can not be read, the message is expected to be in the associated
+// JSON's 'Body' field
+func readMessageBody(basename string) (body []byte, err error) {
+	if body, err = readMessageBodyFromFile(basename + ".dat"); err != nil {
+		return readMessageBodyFromJSON(basename + ".json")
+	}
+	return body, err
 }
 
 /***

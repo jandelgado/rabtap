@@ -5,20 +5,12 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
-	"fmt"
 	"io"
-	"io/ioutil"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
 	"golang.org/x/sync/errgroup"
 )
-
-// MessageReaderFunc provides messages that can be sent to an exchange.
-// returns the message to be published, a flag if more messages are to be read,
-// and an error.
-type MessageReaderFunc func() (amqp.Publishing, bool, error)
 
 // CmdPublishArg contains arguments for the publish command
 type CmdPublishArg struct {
@@ -35,8 +27,8 @@ func publishMessage(publishChannel rabtap.PublishChannel,
 	exchange, routingKey string,
 	amqpPublishing amqp.Publishing) {
 
-	log.Debugf("publishing message %+v to exchange %s with routing key %s",
-		amqpPublishing, exchange, routingKey)
+	log.Debugf("publishing message to exchange %s with routing key %s",
+		exchange, routingKey)
 
 	publishChannel <- &rabtap.PublishMessage{
 		Exchange:   exchange,
@@ -44,47 +36,8 @@ func publishMessage(publishChannel rabtap.PublishChannel,
 		Publishing: &amqpPublishing}
 }
 
-// readSingleMessageFromRawFile reads a single messages from the given io.Reader
-// which is typically stdin or a file. If reading from stdin, CTRL+D (linux)
-// or CTRL+Z (Win) on an empty line terminates the reader.
-func readSingleMessageFromRawFile(reader io.Reader) (amqp.Publishing, bool, error) {
-	buf, err := ioutil.ReadAll(reader)
-	return amqp.Publishing{Body: buf}, false, err
-}
-
-// readNextMessageFromJSONStream reads JSON messages from the given decoder as long
-// as there are messages available.
-func readNextMessageFromJSONStream(decoder *json.Decoder) (amqp.Publishing, bool, error) {
-	message := RabtapPersistentMessage{}
-	err := decoder.Decode(&message)
-	if err != nil {
-		return amqp.Publishing{}, false, err
-	}
-	return message.ToAmqpPublishing(), true, nil
-}
-
-// createMessageReaderFunc returns a function that reads messages from the
-// the given reader in JSON or raw-format
-func createMessageReaderFunc(format string, reader io.ReadCloser) (MessageReaderFunc, error) {
-	switch format {
-	case "json-nopp":
-		fallthrough
-	case "json":
-		decoder := json.NewDecoder(reader)
-		return func() (amqp.Publishing, bool, error) {
-			return readNextMessageFromJSONStream(decoder)
-		}, nil
-	case "raw":
-		return func() (amqp.Publishing, bool, error) {
-			return readSingleMessageFromRawFile(reader)
-		}, nil
-	}
-	return nil, fmt.Errorf("invaild format %s", format)
-}
-
-// publishMessages reads messages with the provided readNextMessageFunc and
-// publishes the messages to the given exchange. When done closes
-// the publishChannel
+// publishMessageStream publishes messages from the provided message stream
+// provided by readNextMessageFunc. When done closes the publishChannel
 func publishMessageStream(publishChannel rabtap.PublishChannel,
 	exchange, routingKey string, readNextMessageFunc MessageReaderFunc) error {
 	for {

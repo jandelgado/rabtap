@@ -320,6 +320,33 @@ func TestCliPubCmdFromStdinWithRoutingKeyJsonFormatDeprecated(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
+func TestCliReplayWithDefaultParameters(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"replay", "--uri=broker1", "/some/dir"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, ReplayCmd, args.Cmd)
+	assert.Equal(t, "broker1", args.AmqpURI)
+	assert.Equal(t, "/some/dir", args.ReplayDir)
+	assert.Equal(t, 1.0, args.Speedup)
+	assert.Equal(t, 0., args.Delay)
+	assert.False(t, args.Verbose)
+	assert.False(t, args.InsecureTLS)
+}
+
+func TestCliReplayWithWithAllOptionsSet(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"replay", "--uri=broker1", "/some/dir", "--speedup=5", "--delay=2", "-kv"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, ReplayCmd, args.Cmd)
+	assert.Equal(t, "broker1", args.AmqpURI)
+	assert.Equal(t, "/some/dir", args.ReplayDir)
+	assert.Equal(t, 5., args.Speedup)
+	assert.Equal(t, 2., args.Delay)
+	assert.True(t, args.Verbose)
+	assert.True(t, args.InsecureTLS)
+}
 func TestCliSubCmdSaveToDir(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir"})

@@ -19,6 +19,11 @@ func TestInitLogging(t *testing.T) {
 	initLogging(false)
 }
 
+func TestDefaultFilenameProviderReturnsFilenameInExpectedFormat(t *testing.T) {
+	fn := defaultFilenameProvider()
+	assert.Regexp(t, "^rabtap-[0-9]+.json$", fn)
+}
+
 func TestGetTLSConfig(t *testing.T) {
 
 	tls := getTLSConfig(true)

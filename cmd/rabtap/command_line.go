@@ -1,5 +1,6 @@
 // command line parsing for rabtap
 // TODO split in per-command parsers
+// TODO use docopt's bind feature to simplify mappings
 // Copyright (C) 2017-2019 Jan Delgado
 
 package main
@@ -8,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 
 	docopt "github.com/docopt/docopt-go"
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -18,7 +20,7 @@ import (
 var RabtapAppVersion = "(version not specified)"
 
 const (
-	// note: usage is interpreted by docopt - this is code.
+	// note: usage is DSL interpreted by docopt - this is code. Change carefully.
 	usage = `rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
@@ -29,6 +31,7 @@ Usage:
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
   rabtap pub [--uri=URI] EXCHANGE [FILE] [--routingkey=KEY] [--format=FORMAT] [-jkv]
+  rabtap replay [--uri=URI] DIR [--delay=DELAY] [--speedup=FACTOR] [-kv]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
   rabtap queue create QUEUE [--uri=URI] [-adkv]
@@ -39,19 +42,22 @@ Usage:
   rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
   rabtap --version
 
-Options:
+Arguments and options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
  FILE                 file to publish in pub mode. If omitted, stdin will be read.
  QUEUE                name of a queue.
  CONNECTION           name of a connection.
+ DIR                  directory to read messages from.
  -a, --autodelete     create auto delete exchange/queue.
  --api=APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
+ --delay=DELAY        Time in ms to wait between sending messages during replay.
+                      If 0 then messages will be delayed as recorded [default: 0].
  -d, --durable        create durable exchange/queue.
  --filter=EXPR        Predicate for info command to filter queues [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
@@ -74,6 +80,7 @@ Options:
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
+ --speedup=FACTOR     Speedup factor to use during replay [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE      exchange type [default: fanout].
  --uri=URI            connect to given AQMP broker. If omitted, the
@@ -111,6 +118,8 @@ const (
 	TapCmd ProgramCmd = iota
 	// PubCmd sets mode to message-publish
 	PubCmd
+	// ReplayCommand sets mode to message replay
+	ReplayCmd
 	// SubCmd sets mode to message-subscribe
 	SubCmd
 	// InfoCmd shows info on exchanges and queues
@@ -141,7 +150,7 @@ type commonArgs struct {
 }
 
 // CommandLineArgs represents the parsed command line arguments
-// TODO does not scale well - split in per-cmd structs?
+// TODO does not scale well - split in per-cmd structs
 type CommandLineArgs struct {
 	Cmd ProgramCmd
 	commonArgs
@@ -168,6 +177,9 @@ type CommandLineArgs struct {
 	Autodelete          bool    // queue create, exchange create
 	SaveDir             *string // save mode: optional directory to stores files to
 	Silent              bool    // suppress message printing
+	Speedup             float64 // replay: speedup factor
+	ReplayDir           string  // replay: base directory
+	Delay               float64 // replay: fixed delay in ms
 
 	ConnName    string // conn mode: name of connection
 	CloseReason string // conn mode: reason of close
@@ -382,6 +394,34 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
+func parseReplayCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
+	result := CommandLineArgs{
+		Cmd:        ReplayCmd,
+		commonArgs: parseCommonArgs(args)}
+
+	var err error
+	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
+		return result, err
+	}
+	result.ReplayDir = args["DIR"].(string)
+
+	if args["--delay"] != nil {
+		result.Delay, err = strconv.ParseFloat(args["--delay"].(string), 64)
+		if err != nil {
+			return result, err
+		}
+	}
+
+	if args["--speedup"] != nil {
+		result.Speedup, err = strconv.ParseFloat(args["--speedup"].(string), 64)
+		if err != nil {
+			return result, err
+		}
+	}
+
+	return result, nil
+}
+
 func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:        TapCmd,
@@ -429,6 +469,8 @@ func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArg
 		return parseInfoCmdArgs(args)
 	case args["pub"].(bool):
 		return parsePublishCmdArgs(args)
+	case args["replay"].(bool):
+		return parseReplayCmdArgs(args)
 	case args["sub"].(bool):
 		return parseSubCmdArgs(args)
 	case args["queue"].(bool):

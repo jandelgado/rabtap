@@ -46,7 +46,7 @@ func TestCmdPublishRaw(t *testing.T) {
 	// message is in tmpfile.Name()
 	os.Args = []string{"rabtap", "pub",
 		"--uri", testcommon.IntegrationURIFromEnv(),
-		"exchange",
+		"--exchange=exchange",
 		tmpfile.Name(),
 		"--routingkey", routingKey}
 
@@ -123,10 +123,10 @@ func TestCmdPublishJSON(t *testing.T) {
 	// message is in tmpfile.Name()
 	os.Args = []string{"rabtap", "pub",
 		"--uri", testcommon.IntegrationURIFromEnv(),
-		"exchange",
+		"--exchange=exchange",
 		tmpfile.Name(),
 		"--routingkey", routingKey,
-		"--json"}
+		"--format=json"}
 	main()
 
 	// verification: we expect 2 messages to be sent by above call

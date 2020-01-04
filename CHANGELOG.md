@@ -1,6 +1,13 @@
 
 # Changelog for rabtap
 
+## v1.22 (2020-01-xx)
+
+* `pub` command now allows to replay messages from a direcory previously recorded.
+  The signature of of the `pub` command was changed (see README.md). Note that the
+  exchange is now optional and will be taken from the message metadata that is
+  published. 
+
 ## v1.21 (2019-12-14)
 
 * new option: `--format FORMAT` which controls output format in `tap`, 

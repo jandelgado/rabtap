@@ -30,8 +30,8 @@ Usage:
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
-  rabtap pub [--uri=URI] EXCHANGE [FILE] [--routingkey=KEY] [--format=FORMAT] [-jkv]
-  rabtap replay [--uri=URI] DIR [--delay=DELAY] [--speedup=FACTOR] [-kv]
+  rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
+             [--delay=DELAY] [--speedup=FACTOR] [-jkv]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
   rabtap queue create QUEUE [--uri=URI] [-adkv]
@@ -46,7 +46,7 @@ Arguments and options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
- FILE                 file to publish in pub mode. If omitted, stdin will be read.
+ SOURCE               file or directory to publish in pub mode. If omitted, stdin will be read.
  QUEUE                name of a queue.
  CONNECTION           name of a connection.
  DIR                  directory to read messages from.
@@ -56,7 +56,7 @@ Arguments and options:
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
- --delay=DELAY        Time in ms to wait between sending messages during replay.
+ --delay=DELAY        Time in ms to wait between sending messages during publish.
                       If 0 then messages will be delayed as recorded [default: 0].
  -d, --durable        create durable exchange/queue.
  --filter=EXPR        Predicate for info command to filter queues [default: true]
@@ -80,7 +80,7 @@ Arguments and options:
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
- --speedup=FACTOR     Speedup factor to use during replay [default: 1.0].
+ --speedup=FACTOR     Speedup factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE      exchange type [default: fanout].
  --uri=URI            connect to given AQMP broker. If omitted, the
@@ -105,7 +105,7 @@ Examples:
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
-  rabtap info --filter "binding.Source == 'amq.topic'" -o
+  rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 `
 )
@@ -118,8 +118,6 @@ const (
 	TapCmd ProgramCmd = iota
 	// PubCmd sets mode to message-publish
 	PubCmd
-	// ReplayCommand sets mode to message replay
-	ReplayCmd
 	// SubCmd sets mode to message-subscribe
 	SubCmd
 	// InfoCmd shows info on exchanges and queues
@@ -158,31 +156,29 @@ type CommandLineArgs struct {
 	TapConfig []rabtap.TapConfiguration // configuration in tap mode
 	APIURI    string
 
-	PubExchange         string  // pub mode: exchange to publish to
-	PubRoutingKey       string  // pub mode: routing key, defaults to ""
-	PubFile             *string // pub mode: file to send
-	AutoAck             bool    // sub mode: auto ack enabled
+	PubExchange         string  // pub: exchange to publish to
+	PubRoutingKey       string  // pub: routing key, defaults to ""
+	Source              *string // pub: file to send
+	Speedup             float64 // pub: speedup factor
+	Delay               float64 // pub: fixed delay in ms
+	AutoAck             bool    // sub: auto ack enabled
 	QueueName           string  // queue create, remove, bind, sub
 	QueueBindingKey     string  // queue bind
 	ExchangeName        string  // exchange name  create, remove or queue bind
 	ExchangeType        string  // exchange type create, remove or queue bind
-	ShowConsumers       bool    // info mode: also show consumer
-	InfoMode            string  // info mode: byExchange, byConnection
-	ShowStats           bool    // info mode: also show statistics
-	QueueFilter         string  // info mode: optional filter predicate
-	OmitEmptyExchanges  bool    // info mode: do not show exchanges wo/ bindings
-	ShowDefaultExchange bool    // info mode: show default exchange
+	ShowConsumers       bool    // info: also show consumer
+	InfoMode            string  // info: byExchange, byConnection
+	ShowStats           bool    // info: also show statistics
+	QueueFilter         string  // info: optional filter predicate
+	OmitEmptyExchanges  bool    // info: do not show exchanges wo/ bindings
+	ShowDefaultExchange bool    // info: show default exchange
 	Format              string  // output format, depends on command
 	Durable             bool    // queue create, exchange create
 	Autodelete          bool    // queue create, exchange create
-	SaveDir             *string // save mode: optional directory to stores files to
+	SaveDir             *string // save: optional directory to stores files to
 	Silent              bool    // suppress message printing
-	Speedup             float64 // replay: speedup factor
-	ReplayDir           string  // replay: base directory
-	Delay               float64 // replay: fixed delay in ms
-
-	ConnName    string // conn mode: name of connection
-	CloseReason string // conn mode: reason of close
+	ConnName            string  // conn: name of connection
+	CloseReason         string  // conn: reason of close
 }
 
 // getAmqpURI returns the ith entry of amqpURIs array or the value
@@ -383,42 +379,28 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
 		return result, err
 	}
-	result.PubExchange = args["EXCHANGE"].(string)
+	if args["--exchange"] != nil {
+		result.PubExchange = args["--exchange"].(string)
+	}
 	if args["--routingkey"] != nil {
 		result.PubRoutingKey = args["--routingkey"].(string)
 	}
-	if args["FILE"] != nil {
-		file := args["FILE"].(string)
-		result.PubFile = &file
+	if args["SOURCE"] != nil {
+		file := args["SOURCE"].(string)
+		result.Source = &file
 	}
-	return result, nil
-}
-
-func parseReplayCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
-	result := CommandLineArgs{
-		Cmd:        ReplayCmd,
-		commonArgs: parseCommonArgs(args)}
-
-	var err error
-	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
-		return result, err
-	}
-	result.ReplayDir = args["DIR"].(string)
-
 	if args["--delay"] != nil {
 		result.Delay, err = strconv.ParseFloat(args["--delay"].(string), 64)
 		if err != nil {
 			return result, err
 		}
 	}
-
 	if args["--speedup"] != nil {
 		result.Speedup, err = strconv.ParseFloat(args["--speedup"].(string), 64)
 		if err != nil {
 			return result, err
 		}
 	}
-
 	return result, nil
 }
 
@@ -469,8 +451,6 @@ func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArg
 		return parseInfoCmdArgs(args)
 	case args["pub"].(bool):
 		return parsePublishCmdArgs(args)
-	case args["replay"].(bool):
-		return parseReplayCmdArgs(args)
 	case args["sub"].(bool):
 		return parseSubCmdArgs(args)
 	case args["queue"].(bool):

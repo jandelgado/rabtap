@@ -100,7 +100,7 @@ func TestReadMessageFromJSONStreamReturnsOneMessagePerCall(t *testing.T) {
 
 func TestCreateMessageReaderFuncReturnsErrorForUnknownFormat(t *testing.T) {
 	reader := ioutil.NopCloser(bytes.NewReader([]byte("")))
-	_, err := createMessageReaderFunc("invalid", reader)
+	_, err := CreateMessageReaderFunc("invalid", reader)
 	assert.NotNil(t, err)
 }
 
@@ -109,7 +109,7 @@ func TestCreateMessageReaderFuncReturnsJSONReaderForJSONFormats(t *testing.T) {
 	for _, format := range []string{"json", "json-nopp"} {
 		reader := ioutil.NopCloser(bytes.NewReader([]byte(`{"Body": "aGVsbG8="}`)))
 
-		readFunc, err := createMessageReaderFunc(format, reader)
+		readFunc, err := CreateMessageReaderFunc(format, reader)
 		assert.Nil(t, err)
 
 		msg, more, err := readFunc()
@@ -127,7 +127,7 @@ func TestCreateMessageReaderFuncReturnsRawFileReaderForRawFormats(t *testing.T) 
 
 	reader := ioutil.NopCloser(bytes.NewReader([]byte("hello")))
 
-	readFunc, err := createMessageReaderFunc("raw", reader)
+	readFunc, err := CreateMessageReaderFunc("raw", reader)
 	assert.Nil(t, err)
 
 	msg, more, err := readFunc()

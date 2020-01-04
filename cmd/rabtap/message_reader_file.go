@@ -52,36 +52,9 @@ func readMessageFromJSONStream(decoder *json.Decoder) (RabtapPersistentMessage, 
 	return message, true, nil
 }
 
-// createMessageFromDirReaderFunc returns a MessageReaderFunc that reads
-// messages from the given list of filenames.
-func createMessageFromDirReaderFunc(format string, files []filenameWithMetadata) (MessageReaderFunc, error) {
-
-	i := 0
-
-	switch format {
-	case "json-nopp":
-		fallthrough
-	case "json":
-		return func() (amqp.Publishing, bool, error) {
-			fullMessage, err := readRabtapPersistentMessage(files[i].filename)
-			i++
-			return fullMessage.ToAmqpPublishing(), i < len(files), err
-		}, nil
-	case "raw":
-		return func() (amqp.Publishing, bool, error) {
-			body, err := ioutil.ReadFile(files[i].filename)
-			message := files[i].metadata
-			message.Body = body
-			i++
-			return message.ToAmqpPublishing(), i < len(files), err
-		}, nil
-	}
-	return nil, fmt.Errorf("invaild format %s", format)
-}
-
-// createMessageReaderFunc returns a MessageReaderFunc that reads messages from
+// CreateMessageReaderFunc returns a MessageReaderFunc that reads messages from
 // the the given reader in the provided format
-func createMessageReaderFunc(format string, reader io.ReadCloser) (MessageReaderFunc, error) {
+func CreateMessageReaderFunc(format string, reader io.ReadCloser) (MessageReaderFunc, error) {
 	switch format {
 	case "json-nopp":
 		fallthrough

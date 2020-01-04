@@ -257,16 +257,19 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	assert.True(t, args.OmitEmptyExchanges)
 }
 
-func TestCliPubCmdFromFile(t *testing.T) {
+func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker", "exchange", "file", "--routingkey", "key"})
+		[]string{"pub", "--uri=broker", "--exchange=exchange", "file",
+			"--routingkey=key", "--delay=1", "--speedup=2"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker", args.AmqpURI)
 	assert.Equal(t, "exchange", args.PubExchange)
-	assert.Equal(t, "file", *args.PubFile)
+	assert.Equal(t, "file", *args.Source)
 	assert.Equal(t, "key", args.PubRoutingKey)
+	assert.Equal(t, 1., args.Delay)
+	assert.Equal(t, 2., args.Speedup)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
@@ -276,77 +279,68 @@ func TestCliPubCmdUriFromEnv(t *testing.T) {
 	os.Setenv(key, "URI")
 	defer os.Unsetenv(key)
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "exchange"})
+		[]string{"pub"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "URI", args.AmqpURI)
-	assert.Equal(t, "exchange", args.PubExchange)
 }
 
-func TestCliPubCmdMissingUri(t *testing.T) {
+func TestCliPubCmdMissingUriReturnsError(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	os.Unsetenv(key)
-	_, err := ParseCommandLineArgs(
-		[]string{"pub", "exchange"})
+	_, err := ParseCommandLineArgs([]string{"pub"})
+	assert.NotNil(t, err)
+}
+
+func TestCliPubCmdInvalidDelayReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"pub", "--uri=uri", "--delay=invalid"})
+	assert.NotNil(t, err)
+}
+
+func TestCliPubCmdInvalidSpeedupReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"pub", "--uri=uri", "--speedup=invalid"})
+	assert.NotNil(t, err)
+}
+
+func TestCliPubCmdInvalidFormatReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"pub", "--uri=uri", "--format=invalid"})
 	assert.NotNil(t, err)
 }
 
 func TestCliPubCmdFromStdinWithRoutingKeyJsonFormat(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--format=json"})
+		[]string{"pub", "--uri=broker1", "--exchange=exchange1", "--routingkey=key", "--format=json"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker1", args.AmqpURI)
 	assert.Equal(t, "exchange1", args.PubExchange)
-	assert.Nil(t, args.PubFile)
+	assert.Nil(t, args.Source)
 	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliPubCmdFromStdinWithRoutingKeyJsonFormatDeprecated(t *testing.T) {
+func TestCliPubCmdFromStdinWithJsonFormatDeprecated(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--json"})
+		[]string{"pub", "--uri=broker1", "--json"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker1", args.AmqpURI)
-	assert.Equal(t, "exchange1", args.PubExchange)
-	assert.Nil(t, args.PubFile)
+	assert.Equal(t, "", args.PubExchange)
+	assert.Nil(t, args.Source)
 	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliReplayWithDefaultParameters(t *testing.T) {
-	args, err := ParseCommandLineArgs(
-		[]string{"replay", "--uri=broker1", "/some/dir"})
-
-	assert.Nil(t, err)
-	assert.Equal(t, ReplayCmd, args.Cmd)
-	assert.Equal(t, "broker1", args.AmqpURI)
-	assert.Equal(t, "/some/dir", args.ReplayDir)
-	assert.Equal(t, 1.0, args.Speedup)
-	assert.Equal(t, 0., args.Delay)
-	assert.False(t, args.Verbose)
-	assert.False(t, args.InsecureTLS)
+func TestCliSubCmdInvalidFormatReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--format=invalid"})
+	assert.NotNil(t, err)
 }
 
-func TestCliReplayWithWithAllOptionsSet(t *testing.T) {
-	args, err := ParseCommandLineArgs(
-		[]string{"replay", "--uri=broker1", "/some/dir", "--speedup=5", "--delay=2", "-kv"})
-
-	assert.Nil(t, err)
-	assert.Equal(t, ReplayCmd, args.Cmd)
-	assert.Equal(t, "broker1", args.AmqpURI)
-	assert.Equal(t, "/some/dir", args.ReplayDir)
-	assert.Equal(t, 5., args.Speedup)
-	assert.Equal(t, 2., args.Delay)
-	assert.True(t, args.Verbose)
-	assert.True(t, args.InsecureTLS)
-}
 func TestCliSubCmdSaveToDir(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir"})

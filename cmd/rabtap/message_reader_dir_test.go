@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -82,7 +84,7 @@ func writeTempFile(t *testing.T, data string) string {
 }
 
 func TestRabtapFileInfoPredicateFiltersExpectedFiles(t *testing.T) {
-	p := newRabtapFileInfoPredicate()
+	p := NewRabtapFileInfoPredicate()
 
 	assert.True(t, p(newFileInfoMock("rabtap-1234.json", 0)))
 	assert.True(t, p(newFileInfoMock("rabtap-1235.json", 0)))
@@ -121,6 +123,42 @@ func TestFindMetadataFilenamesReturnsErrorOnInvalidDirectory(t *testing.T) {
 
 func TestReadMetadataFileReturnsErrorForNonExistingFile(t *testing.T) {
 	_, err := readRabtapPersistentMessage("/this/file/should/not/exist")
+	assert.NotNil(t, err)
+}
+
+func TestLoadMetadataFilesFromDirReturnsExpectedMetadata(t *testing.T) {
+	pred := func(fi os.FileInfo) bool {
+		return fi.Name() == "rabtap.json"
+	}
+	msg := `{ "Exchange": "exchange", "Body": "" }`
+
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	metadataFile := filepath.Join(dir, "rabtap.json")
+	messageFile := filepath.Join(dir, "rabtap.dat")
+
+	err = ioutil.WriteFile(metadataFile, []byte(msg), 0666)
+	require.Nil(t, err)
+	err = ioutil.WriteFile(messageFile, []byte("Hello123"), 0666)
+	require.Nil(t, err)
+
+	metadata, err := LoadMetadataFilesFromDir(dir, ioutil.ReadDir, pred)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(metadata))
+	assert.Equal(t, path.Join(dir, "rabtap.json"), metadata[0].filename)
+	assert.Equal(t, "exchange", metadata[0].metadata.Exchange)
+}
+
+func TestLoadMetadataFilesFromDirFailsOnInvalidDir(t *testing.T) {
+	pred := func(fi os.FileInfo) bool {
+		return true
+	}
+	dirReader := func(string) ([]os.FileInfo, error) {
+		return nil, errors.New("invalid dir")
+	}
+	_, err := LoadMetadataFilesFromDir("unused", dirReader, pred)
 	assert.NotNil(t, err)
 }
 
@@ -163,7 +201,7 @@ func TestReadPersistentRabtapMessageReturnsCorrectObject(t *testing.T) {
 
 func TestReadMetadataOfFilesFailsWithErrorIfAnyFileCouldNotBeRead(t *testing.T) {
 
-	_, err := readMetadataOfFiles([]string{"/this/file/should/not/exist"})
+	_, err := readMetadataOfFiles("/base", []string{"/this/file/should/not/exist"})
 	assert.NotNil(t, err)
 }
 
@@ -189,14 +227,14 @@ func TestReadMetadataOfFilesReturnsExpectedMetadata(t *testing.T) {
   "Body": "SGVsbG8="
 }
 `
-	filename := writeTempFile(t, msg)
+	dir, filename := path.Split(writeTempFile(t, msg))
 	defer os.Remove(filename)
 
-	data, err := readMetadataOfFiles([]string{filename})
+	data, err := readMetadataOfFiles(dir, []string{filename})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(data))
-	assert.Equal(t, filename, data[0].filename)
+	assert.Equal(t, path.Join(dir, filename), data[0].filename)
 	assert.Equal(t, "amq.fanout", data[0].metadata.Exchange)
 	assert.Equal(t, "key", data[0].metadata.RoutingKey)
 	expectedTs, _ := time.Parse(time.RFC3339Nano, "2019-12-29T21:51:33.52288901+01:00")
@@ -204,92 +242,3 @@ func TestReadMetadataOfFilesReturnsExpectedMetadata(t *testing.T) {
 	assert.Equal(t, []byte(""), data[0].metadata.Body)
 	// etc
 }
-
-/***
-func TestReadMessageBodyFromFileReturnsFileAsIs(t *testing.T) {
-
-	filename := writeTempFile(t, "Hello123")
-	defer os.Remove(filename)
-
-	contents, err := readMessageBodyFromFile(filename)
-
-	assert.Nil(t, err)
-	assert.Equal(t, []byte("Hello123"), contents)
-}
-
-func TestReadMessageBodyFromJSONReturnsBodyDecocded(t *testing.T) {
-	msg := `{
-  "ContentType": "",
-  "ContentEncoding": "",
-  "DeliveryMode": 0,
-  "Priority": 0,
-  "CorrelationID": "",
-  "ReplyTo": "",
-  "Expiration": "",
-  "MessageID": "",
-  "Timestamp": "0001-01-01T00:00:00Z",
-  "Type": "",
-  "UserID": "",
-  "AppID": "",
-  "DeliveryTag": 1,
-  "Redelivered": false,
-  "Exchange": "amq.fanout",
-  "RoutingKey": "key",
-  "XRabtapReceivedTimestamp": "2019-12-29T21:51:33.52288901+01:00",
-  "Body": "SGVsbG8="
-}
-`
-	filename := writeTempFile(t, msg)
-	defer os.Remove(filename)
-
-	contents, err := readMessageBodyFromJSON(filename)
-
-	assert.Nil(t, err)
-	assert.Equal(t, []byte("Hello"), contents)
-}
-
-func TestReadMessageBodyReadsMessageFromDatFileFirstIfPresent(t *testing.T) {
-	metadata := `{ "Body": "" }`
-
-	dir, err := ioutil.TempDir("", "")
-	require.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	metadataFile := filepath.Join(dir, "rabtap.json")
-	messageFile := filepath.Join(dir, "rabtap.dat")
-
-	err = ioutil.WriteFile(metadataFile, []byte(metadata), 0666)
-	require.Nil(t, err)
-	err = ioutil.WriteFile(messageFile, []byte("Hello123"), 0666)
-	require.Nil(t, err)
-
-	body, err := readMessageBody(filepath.Join(dir, "rabtap"))
-	assert.Nil(t, err)
-	assert.Equal(t, []byte("Hello123"), body)
-}
-
-func TestReadMessageBodyReadsMessageFromJSONIfNoDatFileIsPresent(t *testing.T) {
-	msg := `{ "Body": "SGVsbG8=" } `
-
-	dir, err := ioutil.TempDir("", "")
-	require.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	messageFile := filepath.Join(dir, "rabtap.json")
-
-	err = ioutil.WriteFile(messageFile, []byte(msg), 0666)
-	require.Nil(t, err)
-
-	body, err := readMessageBody(filepath.Join(dir, "rabtap"))
-	assert.Nil(t, err)
-	assert.Equal(t, []byte("Hello"), body)
-}
-
-func TestReadMessageBodyReturnsErrorIfNoBodyIsPresent(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
-	require.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	_, err = readMessageBody(filepath.Join(dir, "rabtap"))
-	assert.NotNil(t, err)
-}****/

@@ -27,7 +27,7 @@ func publishMessage(publishChannel rabtap.PublishChannel,
 	exchange, routingKey string,
 	amqpPublishing amqp.Publishing) {
 
-	log.Debugf("publishing message to exchange %s with routing key %s",
+	log.Debugf("publishing message to exchange '%s' with routing key '%s'",
 		exchange, routingKey)
 
 	publishChannel <- &rabtap.PublishMessage{

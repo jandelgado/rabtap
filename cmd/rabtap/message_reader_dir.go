@@ -9,8 +9,7 @@ import (
 	"os"
 	"path"
 	"regexp"
-
-	"github.com/streadway/amqp"
+	"strings"
 )
 
 const metadataFilePattern = `^rabtap-[0-9]+.json$`
@@ -21,6 +20,10 @@ type FileInfoPredicate func(fileinfo os.FileInfo) bool
 type FilenameWithMetadata struct {
 	filename string
 	metadata RabtapPersistentMessage
+}
+
+func filenameWithoutExtension(fn string) string {
+	return strings.TrimSuffix(fn, path.Ext(fn))
 }
 
 // newRabtapFileInfoPredicate returns a FileInfoPredicate that matches
@@ -73,8 +76,8 @@ func readMetadataOfFiles(dirname string, filenames []string) ([]FilenameWithMeta
 			return data, err
 		}
 		// we will load the body later when the message is published (from the
-		// JSON or a separate message file). This approach read message bodies
-		// twice, but this should not be a problem (for now...)
+		// JSON or a separate message file). This approach reads message bodies
+		// twice, but this should not be a problem
 		msg.Body = []byte("")
 		data[i] = FilenameWithMetadata{filename: fullpath, metadata: msg}
 	}
@@ -102,18 +105,20 @@ func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata)
 	case "json-nopp":
 		fallthrough
 	case "json":
-		return func() (amqp.Publishing, bool, error) {
-			fullMessage, err := readRabtapPersistentMessage(files[i].filename)
+		return func() (RabtapPersistentMessage, bool, error) {
+			message, err := readRabtapPersistentMessage(files[i].filename)
 			i++
-			return fullMessage.ToAmqpPublishing(), i < len(files), err
+			return message, i < len(files), err
 		}, nil
 	case "raw":
-		return func() (amqp.Publishing, bool, error) {
-			body, err := ioutil.ReadFile(files[i].filename)
+		return func() (RabtapPersistentMessage, bool, error) {
+			// TODO fix filename -> .json to .dat
+			rawFile := filenameWithoutExtension(files[i].filename) + ".dat"
+			body, err := ioutil.ReadFile(rawFile)
 			message := files[i].metadata
 			message.Body = body
 			i++
-			return message.ToAmqpPublishing(), i < len(files), err
+			return message, i < len(files), err
 		}, nil
 	}
 	return nil, fmt.Errorf("invaild format %s", format)

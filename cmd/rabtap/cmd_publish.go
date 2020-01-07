@@ -16,8 +16,8 @@ import (
 type CmdPublishArg struct {
 	amqpURI    string
 	tlsConfig  *tls.Config
-	exchange   string
-	routingKey string
+	exchange   *string
+	routingKey *string
 	readerFunc MessageReaderFunc
 }
 
@@ -36,10 +36,19 @@ func publishMessage(publishChannel rabtap.PublishChannel,
 		Publishing: &amqpPublishing}
 }
 
+// selectOptionalOrDefault returns either an optional string, if set, or
+// a default value.
+func selectOptionalOrDefault(optionalStr *string, defaultStr string) string {
+	if optionalStr != nil {
+		return *optionalStr
+	}
+	return defaultStr
+}
+
 // publishMessageStream publishes messages from the provided message stream
 // provided by readNextMessageFunc. When done closes the publishChannel
 func publishMessageStream(publishChannel rabtap.PublishChannel,
-	exchange, routingKey string, readNextMessageFunc MessageReaderFunc) error {
+	optExchange, optRoutingKey *string, readNextMessageFunc MessageReaderFunc) error {
 	for {
 		msg, more, err := readNextMessageFunc()
 		switch err {
@@ -47,7 +56,9 @@ func publishMessageStream(publishChannel rabtap.PublishChannel,
 			close(publishChannel)
 			return nil
 		case nil:
-			publishMessage(publishChannel, exchange, routingKey, msg)
+			routingKey := selectOptionalOrDefault(optRoutingKey, msg.RoutingKey)
+			exchange := selectOptionalOrDefault(optExchange, msg.Exchange)
+			publishMessage(publishChannel, exchange, routingKey, msg.ToAmqpPublishing())
 		default:
 			close(publishChannel)
 			return err

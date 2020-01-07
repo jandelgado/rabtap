@@ -46,8 +46,8 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 func TestCmdSub(t *testing.T) {
 	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"
-	const testKey = testQueue
-	const testExchange = "sub-exchange-test"
+	testKey := testQueue
+	testExchange := "sub-exchange-test"
 	tlsConfig := &tls.Config{}
 	amqpURI := testcommon.IntegrationURIFromEnv()
 
@@ -84,20 +84,21 @@ func TestCmdSub(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	messageCount := 0
+	// TODO test without cmdPublish
 	cmdPublish(
 		ctx,
 		CmdPublishArg{
 			amqpURI:    amqpURI,
-			exchange:   testExchange,
-			routingKey: testKey,
+			exchange:   &testExchange,
+			routingKey: &testKey,
 			tlsConfig:  tlsConfig,
-			readerFunc: func() (amqp.Publishing, bool, error) {
+			readerFunc: func() (RabtapPersistentMessage, bool, error) {
 				// provide exactly one message
 				if messageCount > 0 {
-					return amqp.Publishing{}, false, io.EOF
+					return RabtapPersistentMessage{}, false, io.EOF
 				}
 				messageCount++
-				return amqp.Publishing{
+				return RabtapPersistentMessage{
 					Body:         []byte(testMessage),
 					ContentType:  "text/plain",
 					DeliveryMode: amqp.Transient,

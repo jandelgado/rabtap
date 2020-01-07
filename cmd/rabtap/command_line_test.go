@@ -257,17 +257,34 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	assert.True(t, args.OmitEmptyExchanges)
 }
 
-func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
+func TestCliPubCmdFromFileMinimalOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker", "--exchange=exchange", "file",
-			"--routingkey=key", "--delay=1", "--speedup=2"})
+		[]string{"pub", "--uri=broker"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker", args.AmqpURI)
-	assert.Equal(t, "exchange", args.PubExchange)
+	assert.Nil(t, args.PubExchange)
+	assert.Nil(t, args.Source)
+	assert.Nil(t, args.PubRoutingKey)
+	assert.Equal(t, "raw", args.Format)
+	assert.Equal(t, 0., args.Delay)
+	assert.Equal(t, 1., args.Speedup)
+	assert.False(t, args.Verbose)
+	assert.False(t, args.InsecureTLS)
+}
+func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"pub", "--uri=broker", "--exchange=exchange", "file",
+			"--routingkey=key", "--delay=1", "--speedup=2", "--format=json"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, PubCmd, args.Cmd)
+	assert.Equal(t, "broker", args.AmqpURI)
+	assert.Equal(t, "exchange", *args.PubExchange)
 	assert.Equal(t, "file", *args.Source)
-	assert.Equal(t, "key", args.PubRoutingKey)
+	assert.Equal(t, "key", *args.PubRoutingKey)
+	assert.Equal(t, "json", args.Format)
 	assert.Equal(t, 1., args.Delay)
 	assert.Equal(t, 2., args.Speedup)
 	assert.False(t, args.Verbose)
@@ -315,7 +332,8 @@ func TestCliPubCmdFromStdinWithRoutingKeyJsonFormat(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker1", args.AmqpURI)
-	assert.Equal(t, "exchange1", args.PubExchange)
+	assert.Equal(t, "exchange1", *args.PubExchange)
+	assert.Equal(t, "key", *args.PubRoutingKey)
 	assert.Nil(t, args.Source)
 	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)
@@ -329,7 +347,8 @@ func TestCliPubCmdFromStdinWithJsonFormatDeprecated(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker1", args.AmqpURI)
-	assert.Equal(t, "", args.PubExchange)
+	assert.Nil(t, args.PubExchange)
+	assert.Nil(t, args.PubRoutingKey)
 	assert.Nil(t, args.Source)
 	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)

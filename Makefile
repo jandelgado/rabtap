@@ -58,8 +58,7 @@ toxiproxy-cmd:
 
 # run rabbitmq server for integration test using docker container.
 run-broker:
-	sudo docker run -ti --rm -p 5672:5672 \
-		        -p 15672:15672 rabbitmq:3-management
+	podman run -ti --rm -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 
 dist-clean: clean
 	rm -f *.out $(BINARY_WIN64) $(BINARY_LINUX64) $(BINARY_DARWIN64)

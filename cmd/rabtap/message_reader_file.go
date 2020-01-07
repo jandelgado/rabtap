@@ -8,14 +8,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-
-	"github.com/streadway/amqp"
 )
 
 // MessageReaderFunc provides messages that can be sent to an exchange.
 // returns the message to be published, a flag if more messages are to be read,
 // and an error.
-type MessageReaderFunc func() (amqp.Publishing, bool, error)
+type MessageReaderFunc func() (RabtapPersistentMessage, bool, error)
 
 // readMessageFromRawFile reads a single messages from the given io.Reader
 // which is typically stdin or a file. If reading from stdin, CTRL+D (linux)
@@ -48,7 +46,6 @@ func readMessageFromJSONStream(decoder *json.Decoder) (RabtapPersistentMessage, 
 	if err != nil {
 		return message, false, err
 	}
-	//	return message.ToAmqpPublishing(), true, nil
 	return message, true, nil
 }
 
@@ -60,14 +57,14 @@ func CreateMessageReaderFunc(format string, reader io.ReadCloser) (MessageReader
 		fallthrough
 	case "json":
 		decoder := json.NewDecoder(reader)
-		return func() (amqp.Publishing, bool, error) {
+		return func() (RabtapPersistentMessage, bool, error) {
 			msg, more, err := readMessageFromJSONStream(decoder)
-			return msg.ToAmqpPublishing(), more, err
+			return msg, more, err
 		}, nil
 	case "raw":
-		return func() (amqp.Publishing, bool, error) {
+		return func() (RabtapPersistentMessage, bool, error) {
 			buf, err := readMessageFromRawFile(reader)
-			return amqp.Publishing{Body: buf}, false, err
+			return RabtapPersistentMessage{Body: buf}, false, err
 		}, nil
 	}
 	return nil, fmt.Errorf("invaild format %s", format)

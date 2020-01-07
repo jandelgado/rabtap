@@ -59,6 +59,8 @@ Arguments and options:
  --delay=DELAY        Time in ms to wait between sending messages during publish.
                       If 0 then messages will be delayed as recorded [default: 0].
  -d, --durable        create durable exchange/queue.
+ --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
+                      be taken from message being published (see JSON message format).
  --filter=EXPR        Predicate for info command to filter queues [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
                         and optionally to file (when --saveto DIR is given). 
@@ -76,7 +78,9 @@ Arguments and options:
                       when the channel is closed.
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
- -r, --routingkey=KEY routing key to use in publish mode.
+ -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
+                      will be taken from message being published (see JSON 
+					  message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
@@ -156,8 +160,8 @@ type CommandLineArgs struct {
 	TapConfig []rabtap.TapConfiguration // configuration in tap mode
 	APIURI    string
 
-	PubExchange         string  // pub: exchange to publish to
-	PubRoutingKey       string  // pub: routing key, defaults to ""
+	PubExchange         *string // pub: exchange to publish to
+	PubRoutingKey       *string // pub: routing key, defaults to ""
 	Source              *string // pub: file to send
 	Speedup             float64 // pub: speedup factor
 	Delay               float64 // pub: fixed delay in ms
@@ -380,10 +384,12 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		return result, err
 	}
 	if args["--exchange"] != nil {
-		result.PubExchange = args["--exchange"].(string)
+		exchange := args["--exchange"].(string)
+		result.PubExchange = &exchange
 	}
 	if args["--routingkey"] != nil {
-		result.PubRoutingKey = args["--routingkey"].(string)
+		routingKey := args["--routingkey"].(string)
+		result.PubRoutingKey = &routingKey
 	}
 	if args["SOURCE"] != nil {
 		file := args["SOURCE"].(string)

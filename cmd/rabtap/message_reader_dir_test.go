@@ -83,6 +83,11 @@ func writeTempFile(t *testing.T, data string) string {
 	return tmpFile.Name()
 }
 
+func TestFilenameWithoutExtensionReturnsExpectedResult(t *testing.T) {
+	assert.Equal(t, "/some/file", filenameWithoutExtension("/some/file.ext"))
+	assert.Equal(t, "/some/file", filenameWithoutExtension("/some/file"))
+}
+
 func TestRabtapFileInfoPredicateFiltersExpectedFiles(t *testing.T) {
 	p := NewRabtapFileInfoPredicate()
 

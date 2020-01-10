@@ -11,6 +11,8 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
@@ -47,7 +50,9 @@ func TestCmdSub(t *testing.T) {
 	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"
 	testKey := testQueue
-	testExchange := "sub-exchange-test"
+
+	testExchange := ""
+	//	testExchange := "sub-exchange-test"
 	tlsConfig := &tls.Config{}
 	amqpURI := testcommon.IntegrationURIFromEnv()
 
@@ -62,16 +67,9 @@ func TestCmdSub(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// creat exchange
-	cmdExchangeCreate(CmdExchangeCreateArg{amqpURI: amqpURI,
-		exchange: testExchange, exchangeType: "fanout",
-		durable: false, tlsConfig: tlsConfig})
-	defer cmdExchangeRemove(amqpURI, testExchange, tlsConfig)
-
 	// create and bind queue
 	cmdQueueCreate(CmdQueueCreateArg{amqpURI: amqpURI,
 		queue: testQueue, tlsConfig: tlsConfig})
-	cmdQueueBindToExchange(amqpURI, testQueue, testKey, testExchange, tlsConfig)
 	defer cmdQueueRemove(amqpURI, testQueue, tlsConfig)
 
 	// subscribe to testQueue
@@ -84,6 +82,7 @@ func TestCmdSub(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	messageCount := 0
+
 	// TODO test without cmdPublish
 	cmdPublish(
 		ctx,
@@ -105,14 +104,55 @@ func TestCmdSub(t *testing.T) {
 				}, true, nil
 			}})
 
-	// test if our tap received the message
+	// test if we received the message
 	select {
 	case <-done:
 	case <-time.After(time.Second * 2):
 		assert.Fail(t, "did not receive message within expected time")
 	}
 	cancel() // stop cmdSubscribe()
+}
 
-	cmdQueueUnbindFromExchange(amqpURI, testQueue, testKey, testExchange, tlsConfig)
-	// TODO check that queue is unbound
+func TestCmdSubIntegration(t *testing.T) {
+	const testMessage = "SubHello"
+	const testQueue = "sub-queue-test"
+	testKey := testQueue
+	testExchange := "" // default exchange
+
+	tlsConfig := &tls.Config{}
+	amqpURI := testcommon.IntegrationURIFromEnv()
+
+	cmdQueueCreate(CmdQueueCreateArg{amqpURI: amqpURI,
+		queue: testQueue, tlsConfig: tlsConfig})
+	defer cmdQueueRemove(amqpURI, testQueue, tlsConfig)
+
+	_, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
+	err := ch.Publish(
+		testExchange,
+		testKey,
+		false, // mandatory
+		false, // immediate
+		amqp.Publishing{
+			Body:         []byte("Hello"),
+			ContentType:  "text/plain",
+			DeliveryMode: amqp.Transient,
+			Headers:      amqp.Table{},
+		})
+	require.Nil(t, err)
+
+	go func() {
+		time.Sleep(time.Second * 2)
+		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	}()
+
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+	os.Args = []string{"rabtap", "sub",
+		"--uri", testcommon.IntegrationURIFromEnv(),
+		testQueue,
+		"--format=raw",
+		"--no-color"}
+	output := testcommon.CaptureOutput(main)
+
+	assert.Regexp(t, "(?s).*message received.*\nroutingkey.....: sub-queue-test\n.*Hello", output)
 }

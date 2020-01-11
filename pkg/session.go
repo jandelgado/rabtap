@@ -13,6 +13,7 @@ import (
 
 const (
 	retryDelay = 3 * time.Second
+	FailEarly  = true
 )
 
 // Session composes an amqp.Connection with an amqp.Channel
@@ -36,12 +37,11 @@ func (s *Session) NewChannel() error {
 // channel in a Session struct. Closes returned chan when initial connection
 // attempt fails.
 func redial(ctx context.Context, url string, tlsConfig *tls.Config,
-	logger logrus.StdLogger) chan chan Session {
+	logger logrus.StdLogger, failEarly bool) chan chan Session {
 
 	sessions := make(chan chan Session)
 
 	go func() {
-		initial := true
 		sess := make(chan Session)
 		defer close(sessions)
 
@@ -68,7 +68,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 					}
 				}
 				logger.Printf("session: cannot (re-)dial: %v: %q", err, url)
-				if initial {
+				if failEarly {
 					close(sess)
 					return
 				}
@@ -81,7 +81,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 				}
 			}
 
-			initial = false
+			failEarly = false
 
 			select {
 			case sess <- Session{conn, ch}:

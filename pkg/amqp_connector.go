@@ -50,7 +50,7 @@ func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger logrus.StdLogger
 // Connect  (re-)establishes the connection to RabbitMQ broker.
 func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) error {
 
-	sessions := redial(ctx, s.uri, s.tlsConfig, s.logger)
+	sessions := redial(ctx, s.uri, s.tlsConfig, s.logger, FailEarly)
 	for session := range sessions {
 		s.logger.Printf("waiting for new session ...")
 		sub, more := <-session

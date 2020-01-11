@@ -32,9 +32,9 @@ func amqpMessageLoop(ctx context.Context,
 			// Avoid blocking write to out when e.g. on the other end of the
 			// channel the user pressed Ctrl+S to stop console output
 			select {
-			case out <- NewTapMessage(&amqpMessage, received):
 			case <-ctx.Done():
 				return doNotReconnect
+			case out <- NewTapMessage(&amqpMessage, received):
 			}
 
 		case <-ctx.Done():

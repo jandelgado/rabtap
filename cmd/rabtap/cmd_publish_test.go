@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2020 Jan Delgado
 
 // +build integration
 
@@ -18,6 +18,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDurationBetweenMessagesReturnsZeroIfAnyOfTheArgumentsIsNil(t *testing.T) {
+	msg := RabtapPersistentMessage{XRabtapReceivedTimestamp: time.Now()}
+	assert.Equal(t, time.Duration(0), durationBetweenMessages(&msg, nil))
+	assert.Equal(t, time.Duration(0), durationBetweenMessages(nil, &msg))
+	assert.Equal(t, time.Duration(0), durationBetweenMessages(nil, nil))
+}
+
+func TestDurationBetweenMessagesIsCalculatedCorrectly(t *testing.T) {
+	first := time.Unix(0, 0)
+	second := time.Unix(0, 1000)
+	assert.Equal(t, time.Duration(1000), durationBetweenMessages(
+		&RabtapPersistentMessage{XRabtapReceivedTimestamp: first},
+		&RabtapPersistentMessage{XRabtapReceivedTimestamp: second}))
+}
 
 func TestSelectOptionOrDefaultReturnsOptionalIfSet(t *testing.T) {
 	opt := "optional"

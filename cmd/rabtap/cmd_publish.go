@@ -1,4 +1,5 @@
-// Copyright (C) 2017 Jan Delgado
+// publish messages
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
@@ -6,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
@@ -19,6 +21,15 @@ type CmdPublishArg struct {
 	exchange   *string
 	routingKey *string
 	readerFunc MessageReaderFunc
+}
+
+func durationBetweenMessages(first, second *RabtapPersistentMessage) time.Duration {
+	if first == nil || second == nil {
+		return time.Duration(0)
+	}
+	firstTs := first.XRabtapReceivedTimestamp
+	secondTs := second.XRabtapReceivedTimestamp
+	return secondTs.Sub(firstTs)
 }
 
 // publishMessage publishes a single message on the given exchange with the
@@ -49,6 +60,7 @@ func selectOptionalOrDefault(optionalStr *string, defaultStr string) string {
 // provided by readNextMessageFunc. When done closes the publishChannel
 func publishMessageStream(publishChannel rabtap.PublishChannel,
 	optExchange, optRoutingKey *string, readNextMessageFunc MessageReaderFunc) error {
+	var lastMsg *RabtapPersistentMessage
 	for {
 		msg, more, err := readNextMessageFunc()
 		switch err {
@@ -56,6 +68,10 @@ func publishMessageStream(publishChannel rabtap.PublishChannel,
 			close(publishChannel)
 			return nil
 		case nil:
+			delay := durationBetweenMessages(lastMsg, &msg)
+			time.Sleep(delay)
+			lastMsg = &msg
+			// TODO honour absolute delay and speedup option
 			routingKey := selectOptionalOrDefault(optRoutingKey, msg.RoutingKey)
 			exchange := selectOptionalOrDefault(optExchange, msg.Exchange)
 			publishMessage(publishChannel, exchange, routingKey, msg.ToAmqpPublishing())

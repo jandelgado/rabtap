@@ -5,7 +5,10 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"errors"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -81,6 +84,23 @@ func TestPublishMessageStreamPropagatesMessageReadError(t *testing.T) {
 	routingKey := ""
 	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader)
 	assert.Equal(t, errors.New("error"), err)
+}
+
+func TestCmdPublishFailsWithInvaludBrokerURI(t *testing.T) {
+	ctx := context.Background()
+
+	tlsConfig := &tls.Config{}
+	dum := ""
+	args := CmdPublishArg{
+		amqpURI:    "invalid",
+		exchange:   &dum,
+		routingKey: &dum,
+		tlsConfig:  tlsConfig,
+		readerFunc: func() (RabtapPersistentMessage, bool, error) {
+			return RabtapPersistentMessage{}, false, io.EOF
+		}}
+	err := cmdPublish(ctx, args)
+	assert.NotNil(t, err)
 }
 
 func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {

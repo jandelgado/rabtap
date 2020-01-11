@@ -106,16 +106,24 @@ func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata)
 		fallthrough
 	case "json":
 		return func() (RabtapPersistentMessage, bool, error) {
+			var message RabtapPersistentMessage
+			if i >= len(files) {
+				return message, false, nil
+			}
+
 			message, err := readRabtapPersistentMessage(files[i].filename)
 			i++
 			return message, i < len(files), err
 		}, nil
 	case "raw":
 		return func() (RabtapPersistentMessage, bool, error) {
-			// TODO fix filename -> .json to .dat
+			var message RabtapPersistentMessage
+			if i >= len(files) {
+				return message, false, nil
+			}
 			rawFile := filenameWithoutExtension(files[i].filename) + ".dat"
 			body, err := ioutil.ReadFile(rawFile)
-			message := files[i].metadata
+			message = files[i].metadata
 			message.Body = body
 			i++
 			return message, i < len(files), err

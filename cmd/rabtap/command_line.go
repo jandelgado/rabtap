@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	docopt "github.com/docopt/docopt-go"
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -31,7 +32,7 @@ Usage:
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
   rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
-             [--delay=DELAY] [--speedup=FACTOR] [-jkv]
+             [--delay=DELAY | --speed=FACTOR] [-jkv]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
   rabtap queue create QUEUE [--uri=URI] [-adkv]
@@ -56,8 +57,9 @@ Arguments and options:
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
- --delay=DELAY        Time in ms to wait between sending messages during publish.
-                      If 0 then messages will be delayed as recorded [default: 0].
+ --delay=DELAY        Time to wait between sending messages during publish.
+                      If not set then messages will be delayed as recorded. 
+					  The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
@@ -84,7 +86,7 @@ Arguments and options:
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
- --speedup=FACTOR     Speedup factor to use during publish [default: 1.0].
+ --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE      exchange type [default: fanout].
  --uri=URI            connect to given AQMP broker. If omitted, the
@@ -160,29 +162,29 @@ type CommandLineArgs struct {
 	TapConfig []rabtap.TapConfiguration // configuration in tap mode
 	APIURI    string
 
-	PubExchange         *string // pub: exchange to publish to
-	PubRoutingKey       *string // pub: routing key, defaults to ""
-	Source              *string // pub: file to send
-	Speedup             float64 // pub: speedup factor
-	Delay               float64 // pub: fixed delay in ms
-	AutoAck             bool    // sub: auto ack enabled
-	QueueName           string  // queue create, remove, bind, sub
-	QueueBindingKey     string  // queue bind
-	ExchangeName        string  // exchange name  create, remove or queue bind
-	ExchangeType        string  // exchange type create, remove or queue bind
-	ShowConsumers       bool    // info: also show consumer
-	InfoMode            string  // info: byExchange, byConnection
-	ShowStats           bool    // info: also show statistics
-	QueueFilter         string  // info: optional filter predicate
-	OmitEmptyExchanges  bool    // info: do not show exchanges wo/ bindings
-	ShowDefaultExchange bool    // info: show default exchange
-	Format              string  // output format, depends on command
-	Durable             bool    // queue create, exchange create
-	Autodelete          bool    // queue create, exchange create
-	SaveDir             *string // save: optional directory to stores files to
-	Silent              bool    // suppress message printing
-	ConnName            string  // conn: name of connection
-	CloseReason         string  // conn: reason of close
+	PubExchange         *string        // pub: exchange to publish to
+	PubRoutingKey       *string        // pub: routing key, defaults to ""
+	Source              *string        // pub: file to send
+	Speed               float64        // pub: speed factor
+	Delay               *time.Duration // pub: fixed delay in ms
+	AutoAck             bool           // sub: auto ack enabled
+	QueueName           string         // queue create, remove, bind, sub
+	QueueBindingKey     string         // queue bind
+	ExchangeName        string         // exchange name  create, remove or queue bind
+	ExchangeType        string         // exchange type create, remove or queue bind
+	ShowConsumers       bool           // info: also show consumer
+	InfoMode            string         // info: byExchange, byConnection
+	ShowStats           bool           // info: also show statistics
+	QueueFilter         string         // info: optional filter predicate
+	OmitEmptyExchanges  bool           // info: do not show exchanges wo/ bindings
+	ShowDefaultExchange bool           // info: show default exchange
+	Format              string         // output format, depends on command
+	Durable             bool           // queue create, exchange create
+	Autodelete          bool           // queue create, exchange create
+	SaveDir             *string        // save: optional directory to stores files to
+	Silent              bool           // suppress message printing
+	ConnName            string         // conn: name of connection
+	CloseReason         string         // conn: reason of close
 }
 
 // getAmqpURI returns the ith entry of amqpURIs array or the value
@@ -396,13 +398,14 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.Source = &file
 	}
 	if args["--delay"] != nil {
-		result.Delay, err = strconv.ParseFloat(args["--delay"].(string), 64)
+		delay, err := time.ParseDuration(args["--delay"].(string))
 		if err != nil {
 			return result, err
 		}
+		result.Delay = &delay
 	}
-	if args["--speedup"] != nil {
-		result.Speedup, err = strconv.ParseFloat(args["--speedup"].(string), 64)
+	if args["--speed"] != nil {
+		result.Speed, err = strconv.ParseFloat(args["--speed"].(string), 64)
 		if err != nil {
 			return result, err
 		}

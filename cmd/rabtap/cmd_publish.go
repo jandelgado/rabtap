@@ -21,15 +21,31 @@ type CmdPublishArg struct {
 	exchange   *string
 	routingKey *string
 	readerFunc MessageReaderFunc
+	speed      float64
+	fixedDelay *time.Duration
 }
 
-func durationBetweenMessages(first, second *RabtapPersistentMessage) time.Duration {
+type DelayFunc func(first, second *RabtapPersistentMessage)
+
+func multDuration(duration time.Duration, factor float64) time.Duration {
+	d := float64(duration.Nanoseconds()) * factor
+	return time.Duration(int(d))
+}
+
+// durationBetweenMessages calculates the delay to make between the
+// publishing of two previously recorded messages.
+func durationBetweenMessages(first, second *RabtapPersistentMessage,
+	speed float64, fixedDelay *time.Duration) time.Duration {
 	if first == nil || second == nil {
 		return time.Duration(0)
 	}
+	if fixedDelay != nil {
+		return *fixedDelay
+	}
 	firstTs := first.XRabtapReceivedTimestamp
 	secondTs := second.XRabtapReceivedTimestamp
-	return secondTs.Sub(firstTs)
+	delta := secondTs.Sub(firstTs)
+	return multDuration(delta, speed)
 }
 
 // publishMessage publishes a single message on the given exchange with the
@@ -59,7 +75,9 @@ func selectOptionalOrDefault(optionalStr *string, defaultStr string) string {
 // publishMessageStream publishes messages from the provided message stream
 // provided by readNextMessageFunc. When done closes the publishChannel
 func publishMessageStream(publishChannel rabtap.PublishChannel,
-	optExchange, optRoutingKey *string, readNextMessageFunc MessageReaderFunc) error {
+	optExchange, optRoutingKey *string,
+	readNextMessageFunc MessageReaderFunc,
+	delayFunc DelayFunc) error {
 	var lastMsg *RabtapPersistentMessage
 	for {
 		msg, more, err := readNextMessageFunc()
@@ -68,13 +86,11 @@ func publishMessageStream(publishChannel rabtap.PublishChannel,
 			close(publishChannel)
 			return nil
 		case nil:
-			delay := durationBetweenMessages(lastMsg, &msg)
-			time.Sleep(delay)
-			lastMsg = &msg
-			// TODO honour absolute delay and speedup option
+			delayFunc(lastMsg, &msg)
 			routingKey := selectOptionalOrDefault(optRoutingKey, msg.RoutingKey)
 			exchange := selectOptionalOrDefault(optExchange, msg.Exchange)
 			publishMessage(publishChannel, exchange, routingKey, msg.ToAmqpPublishing())
+			lastMsg = &msg
 		default:
 			close(publishChannel)
 			return err
@@ -103,14 +119,20 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)
 	publishChannel := make(rabtap.PublishChannel)
 
+	delayFunc := func(first, second *RabtapPersistentMessage) {
+		delay := durationBetweenMessages(first, second, cmd.speed, cmd.fixedDelay)
+		log.Infof("sleeping for %s", delay)
+		time.Sleep(delay) // TODO make interuptable
+	}
+
 	go func() {
 		// runs as long as readerFunc returns messages. Unfortunately, we
 		// can not stop a blocking read on a file like we do with channels
 		// and select. So we don't put the goroutine in the error group to
 		// avoid blocking when e.g. the user presses CTRL+S and then CTRL+C.
-		// TODO come up with better solution
+		// TODO find better solution
 		errChan <- publishMessageStream(publishChannel, cmd.exchange,
-			cmd.routingKey, cmd.readerFunc)
+			cmd.routingKey, cmd.readerFunc, delayFunc)
 	}()
 
 	g.Go(func() error {

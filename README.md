@@ -130,7 +130,8 @@ Usage:
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
-  rabtap pub [--uri=URI] EXCHANGE [FILE] [--routingkey=KEY] [--format=FORMAT] [-jkv]
+  rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
+             [--delay=DELAY | --speed=FACTOR] [-jkv]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
   rabtap queue create QUEUE [--uri=URI] [-adkv]
@@ -141,26 +142,32 @@ Usage:
   rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
   rabtap --version
 
-Options:
+Arguments and options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
- FILE                 file to publish in pub mode. If omitted, stdin will be read.
+ SOURCE               file or directory to publish in pub mode. If omitted, stdin will be read.
  QUEUE                name of a queue.
  CONNECTION           name of a connection.
+ DIR                  directory to read messages from.
  -a, --autodelete     create auto delete exchange/queue.
  --api=APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
+ --delay=DELAY        Time to wait between sending messages during publish.
+                      If not set then messages will be delayed as recorded. 
+					  The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
+ --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
+                      be taken from message being published (see JSON message format).
  --filter=EXPR        Predicate for info command to filter queues [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
-                      and optionally to file (when --saveto DIR is given). 
-                      Valid options are: "raw", "json", "json-nopp". Default: raw
+                        and optionally to file (when --saveto DIR is given). 
+                        Valid options are: "raw", "json", "json-nopp". Default: raw
                       * for info command: controls generated output format. Valid 
-                      options are: "text", "dot". Default: text
+                        options are: "text", "dot". Default: text
  -h, --help           print this help.
  -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
@@ -172,10 +179,13 @@ Options:
                       when the channel is closed.
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
- -r, --routingkey=KEY routing key to use in publish mode.
+ -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
+                      will be taken from message being published (see JSON 
+					  message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
+ --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE      exchange type [default: fanout].
  --uri=URI            connect to given AQMP broker. If omitted, the
@@ -200,7 +210,7 @@ Examples:
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
-  rabtap info --filter "binding.Source == 'amq.topic'" -o
+  rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 ```
 

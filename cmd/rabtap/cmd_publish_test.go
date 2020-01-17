@@ -22,11 +22,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMultDurationReturnsCorrectValue(t *testing.T) {
+	assert.Equal(t, time.Duration(50), multDuration(time.Duration(100), 0.5))
+}
+
 func TestDurationBetweenMessagesReturnsZeroIfAnyOfTheArgumentsIsNil(t *testing.T) {
 	msg := RabtapPersistentMessage{XRabtapReceivedTimestamp: time.Now()}
-	assert.Equal(t, time.Duration(0), durationBetweenMessages(&msg, nil))
-	assert.Equal(t, time.Duration(0), durationBetweenMessages(nil, &msg))
-	assert.Equal(t, time.Duration(0), durationBetweenMessages(nil, nil))
+	fixed := time.Duration(123)
+	for _, delay := range []*time.Duration{nil, &fixed} {
+		assert.Equal(t, time.Duration(0), durationBetweenMessages(&msg, nil, 1., delay))
+		assert.Equal(t, time.Duration(0), durationBetweenMessages(nil, &msg, 1., delay))
+		assert.Equal(t, time.Duration(0), durationBetweenMessages(nil, nil, 1., delay))
+	}
+}
+
+func TestDurationBetweenMessagesReturnsFixedDurationIfSet(t *testing.T) {
+	msg := RabtapPersistentMessage{XRabtapReceivedTimestamp: time.Now()}
+	fixed := time.Duration(123)
+	assert.Equal(t, time.Duration(123), durationBetweenMessages(&msg, &msg, 1., &fixed))
+}
+
+func TestDurationBetweenMessagesCorrectlyScalesDuration(t *testing.T) {
+	first := time.Unix(0, 0)
+	second := time.Unix(0, 1000)
+	assert.Equal(t, time.Duration(500), durationBetweenMessages(
+		&RabtapPersistentMessage{XRabtapReceivedTimestamp: first},
+		&RabtapPersistentMessage{XRabtapReceivedTimestamp: second},
+		.5, nil))
 }
 
 func TestDurationBetweenMessagesIsCalculatedCorrectly(t *testing.T) {
@@ -34,7 +56,8 @@ func TestDurationBetweenMessagesIsCalculatedCorrectly(t *testing.T) {
 	second := time.Unix(0, 1000)
 	assert.Equal(t, time.Duration(1000), durationBetweenMessages(
 		&RabtapPersistentMessage{XRabtapReceivedTimestamp: first},
-		&RabtapPersistentMessage{XRabtapReceivedTimestamp: second}))
+		&RabtapPersistentMessage{XRabtapReceivedTimestamp: second},
+		1., nil))
 }
 
 func TestSelectOptionOrDefaultReturnsOptionalIfSet(t *testing.T) {
@@ -50,11 +73,12 @@ func TestPublishMessageStreamPublishesNextMessage(t *testing.T) {
 	mockReader := func() (RabtapPersistentMessage, bool, error) {
 		return RabtapPersistentMessage{Body: []byte("hello")}, false, nil
 	}
+	delayer := func(first, second *RabtapPersistentMessage) {}
 
 	pubCh := make(rabtap.PublishChannel, 1)
 	exchange := "exchange"
 	routingKey := "key"
-	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader)
+	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader, delayer)
 
 	assert.Nil(t, err)
 	select {
@@ -78,11 +102,12 @@ func TestPublishMessageStreamPropagatesMessageReadError(t *testing.T) {
 	mockReader := func() (RabtapPersistentMessage, bool, error) {
 		return RabtapPersistentMessage{}, false, errors.New("error")
 	}
+	delayer := func(first, second *RabtapPersistentMessage) {}
 
 	pubCh := make(rabtap.PublishChannel)
 	exchange := ""
 	routingKey := ""
-	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader)
+	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader, delayer)
 	assert.Equal(t, errors.New("error"), err)
 }
 
@@ -180,15 +205,18 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 	  "Redelivered": false,
 	  "Exchange": "myexchange",
 	  "RoutingKey": "` + routingKey + `",
-	  "Body": "aGVsbG8="
+	  "Body": "aGVsbG8=",
+	  "XRabtapReceivedTimestamp": "2017-10-28T23:45:33+02:00"
     }
 	{
 	  "Exchange": "myexchange",
 	  "RoutingKey": "` + routingKey + `",
-      "Body": "c2Vjb25kCg=="
+      "Body": "c2Vjb25kCg==",
+	  "XRabtapReceivedTimestamp": "2017-10-28T23:45:34+02:00"
 	}
 	{
-      "Body": "c2Vjb25kCg=="
+      "Body": "c2Vjb25kCg==",
+	  "XRabtapReceivedTimestamp": "2017-10-28T23:45:35+02:00"
 	}`
 
 	tmpfile, err := ioutil.TempFile("", "rabtap")

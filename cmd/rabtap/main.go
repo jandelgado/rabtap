@@ -103,12 +103,17 @@ func createMessageReaderForPublishFunc(source *string, format string) (MessageRe
 }
 
 func startCmdPublish(ctx context.Context, args CommandLineArgs) {
+	if args.Format == "raw" && args.PubExchange == nil && args.PubRoutingKey == nil {
+		fmt.Fprint(os.Stderr, "Warning: using raw message format but neither exchange or routing key are set.\n")
+	}
 	readerFunc, err := createMessageReaderForPublishFunc(args.Source, args.Format)
 	failOnError(err, "message-reader", os.Exit)
 	err = cmdPublish(ctx, CmdPublishArg{
 		amqpURI:    args.AmqpURI,
 		exchange:   args.PubExchange,
 		routingKey: args.PubRoutingKey,
+		fixedDelay: args.Delay,
+		speed:      args.Speed,
 		tlsConfig:  getTLSConfig(args.InsecureTLS),
 		readerFunc: readerFunc})
 	failOnError(err, "error publishing message", os.Exit)

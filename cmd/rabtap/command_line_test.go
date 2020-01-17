@@ -7,6 +7,7 @@ package main
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -268,15 +269,15 @@ func TestCliPubCmdFromFileMinimalOptsSet(t *testing.T) {
 	assert.Nil(t, args.Source)
 	assert.Nil(t, args.PubRoutingKey)
 	assert.Equal(t, "raw", args.Format)
-	assert.Equal(t, 0., args.Delay)
-	assert.Equal(t, 1., args.Speedup)
+	assert.Nil(t, args.Delay)
+	assert.Equal(t, 1., args.Speed)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
 func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"pub", "--uri=broker", "--exchange=exchange", "file",
-			"--routingkey=key", "--delay=1", "--speedup=2", "--format=json"})
+			"--routingkey=key", "--delay=5s", "--format=json"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
@@ -285,8 +286,8 @@ func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	assert.Equal(t, "file", *args.Source)
 	assert.Equal(t, "key", *args.PubRoutingKey)
 	assert.Equal(t, "json", args.Format)
-	assert.Equal(t, 1., args.Delay)
-	assert.Equal(t, 2., args.Speedup)
+	assert.Equal(t, 5*time.Second, *args.Delay)
+	assert.Equal(t, 1., args.Speed)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
@@ -316,7 +317,7 @@ func TestCliPubCmdInvalidDelayReturnsError(t *testing.T) {
 }
 
 func TestCliPubCmdInvalidSpeedupReturnsError(t *testing.T) {
-	_, err := ParseCommandLineArgs([]string{"pub", "--uri=uri", "--speedup=invalid"})
+	_, err := ParseCommandLineArgs([]string{"pub", "--uri=uri", "--speed=invalid"})
 	assert.NotNil(t, err)
 }
 

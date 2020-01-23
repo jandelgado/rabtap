@@ -15,15 +15,15 @@ build-all:	build build-mac build-win
 
 build-mac:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
-				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_DARWIN64) 
+				"-s -w -X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_DARWIN64) 
 
 build-linux:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
-				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_LINUX64) 
+				"-s -w -X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_LINUX64) 
 
 build-win:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
-				"-X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_WIN64) 
+				"-s -w -X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_WIN64) 
 
 tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"sort"
 	"time"
 
 	//"net/http"
@@ -99,6 +100,12 @@ func createMessageReaderForPublishFunc(source *string, format string) (MessageRe
 	if err != nil {
 		return nil, err
 	}
+
+	sort.SliceStable(metadataFiles, func(i, j int) bool {
+		return metadataFiles[i].metadata.XRabtapReceivedTimestamp.Before(
+			metadataFiles[j].metadata.XRabtapReceivedTimestamp)
+	})
+
 	return CreateMessageFromDirReaderFunc(format, metadataFiles)
 }
 

@@ -61,7 +61,11 @@ func readRabtapPersistentMessage(filename string) (RabtapPersistentMessage, erro
 		return RabtapPersistentMessage{}, err
 	}
 	defer file.Close()
-	return readMessageFromJSON(file)
+	contents, err := readMessageFromJSON(file)
+	if err != nil {
+		return RabtapPersistentMessage{}, fmt.Errorf("error reading %s: %v", filename, err)
+	}
+	return contents, nil
 }
 
 // readMetadataOfFiles reads all metadata files from the given list of files.
@@ -99,7 +103,7 @@ func LoadMetadataFilesFromDir(dirname string, dirReader DirReader, pred FileInfo
 // messages from the given list of filenames in the given format.
 func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata) (MessageReaderFunc, error) {
 
-	i := 0
+	curfile := 0
 
 	switch format {
 	case "json-nopp":
@@ -107,26 +111,26 @@ func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata)
 	case "json":
 		return func() (RabtapPersistentMessage, bool, error) {
 			var message RabtapPersistentMessage
-			if i >= len(files) {
+			if curfile >= len(files) {
 				return message, false, nil
 			}
 
-			message, err := readRabtapPersistentMessage(files[i].filename)
-			i++
-			return message, i < len(files), err
+			message, err := readRabtapPersistentMessage(files[curfile].filename)
+			curfile++
+			return message, curfile < len(files), err
 		}, nil
 	case "raw":
 		return func() (RabtapPersistentMessage, bool, error) {
 			var message RabtapPersistentMessage
-			if i >= len(files) {
+			if curfile >= len(files) {
 				return message, false, nil
 			}
-			rawFile := filenameWithoutExtension(files[i].filename) + ".dat"
+			rawFile := filenameWithoutExtension(files[curfile].filename) + ".dat"
 			body, err := ioutil.ReadFile(rawFile)
-			message = files[i].metadata
+			message = files[curfile].metadata
 			message.Body = body
-			i++
-			return message, i < len(files), err
+			curfile++
+			return message, curfile < len(files), err
 		}, nil
 	}
 	return nil, fmt.Errorf("invaild format %s", format)

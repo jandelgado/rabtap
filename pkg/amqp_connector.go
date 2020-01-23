@@ -55,15 +55,14 @@ func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) erro
 		s.logger.Printf("waiting for new session ...")
 		sub, more := <-session
 		if !more {
-			// closed
+			// closed. TODO propagate errors from redial()
 			return errors.New("initial connection failed")
 		}
-		s.logger.Printf("got new session ...")
+		s.logger.Printf("got new amqp session ...")
 		action, err := worker(ctx, sub)
 		if !action.shouldReconnect() {
 			return err
 		}
 	}
-	s.logger.Print("amqp_connector.Connect exiting")
 	return nil
 }

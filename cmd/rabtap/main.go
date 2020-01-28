@@ -6,9 +6,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"os/signal"
+	"sort"
 	"time"
 
 	//"net/http"
@@ -41,10 +43,10 @@ func failOnError(err error, msg string, exitFunc func(int)) {
 	}
 }
 
-// defaultFilenameProvider returns the default filename to use when messages
-// are saved to files during tap or subscribe.
+// defaultFilenameProvider returns the default filename without extension to
+// use when messages are saved to files during tap or subscribe.
 func defaultFilenameProvider() string {
-	return fmt.Sprintf("rabtap-%d.json", time.Now().UnixNano())
+	return fmt.Sprintf("rabtap-%d", time.Now().UnixNano())
 }
 
 func getTLSConfig(insecureTLS bool) *tls.Config {
@@ -72,20 +74,53 @@ func startCmdInfo(args CommandLineArgs, title string) {
 		out: NewColorableWriter(os.Stdout)})
 }
 
-func startCmdPublish(ctx context.Context, args CommandLineArgs) {
-	file := os.Stdin
-	if args.PubFile != nil {
-		var err error
-		file, err = os.Open(*args.PubFile)
-		failOnError(err, "error opening "+*args.PubFile, os.Exit)
-		defer file.Close()
+// createMessageReaderForPublish returns a MessageReaderFunc that reads
+// messages from the given source in the specified format. The source can
+// be either empty (=stdin), a filename or a directory name
+func createMessageReaderForPublishFunc(source *string, format string) (MessageReaderFunc, error) {
+	if source == nil {
+		return CreateMessageReaderFunc(format, os.Stdin)
 	}
-	readerFunc, err := createMessageReaderFunc(args.Format, file)
-	failOnError(err, "options", os.Exit)
+
+	fi, err := os.Stat(*source)
+	if err != nil {
+		return nil, err
+	}
+
+	if !fi.IsDir() {
+		file, err := os.Open(*source)
+		if err != nil {
+			return nil, err
+		}
+		// TODO close file
+		return CreateMessageReaderFunc(format, file)
+	}
+
+	metadataFiles, err := LoadMetadataFilesFromDir(*source, ioutil.ReadDir, NewRabtapFileInfoPredicate())
+	if err != nil {
+		return nil, err
+	}
+
+	sort.SliceStable(metadataFiles, func(i, j int) bool {
+		return metadataFiles[i].metadata.XRabtapReceivedTimestamp.Before(
+			metadataFiles[j].metadata.XRabtapReceivedTimestamp)
+	})
+
+	return CreateMessageFromDirReaderFunc(format, metadataFiles)
+}
+
+func startCmdPublish(ctx context.Context, args CommandLineArgs) {
+	if args.Format == "raw" && args.PubExchange == nil && args.PubRoutingKey == nil {
+		fmt.Fprint(os.Stderr, "Warning: using raw message format but neither exchange or routing key are set.\n")
+	}
+	readerFunc, err := createMessageReaderForPublishFunc(args.Source, args.Format)
+	failOnError(err, "message-reader", os.Exit)
 	err = cmdPublish(ctx, CmdPublishArg{
 		amqpURI:    args.AmqpURI,
 		exchange:   args.PubExchange,
 		routingKey: args.PubRoutingKey,
+		fixedDelay: args.Delay,
+		speed:      args.Speed,
 		tlsConfig:  getTLSConfig(args.InsecureTLS),
 		readerFunc: readerFunc})
 	failOnError(err, "error publishing message", os.Exit)

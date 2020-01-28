@@ -17,10 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCmdPurgeQueue(t *testing.T) {
+func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 
-	// create a queue, publish some messages, purge queue and make
-	// sure queue is empty
+	// integration tests queue creation, bind to exchange, purge,
+	// unbdind from exchange via calls through the main method
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
@@ -32,14 +32,10 @@ func TestCmdPurgeQueue(t *testing.T) {
 	amqpURI := testcommon.IntegrationURIFromEnv()
 	apiURL, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 
-	os.Args = []string{"rabtap", "queue",
-		"create", testQueue,
-		"--uri", amqpURI}
+	os.Args = []string{"rabtap", "queue", "create", testQueue, "--uri", amqpURI}
 	main()
 
-	os.Args = []string{"rabtap", "queue",
-		"bind", testQueue,
-		"to", testExchange,
+	os.Args = []string{"rabtap", "queue", "bind", testQueue, "to", testExchange,
 		"--bindingkey", testQueue,
 		"--uri", amqpURI}
 	main()
@@ -47,12 +43,12 @@ func TestCmdPurgeQueue(t *testing.T) {
 	// TODO publish some messages
 
 	// purge queue and check size
-	os.Args = []string{"rabtap", "queue",
-		"purge", testQueue,
-		"--uri", amqpURI}
+	os.Args = []string{"rabtap", "queue", "purge", testQueue, "--uri", amqpURI}
 	main()
 
 	time.Sleep(2 * time.Second)
+
+	// TODO add a simple client to testcommon
 	client := rabtap.NewRabbitHTTPClient(apiURL, &tls.Config{})
 	queues, err := client.Queues()
 	assert.Nil(t, err)
@@ -63,10 +59,15 @@ func TestCmdPurgeQueue(t *testing.T) {
 	queue := queues[i]
 	assert.Equal(t, 0, queue.Messages)
 
-	// remove queue
-	os.Args = []string{"rabtap", "queue",
-		"rm", testQueue,
+	// unbind queue
+	os.Args = []string{"rabtap", "queue", "unbind", testQueue, "from", testExchange,
+		"--bindingkey", testQueue,
 		"--uri", amqpURI}
 	main()
 
+	// remove queue
+	os.Args = []string{"rabtap", "queue", "rm", testQueue, "--uri", amqpURI}
+	main()
+
+	// TODO check that queue is removed
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAmqpMessageLoopForwardsMessage(t *testing.T) {
+func TestAmqpMessageLoopPanicsWithInvalidMessage(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	out := make(TapChannel)
 	in := make(chan interface{})
@@ -67,6 +67,7 @@ func TestAmqpMessageLoopCancelBlockingWrite(t *testing.T) {
 	// this second write blocks the write in the messageloop
 	in <- amqp.Delivery{}
 
+	time.Sleep(1 * time.Second)
 	cancel()
 
 	select {

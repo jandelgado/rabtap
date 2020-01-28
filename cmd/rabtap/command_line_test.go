@@ -7,6 +7,7 @@ package main
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -257,16 +258,36 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	assert.True(t, args.OmitEmptyExchanges)
 }
 
-func TestCliPubCmdFromFile(t *testing.T) {
+func TestCliPubCmdFromFileMinimalOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker", "exchange", "file", "--routingkey", "key"})
+		[]string{"pub", "--uri=broker"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker", args.AmqpURI)
-	assert.Equal(t, "exchange", args.PubExchange)
-	assert.Equal(t, "file", *args.PubFile)
-	assert.Equal(t, "key", args.PubRoutingKey)
+	assert.Nil(t, args.PubExchange)
+	assert.Nil(t, args.Source)
+	assert.Nil(t, args.PubRoutingKey)
+	assert.Equal(t, "raw", args.Format)
+	assert.Nil(t, args.Delay)
+	assert.Equal(t, 1., args.Speed)
+	assert.False(t, args.Verbose)
+	assert.False(t, args.InsecureTLS)
+}
+func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"pub", "--uri=broker", "--exchange=exchange", "file",
+			"--routingkey=key", "--delay=5s", "--format=json"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, PubCmd, args.Cmd)
+	assert.Equal(t, "broker", args.AmqpURI)
+	assert.Equal(t, "exchange", *args.PubExchange)
+	assert.Equal(t, "file", *args.Source)
+	assert.Equal(t, "key", *args.PubRoutingKey)
+	assert.Equal(t, "json", args.Format)
+	assert.Equal(t, 5*time.Second, *args.Delay)
+	assert.Equal(t, 1., args.Speed)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
@@ -276,48 +297,68 @@ func TestCliPubCmdUriFromEnv(t *testing.T) {
 	os.Setenv(key, "URI")
 	defer os.Unsetenv(key)
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "exchange"})
+		[]string{"pub"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "URI", args.AmqpURI)
-	assert.Equal(t, "exchange", args.PubExchange)
 }
 
-func TestCliPubCmdMissingUri(t *testing.T) {
+func TestCliPubCmdMissingUriReturnsError(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	os.Unsetenv(key)
-	_, err := ParseCommandLineArgs(
-		[]string{"pub", "exchange"})
+	_, err := ParseCommandLineArgs([]string{"pub"})
+	assert.NotNil(t, err)
+}
+
+func TestCliPubCmdInvalidDelayReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"pub", "--uri=uri", "--delay=invalid"})
+	assert.NotNil(t, err)
+}
+
+func TestCliPubCmdInvalidSpeedupReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"pub", "--uri=uri", "--speed=invalid"})
+	assert.NotNil(t, err)
+}
+
+func TestCliPubCmdInvalidFormatReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"pub", "--uri=uri", "--format=invalid"})
 	assert.NotNil(t, err)
 }
 
 func TestCliPubCmdFromStdinWithRoutingKeyJsonFormat(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--format=json"})
+		[]string{"pub", "--uri=broker1", "--exchange=exchange1", "--routingkey=key", "--format=json"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker1", args.AmqpURI)
-	assert.Equal(t, "exchange1", args.PubExchange)
-	assert.Nil(t, args.PubFile)
+	assert.Equal(t, "exchange1", *args.PubExchange)
+	assert.Equal(t, "key", *args.PubRoutingKey)
+	assert.Nil(t, args.Source)
 	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
 }
 
-func TestCliPubCmdFromStdinWithRoutingKeyJsonFormatDeprecated(t *testing.T) {
+func TestCliPubCmdFromStdinWithJsonFormatDeprecated(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=broker1", "exchange1", "--routingkey=key", "--json"})
+		[]string{"pub", "--uri=broker1", "--json"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assert.Equal(t, "broker1", args.AmqpURI)
-	assert.Equal(t, "exchange1", args.PubExchange)
-	assert.Nil(t, args.PubFile)
+	assert.Nil(t, args.PubExchange)
+	assert.Nil(t, args.PubRoutingKey)
+	assert.Nil(t, args.Source)
 	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+}
+
+func TestCliSubCmdInvalidFormatReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--format=invalid"})
+	assert.NotNil(t, err)
 }
 
 func TestCliSubCmdSaveToDir(t *testing.T) {

@@ -1,32 +1,51 @@
-// Copyright (C) 2017 Jan Delgado
+// publish messages
+// Copyright (C) 2017-2019 Jan Delgado
 
 package main
 
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
-	"fmt"
 	"io"
-	"io/ioutil"
+	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/streadway/amqp"
 	"golang.org/x/sync/errgroup"
 )
 
-// MessageReaderFunc provides messages that can be sent to an exchange.
-// returns the message to be published, a flag if more messages are to be read,
-// and an error.
-type MessageReaderFunc func() (amqp.Publishing, bool, error)
-
 // CmdPublishArg contains arguments for the publish command
 type CmdPublishArg struct {
 	amqpURI    string
 	tlsConfig  *tls.Config
-	exchange   string
-	routingKey string
+	exchange   *string
+	routingKey *string
 	readerFunc MessageReaderFunc
+	speed      float64
+	fixedDelay *time.Duration
+}
+
+type DelayFunc func(first, second *RabtapPersistentMessage)
+
+func multDuration(duration time.Duration, factor float64) time.Duration {
+	d := float64(duration.Nanoseconds()) * factor
+	return time.Duration(int(d))
+}
+
+// durationBetweenMessages calculates the delay to make between the
+// publishing of two previously recorded messages.
+func durationBetweenMessages(first, second *RabtapPersistentMessage,
+	speed float64, fixedDelay *time.Duration) time.Duration {
+	if first == nil || second == nil {
+		return time.Duration(0)
+	}
+	if fixedDelay != nil {
+		return *fixedDelay
+	}
+	firstTs := first.XRabtapReceivedTimestamp
+	secondTs := second.XRabtapReceivedTimestamp
+	delta := secondTs.Sub(firstTs)
+	return multDuration(delta, speed)
 }
 
 // publishMessage publishes a single message on the given exchange with the
@@ -35,8 +54,8 @@ func publishMessage(publishChannel rabtap.PublishChannel,
 	exchange, routingKey string,
 	amqpPublishing amqp.Publishing) {
 
-	log.Debugf("publishing message %+v to exchange %s with routing key %s",
-		amqpPublishing, exchange, routingKey)
+	log.Debugf("publishing message to exchange '%s' with routing key '%s'",
+		exchange, routingKey)
 
 	publishChannel <- &rabtap.PublishMessage{
 		Exchange:   exchange,
@@ -44,49 +63,22 @@ func publishMessage(publishChannel rabtap.PublishChannel,
 		Publishing: &amqpPublishing}
 }
 
-// readSingleMessageFromRawFile reads a single messages from the given io.Reader
-// which is typically stdin or a file. If reading from stdin, CTRL+D (linux)
-// or CTRL+Z (Win) on an empty line terminates the reader.
-func readSingleMessageFromRawFile(reader io.Reader) (amqp.Publishing, bool, error) {
-	buf, err := ioutil.ReadAll(reader)
-	return amqp.Publishing{Body: buf}, false, err
-}
-
-// readNextMessageFromJSONStream reads JSON messages from the given decoder as long
-// as there are messages available.
-func readNextMessageFromJSONStream(decoder *json.Decoder) (amqp.Publishing, bool, error) {
-	message := RabtapPersistentMessage{}
-	err := decoder.Decode(&message)
-	if err != nil {
-		return amqp.Publishing{}, false, err
+// selectOptionalOrDefault returns either an optional string, if set, or
+// a default value.
+func selectOptionalOrDefault(optionalStr *string, defaultStr string) string {
+	if optionalStr != nil {
+		return *optionalStr
 	}
-	return message.ToAmqpPublishing(), true, nil
+	return defaultStr
 }
 
-// createMessageReaderFunc returns a function that reads messages from the
-// the given reader in JSON or raw-format
-func createMessageReaderFunc(format string, reader io.ReadCloser) (MessageReaderFunc, error) {
-	switch format {
-	case "json-nopp":
-		fallthrough
-	case "json":
-		decoder := json.NewDecoder(reader)
-		return func() (amqp.Publishing, bool, error) {
-			return readNextMessageFromJSONStream(decoder)
-		}, nil
-	case "raw":
-		return func() (amqp.Publishing, bool, error) {
-			return readSingleMessageFromRawFile(reader)
-		}, nil
-	}
-	return nil, fmt.Errorf("invaild format %s", format)
-}
-
-// publishMessages reads messages with the provided readNextMessageFunc and
-// publishes the messages to the given exchange. When done closes
-// the publishChannel
+// publishMessageStream publishes messages from the provided message stream
+// provided by readNextMessageFunc. When done closes the publishChannel
 func publishMessageStream(publishChannel rabtap.PublishChannel,
-	exchange, routingKey string, readNextMessageFunc MessageReaderFunc) error {
+	optExchange, optRoutingKey *string,
+	readNextMessageFunc MessageReaderFunc,
+	delayFunc DelayFunc) error {
+	var lastMsg *RabtapPersistentMessage
 	for {
 		msg, more, err := readNextMessageFunc()
 		switch err {
@@ -94,7 +86,11 @@ func publishMessageStream(publishChannel rabtap.PublishChannel,
 			close(publishChannel)
 			return nil
 		case nil:
-			publishMessage(publishChannel, exchange, routingKey, msg)
+			delayFunc(lastMsg, &msg)
+			routingKey := selectOptionalOrDefault(optRoutingKey, msg.RoutingKey)
+			exchange := selectOptionalOrDefault(optExchange, msg.Exchange)
+			publishMessage(publishChannel, exchange, routingKey, msg.ToAmqpPublishing())
+			lastMsg = &msg
 		default:
 			close(publishChannel)
 			return err
@@ -123,14 +119,20 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)
 	publishChannel := make(rabtap.PublishChannel)
 
+	delayFunc := func(first, second *RabtapPersistentMessage) {
+		delay := durationBetweenMessages(first, second, cmd.speed, cmd.fixedDelay)
+		log.Infof("sleeping for %s", delay)
+		time.Sleep(delay) // TODO make interuptable
+	}
+
 	go func() {
 		// runs as long as readerFunc returns messages. Unfortunately, we
 		// can not stop a blocking read on a file like we do with channels
 		// and select. So we don't put the goroutine in the error group to
 		// avoid blocking when e.g. the user presses CTRL+S and then CTRL+C.
-		// TODO come up with better solution
+		// TODO find better solution
 		errChan <- publishMessageStream(publishChannel, cmd.exchange,
-			cmd.routingKey, cmd.readerFunc)
+			cmd.routingKey, cmd.readerFunc, delayFunc)
 	}()
 
 	g.Go(func() error {

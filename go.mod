@@ -12,9 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.3.0
 	github.com/streadway/amqp v0.0.0-20190225234609-30f8ed68076e
 	github.com/stretchr/testify v1.3.0
-	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b // indirect
-	golang.org/x/net v0.0.0-20190226215741-afe646ca25a4 // indirect
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/sys v0.0.0-20190226215855-775f8194d0f9 // indirect
+	golang.org/x/tools v0.0.0-20200103221440-774c71fcf114 // indirect
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
 )

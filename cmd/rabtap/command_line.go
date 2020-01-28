@@ -1,5 +1,6 @@
 // command line parsing for rabtap
 // TODO split in per-command parsers
+// TODO use docopt's bind feature to simplify mappings
 // Copyright (C) 2017-2019 Jan Delgado
 
 package main
@@ -8,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	docopt "github.com/docopt/docopt-go"
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -18,7 +21,7 @@ import (
 var RabtapAppVersion = "(version not specified)"
 
 const (
-	// note: usage is interpreted by docopt - this is code.
+	// note: usage is DSL interpreted by docopt - this is code. Change carefully.
 	usage = `rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
@@ -28,7 +31,8 @@ Usage:
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
-  rabtap pub [--uri=URI] EXCHANGE [FILE] [--routingkey=KEY] [--format=FORMAT] [-jkv]
+  rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
+             [--delay=DELAY | --speed=FACTOR] [-jkv]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
   rabtap queue create QUEUE [--uri=URI] [-adkv]
@@ -39,20 +43,26 @@ Usage:
   rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
   rabtap --version
 
-Options:
+Arguments and options:
  EXCHANGES            comma-separated list of exchanges and binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
- FILE                 file to publish in pub mode. If omitted, stdin will be read.
+ SOURCE               file or directory to publish in pub mode. If omitted, stdin will be read.
  QUEUE                name of a queue.
  CONNECTION           name of a connection.
+ DIR                  directory to read messages from.
  -a, --autodelete     create auto delete exchange/queue.
  --api=APIURI         connect to given API server. If APIURI is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
  --consumers          include consumers and connections in output of info command.
+ --delay=DELAY        Time to wait between sending messages during publish.
+                      If not set then messages will be delayed as recorded. 
+					  The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
+ --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
+                      be taken from message being published (see JSON message format).
  --filter=EXPR        Predicate for info command to filter queues [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
                         and optionally to file (when --saveto DIR is given). 
@@ -70,10 +80,13 @@ Options:
                       when the channel is closed.
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
- -r, --routingkey=KEY routing key to use in publish mode.
+ -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
+                      will be taken from message being published (see JSON 
+					  message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
+ --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE      exchange type [default: fanout].
  --uri=URI            connect to given AQMP broker. If omitted, the
@@ -98,7 +111,7 @@ Examples:
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
-  rabtap info --filter "binding.Source == 'amq.topic'" -o
+  rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 `
 )
@@ -141,7 +154,7 @@ type commonArgs struct {
 }
 
 // CommandLineArgs represents the parsed command line arguments
-// TODO does not scale well - split in per-cmd structs?
+// TODO does not scale well - split in per-cmd structs
 type CommandLineArgs struct {
 	Cmd ProgramCmd
 	commonArgs
@@ -149,28 +162,29 @@ type CommandLineArgs struct {
 	TapConfig []rabtap.TapConfiguration // configuration in tap mode
 	APIURI    string
 
-	PubExchange         string  // pub mode: exchange to publish to
-	PubRoutingKey       string  // pub mode: routing key, defaults to ""
-	PubFile             *string // pub mode: file to send
-	AutoAck             bool    // sub mode: auto ack enabled
-	QueueName           string  // queue create, remove, bind, sub
-	QueueBindingKey     string  // queue bind
-	ExchangeName        string  // exchange name  create, remove or queue bind
-	ExchangeType        string  // exchange type create, remove or queue bind
-	ShowConsumers       bool    // info mode: also show consumer
-	InfoMode            string  // info mode: byExchange, byConnection
-	ShowStats           bool    // info mode: also show statistics
-	QueueFilter         string  // info mode: optional filter predicate
-	OmitEmptyExchanges  bool    // info mode: do not show exchanges wo/ bindings
-	ShowDefaultExchange bool    // info mode: show default exchange
-	Format              string  // output format, depends on command
-	Durable             bool    // queue create, exchange create
-	Autodelete          bool    // queue create, exchange create
-	SaveDir             *string // save mode: optional directory to stores files to
-	Silent              bool    // suppress message printing
-
-	ConnName    string // conn mode: name of connection
-	CloseReason string // conn mode: reason of close
+	PubExchange         *string        // pub: exchange to publish to
+	PubRoutingKey       *string        // pub: routing key, defaults to ""
+	Source              *string        // pub: file to send
+	Speed               float64        // pub: speed factor
+	Delay               *time.Duration // pub: fixed delay in ms
+	AutoAck             bool           // sub: auto ack enabled
+	QueueName           string         // queue create, remove, bind, sub
+	QueueBindingKey     string         // queue bind
+	ExchangeName        string         // exchange name  create, remove or queue bind
+	ExchangeType        string         // exchange type create, remove or queue bind
+	ShowConsumers       bool           // info: also show consumer
+	InfoMode            string         // info: byExchange, byConnection
+	ShowStats           bool           // info: also show statistics
+	QueueFilter         string         // info: optional filter predicate
+	OmitEmptyExchanges  bool           // info: do not show exchanges wo/ bindings
+	ShowDefaultExchange bool           // info: show default exchange
+	Format              string         // output format, depends on command
+	Durable             bool           // queue create, exchange create
+	Autodelete          bool           // queue create, exchange create
+	SaveDir             *string        // save: optional directory to stores files to
+	Silent              bool           // suppress message printing
+	ConnName            string         // conn: name of connection
+	CloseReason         string         // conn: reason of close
 }
 
 // getAmqpURI returns the ith entry of amqpURIs array or the value
@@ -371,13 +385,30 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
 		return result, err
 	}
-	result.PubExchange = args["EXCHANGE"].(string)
-	if args["--routingkey"] != nil {
-		result.PubRoutingKey = args["--routingkey"].(string)
+	if args["--exchange"] != nil {
+		exchange := args["--exchange"].(string)
+		result.PubExchange = &exchange
 	}
-	if args["FILE"] != nil {
-		file := args["FILE"].(string)
-		result.PubFile = &file
+	if args["--routingkey"] != nil {
+		routingKey := args["--routingkey"].(string)
+		result.PubRoutingKey = &routingKey
+	}
+	if args["SOURCE"] != nil {
+		file := args["SOURCE"].(string)
+		result.Source = &file
+	}
+	if args["--delay"] != nil {
+		delay, err := time.ParseDuration(args["--delay"].(string))
+		if err != nil {
+			return result, err
+		}
+		result.Delay = &delay
+	}
+	if args["--speed"] != nil {
+		result.Speed, err = strconv.ParseFloat(args["--speed"].(string), 64)
+		if err != nil {
+			return result, err
+		}
 	}
 	return result, nil
 }

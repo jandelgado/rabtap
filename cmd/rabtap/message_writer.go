@@ -15,7 +15,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// RabtapPersistentMessage is a messages as persistet from/to a JSON file
+// RabtapPersistentMessage is a messages as persisted from/to a JSON file
 // object can be initialiazed from amqp.Delivery and to amqp.Publishing
 type RabtapPersistentMessage struct {
 	Headers map[string]interface{} `json:",omitempty"`

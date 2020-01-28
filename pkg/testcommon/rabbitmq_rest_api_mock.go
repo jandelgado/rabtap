@@ -70,6 +70,8 @@ func mockStdGetHandler(w http.ResponseWriter, r *http.Request) {
 		result = overviewResult
 	case "/consumers":
 		result = consumerResult
+	case "/policies":
+		result = policyResult
 	case "/channels":
 		result = channelResult
 	case "/connections":
@@ -411,6 +413,10 @@ const (
 `
 
 	// result of GET /api/queues
+	// DLX-policies:
+	//   DLX yes: Queue direct-q1: EffectivePolicyDefitions set
+	//   DLX yes: Queue topic-q1: EffectivePolicyDefinitions not set, Arguments set
+	//   Other queues: None set
 	queueResult = `
 [
     {
@@ -437,6 +443,10 @@ const (
         "exclusive": false,
         "auto_delete": false,
         "durable": true,
+		"effective_policy_definition": {
+			"dead-letter-exchange": "mydlx",
+			"some-other-value": 1234
+		},
         "vhost": "/",
         "name": "direct-q1",
         "message_bytes_paged_out": 0,
@@ -483,7 +493,6 @@ const (
         "recoverable_slaves": null,
         "consumers": 4,
         "exclusive_consumer_tag": null,
-        "policy": null,
         "consumer_utilisation": null,
         "memory": 29840
     },
@@ -557,7 +566,6 @@ const (
         "recoverable_slaves": null,
         "consumers": 0,
         "exclusive_consumer_tag": null,
-        "policy": null,
         "consumer_utilisation": null,
         "memory": 29840
     },
@@ -887,6 +895,10 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "topic-q1",
+		"arguments": {
+			"x-dead-letter-exchange": "mydlx",
+		 	"some-other-value": 1234
+		},
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -1204,6 +1216,21 @@ const (
     }
 ]`
 
+	policyResult = `
+[
+   {
+      "pattern" : "myqueue",
+      "priority" : 0,
+      "name" : "DLX",
+      "definition" : {
+         "dead-letter-exchange" : "mydlx",
+		 "some-other-value": 1234
+      },
+      "vhost" : "/",
+      "apply-to" : "queues"
+   }
+]
+	`
 	channelResult = `
 
 [

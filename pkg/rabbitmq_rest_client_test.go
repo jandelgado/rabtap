@@ -4,6 +4,7 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCustomKeyValueObjectUnmarshaler(t *testing.T) {
+	var obj KeyValueMap
+	err := json.Unmarshal([]byte(`{"key": "value"}`), &obj)
+	assert.Nil(t, err)
+	assert.Equal(t, "value", obj["key"])
+}
+
+func TestCustomKeyValueObjectUnmarshalerÁrrayReturnsNil(t *testing.T) {
+	var obj KeyValueMap
+	err := json.Unmarshal([]byte(`[]`), &obj)
+	assert.Nil(t, err)
+	assert.Nil(t, obj)
+}
 func TestGetAllResources(t *testing.T) {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
@@ -245,6 +259,22 @@ func TestFindQueueByNameNotFound(t *testing.T) {
 	assert.Equal(t, -1, FindQueueByName(queues, "/", "not-available"))
 }
 
+func TestFindPolicyByName(t *testing.T) {
+	policies := []RabbitPolicy{
+		{Name: "pol0", Vhost: "vhost"},
+		{Name: "pol1", Vhost: "vhost"},
+	}
+	assert.Equal(t, 1, FindPolicyByName(policies, "vhost", "pol1"))
+}
+
+func TestFindPolicyByNameNotFound(t *testing.T) {
+	policies := []RabbitPolicy{
+		{Name: "pol0", Vhost: "vhost"},
+		{Name: "pol1", Vhost: "vhost"},
+	}
+	assert.Equal(t, -1, FindPolicyByName(policies, "vhost", "not-available"))
+}
+
 func TestFindConnectionByName(t *testing.T) {
 	conns := []RabbitConnection{
 		{Name: "c1", Vhost: "vhost"},
@@ -299,4 +329,76 @@ func TestFindBindingsByExchangeReturnsMatchingBindings(t *testing.T) {
 	assert.Equal(t, 2, len(foundBindings))
 	assert.Equal(t, "q1", foundBindings[0].Destination)
 	assert.Equal(t, "q3", foundBindings[1].Destination)
+}
+
+func TestQueueDlxAccessorMethodsWhenNotDefined(t *testing.T) {
+	qWithoutDlx := RabbitQueue{}
+	assert.False(t, qWithoutDlx.HasDlx())
+	assert.Equal(t, "", qWithoutDlx.Dlx())
+}
+
+func TestQueueDlxAccessorMethodsWhenDefinedInArguments(t *testing.T) {
+	args := map[string]interface{}{"x-dead-letter-exchange": "mydlx", "test": 1234, "empty": nil}
+	qWithDlx := RabbitQueue{Arguments: args}
+	assert.True(t, qWithDlx.HasDlx())
+	assert.Equal(t, "mydlx", qWithDlx.Dlx())
+}
+
+func TestQueueDlxAccessorMethodsWhenDefinedInPolicy(t *testing.T) {
+	dlxPolicy := map[string]interface{}{"dead-letter-exchange": "mydlx", "test": 1234, "empty": nil}
+	qWithDlx := RabbitQueue{EffectivePolicyDefinition: dlxPolicy}
+	assert.True(t, qWithDlx.HasDlx())
+	assert.Equal(t, "mydlx", qWithDlx.Dlx())
+}
+
+func TestFixQueueEffectivePolicySetAttributeIfMissingAndPolicyDefined(t *testing.T) {
+
+	newDlxPolicy := map[string]interface{}{"dead-letter-exchange": "mydlx"}
+	policies := []RabbitPolicy{{Name: "DLX",
+		Vhost:      "/",
+		Definition: newDlxPolicy}}
+
+	dlx := "DLX"
+	queues := []RabbitQueue{{Vhost: "/",
+		Policy:                    &dlx,
+		EffectivePolicyDefinition: nil}}
+
+	fixQueueEffectivePolicyDefinitions(policies, queues)
+
+	// expect EffectivePolicyDefinition taken from policy "DLX"
+	assert.Equal(t, "mydlx",
+		queues[0].EffectivePolicyDefinition["dead-letter-exchange"].(string))
+}
+
+func TestFixQueueEffectivePolicyDoesNotChangeExistingAttribute(t *testing.T) {
+
+	newDlxPolicy := map[string]interface{}{"dead-letter-exchange": "mynewdlx"}
+	policies := []RabbitPolicy{{Name: "DLX",
+		Vhost:      "/",
+		Definition: newDlxPolicy}}
+
+	dlxPolicy := map[string]interface{}{"dead-letter-exchange": "mydlx"}
+	dlx := "DLX"
+	queues := []RabbitQueue{{Vhost: "/",
+		Policy:                    &dlx,
+		EffectivePolicyDefinition: dlxPolicy}}
+
+	fixQueueEffectivePolicyDefinitions(policies, queues)
+
+	// since queues[0] already has a EffectivePolicyDefinition, we don't expect a change
+	assert.Equal(t, "mydlx",
+		queues[0].EffectivePolicyDefinition["dead-letter-exchange"].(string))
+}
+
+func TestFixQueueEffectivePolicyPassesWithoutPolicy(t *testing.T) {
+
+	dlxPolicy := map[string]interface{}{"dead-letter-exchange": "mydlx"}
+	queues := []RabbitQueue{{Vhost: "/",
+		Policy:                    nil,
+		EffectivePolicyDefinition: dlxPolicy}}
+
+	fixQueueEffectivePolicyDefinitions([]RabbitPolicy{}, queues)
+
+	assert.Equal(t, "mydlx",
+		queues[0].EffectivePolicyDefinition["dead-letter-exchange"].(string))
 }

@@ -35,6 +35,7 @@ type dotRendererTpl struct {
 type brokerInfoRendererDot struct {
 	config   BrokerInfoRendererConfig
 	template dotRendererTpl
+	rendered map[string]bool // keeps track of rendered elements
 }
 
 type dotNode struct {
@@ -52,60 +53,68 @@ func NewBrokerInfoRendererDot(config BrokerInfoRendererConfig) BrokerInfoRendere
 // newDotRendererTpl returns the dot template to use. For now, just one default
 // template is used, later will support loading templates from the filesytem
 func newDotRendererTpl() dotRendererTpl {
-	return dotRendererTpl{dotTplRootNode: `graph broker {
+	return dotRendererTpl{dotTplRootNode: `digraph broker {
 {{ q .Name }} [shape="record", label="{RabbitMQ {{ .Overview.RabbitmqVersion }} | 
                {{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }} |
                {{- .Overview.ClusterName }} }"];
-
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}
 }`,
 
-		dotTplVhost: `{{ q .Name }} [shape="box", label="Virtual host {{ .Vhost }}"];
+		dotTplVhost: `{{ q .Name }} [shape="box", label="Virtual host\n{{ .Vhost }}"];
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name -}} [headport=n]{{ printf ";\n" }}{{ end -}}
+{ rank = same; {{ range $i, $e := .Children }}{{ q $e.Name }}; {{ end -}} };
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name -}} [headport=n]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
-		dotTplExchange: `
-{{ q .Name }} [shape="record"; label="{ {{ .Exchange.Name }} | {{- .Exchange.Type }} | {
-			  {{- if .Exchange.Durable }} D {{ end }} | 
-			  {{- if .Exchange.AutoDelete }} AD {{ end }} | 
-			  {{- if .Exchange.Internal }} I {{ end }} } }"];
-
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }} [fontsize=10; headport=n; label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{ end -}}
+		dotTplExchange: `{{ q .Name }} [shape="none"; margin="0"; label=< 
+		    <TABLE border='0' cellborder='1' cellspacing='0'>
+              <TR><TD colspan='1' WIDTH='33%%'> E </TD><TD colspan='2' balign='center'>{{ .Exchange.Type }}</TD></TR>
+              <TR><TD colspan='3' align='text'><B>{{- if eq .Exchange.Name "" }}(default){{else}}{{ .Exchange.Name }}{{end}}</B></TD></TR>
+			  <TR><TD WIDTH='33%%'>{{- if .Exchange.Durable }} D {{ else }} &nbsp; {{ end }}</TD>
+				  <TD WIDTH='33%%'>{{- if .Exchange.AutoDelete }} AD {{ end }}</TD>
+				  <TD WIDTH='33%%'>{{- if .Exchange.Internal }} I {{ end }}</TD></TR>
+		    </TABLE> >];
+	{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }} [fontsize=10; label={{ q $e.ParentAssoc }}]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplQueue: `
-{{ q .Name }} [shape="record"; label="{ {{ .Queue.Name }} | {
-			  {{- if .Queue.Durable }} D {{ end }} | 
-			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
-			  {{- if .Queue.Exclusive }} EX {{ end }} } }"];
-
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
+{{ q .Name }} [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='4' WIDTH='25%%'> Q</TD><TD><B>{{ .Queue.Name }}</B></TD></TR>
+			   <TR><TD WIDTH='25%%'>{{- if .Queue.Durable }} D {{else}} &nbsp; {{ end }}</TD> 
+			       <TD WIDTH='25%%'>{{- if .Queue.AutoDelete }} AD {{ end }} </TD>
+			       <TD WIDTH='25%%'>{{- if .Queue.Exclusive }} EX {{ end }} </TD>
+			       <TD  WIDTH='25%%' PORT='dlx'>{{- if .Queue.HasDlx }}<dlx> DLX {{ end }}</TD></TR>
+				</TABLE> >];
+{{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text }}{{ end -}}`,
 
 		dotTplBoundQueue: `
-{{ q .Name }} [shape="record"; label="{ {{ .Queue.Name }} | {
-			  {{- if .Queue.Durable }} D {{ end }} | 
-			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
-			  {{- if .Queue.Exclusive }} EX {{ end }} } }"];
-
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
+{{- if not .Skip }}
+{{ q .Name }} [shape="none"; margin="0"; label=<
+		     <TABLE border='0' cellborder='1' cellspacing='0'>
+			   <TR><TD colspan='1' WIDTH='25%%'> Q</TD><TD colspan='3'><B>{{ .Queue.Name }}</B></TD></TR>
+			   <TR><TD WIDTH='25%%'>{{- if .Queue.Durable }} D {{else}} &nbsp; {{ end }}</TD> 
+			       <TD WIDTH='25%%'>{{- if .Queue.AutoDelete }} AD {{ end }} </TD>
+			       <TD WIDTH='25%%'>{{- if .Queue.Exclusive }} EX {{ end }} </TD>
+			       <TD  WIDTH='25%%' PORT='dlx'>{{- if .Queue.HasDlx }} DLX {{ end }}</TD></TR>
+				</TABLE> >];
+{{ if .Queue.HasDlx }}{{ q .Name }}:dlx -> {{ q ( print "exchange_"  .Queue.Dlx )}} [style="dashed"];{{ end -}}
+{{- end}}
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
 
-		// TODO add more details
 		dotTplConnection: `
-{{ q .Name }} [shape="record" label="{{ .Connection.Name }}"];
+{{ q .Name }} [shape="record" label="{ Conn | {{ .Connection.Name }} }"];
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`, // TODO add more details
 
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
-{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
-
-		// TODO add more details
 		dotTplConsumer: `
-{{ q .Name }} [shape="record" label="{{ .Consumer.ConsumerTag}}"];
-
-{{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
-{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
+{{ q .Name }} [shape="record" label="{ Cons | {{ .Consumer.ConsumerTag}} }"];
+{{ range $i, $e := .Children }}{{ q $.Name }} -> {{ q $e.Name }}{{ end -}}
+{{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`, // TODO add more details
 	}
 }
 
@@ -153,14 +162,15 @@ func (s brokerInfoRendererDot) renderQueueElementAsString(name string, children 
 	return resolveTemplate("queue-dotTpl", s.template.dotTplQueue, args, funcMap)
 }
 
-func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
+func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding, skip bool) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
 		Binding  rabtap.RabbitBinding
 		Queue    rabtap.RabbitQueue
-	}{name, children, s.config, binding, queue}
+		Skip     bool
+	}{name, children, s.config, binding, queue, skip}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
 	return resolveTemplate("bound-queue-dotTpl", s.template.dotTplBoundQueue, args, funcMap)
 }
@@ -216,7 +226,10 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}) dotNode {
 		queue := boundQueue.Queue
 		binding := boundQueue.Binding
 		name := fmt.Sprintf("boundqueue_%s", queue.Name)
-		node = dotNode{name, s.renderBoundQueueElementAsString(name, children, queue, binding), binding.RoutingKey}
+		// don't render bound queue nodes more than once
+		_, skip := s.rendered[name]
+		s.rendered[name] = true
+		node = dotNode{name, s.renderBoundQueueElementAsString(name, children, queue, binding, skip), binding.RoutingKey}
 	case *connectionNode:
 		conn := n.(*connectionNode)
 		name := fmt.Sprintf("connection_%s", conn.Connection.Name)
@@ -234,6 +247,7 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}) dotNode {
 // Render renders the given tree in graphviz dot format. See
 // https://www.graphviz.org/doc/info/lang.html
 func (s *brokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
+	s.rendered = map[string]bool{}
 	res := s.renderNode(rootNode)
 	fmt.Fprintf(out, res.Text)
 	return nil

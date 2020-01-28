@@ -1,2 +1,2 @@
 #!/bin/sh
-golangci-lint -E bodyclose,misspell,gocyclo,dupl,gofmt,golint,unconvert,goimports,depguard,gocritic,funlen,interfacer run
+golangci-lint -E bodyclose,misspell,gocyclo,dupl,golint,unconvert,goimports,depguard,gocritic,gofmt,interfacer run

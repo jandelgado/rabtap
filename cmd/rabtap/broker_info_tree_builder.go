@@ -216,31 +216,48 @@ func (s defaultBrokerInfoTreeBuilder) createQueueNodeFromBinding(
 func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 	exchange rabtap.RabbitExchange, brokerInfo rabtap.BrokerInfo) *exchangeNode {
 
-	exchangeNode := exchangeNode{baseNode{[]interface{}{}}, exchange}
+	// to detect cyclic exchange-to-exchange bindings. Yes, this is possible.
+	visited := map[string]bool{}
 
-	// process all bindings for current exchange
-	for _, binding := range rabtap.FindBindingsForExchange(exchange, brokerInfo.Bindings) {
-		if binding.DestinationType == "exchange" {
-			// exchange to exchange binding
-			i := rabtap.FindExchangeByName(
-				brokerInfo.Exchanges,
-				binding.Vhost,
-				binding.Destination)
-			if i != -1 {
-				exchangeNode.Add(
-					s.createExchangeNode(
-						brokerInfo.Exchanges[i],
-						brokerInfo))
-			} // TODO else log error
-		} else {
-			// queue to exchange binding
-			queues := s.createQueueNodeFromBinding(binding, exchange, brokerInfo)
-			for _, queue := range queues {
-				exchangeNode.Add(queue)
+	var create func(rabtap.RabbitExchange, rabtap.BrokerInfo) *exchangeNode
+	create = func(exchange rabtap.RabbitExchange, brokerInfo rabtap.BrokerInfo) *exchangeNode {
+
+		exchangeNode := exchangeNode{baseNode{[]interface{}{}}, exchange}
+
+		// process all bindings for current exchange
+		for _, binding := range rabtap.FindBindingsForExchange(exchange, brokerInfo.Bindings) {
+			if binding.DestinationType == "exchange" {
+				// exchange to exchange binding
+				i := rabtap.FindExchangeByName(
+					brokerInfo.Exchanges,
+					binding.Vhost,
+					binding.Destination)
+				if i == -1 {
+					// ignore if not found
+					continue
+				}
+				boundExchange := brokerInfo.Exchanges[i]
+				if _, found := visited[boundExchange.Name]; found {
+					// cyclic exchange-to-exchange binding detected
+					continue
+				}
+				visited[boundExchange.Name] = true
+				exchangeNode.Add(create(exchange, brokerInfo))
+			} else {
+				// do not add (redundant) queues if in recursive exchange call
+				if len(visited) > 0 {
+					continue
+				}
+				// queue to exchange binding
+				queues := s.createQueueNodeFromBinding(binding, exchange, brokerInfo)
+				for _, queue := range queues {
+					exchangeNode.Add(queue)
+				}
 			}
 		}
+		return &exchangeNode
 	}
-	return &exchangeNode
+	return create(exchange, brokerInfo)
 }
 
 func (s defaultBrokerInfoTreeBuilder) createRootNode(rootNodeURL string,

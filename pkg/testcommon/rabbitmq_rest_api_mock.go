@@ -270,6 +270,17 @@ const (
 
         },
         "properties_key": "topic-q2"
+    },
+    {
+        "source": "test-topic",
+        "vhost": "/",
+        "destination": "test-topic",
+        "destination_type": "exchange",
+        "routing_key": "",
+        "arguments": {
+
+        },
+        "properties_key": "~"
     }
 ]`
 

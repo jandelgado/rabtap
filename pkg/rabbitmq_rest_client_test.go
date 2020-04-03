@@ -28,7 +28,7 @@ func TestGetAllResources(t *testing.T) {
 	assert.Equal(t, 1, len(all.Connections))
 	assert.Equal(t, 12, len(all.Exchanges))
 	assert.Equal(t, 8, len(all.Queues))
-	assert.Equal(t, 16, len(all.Bindings))
+	assert.Equal(t, 17, len(all.Bindings))
 	assert.Equal(t, 2, len(all.Consumers))
 }
 

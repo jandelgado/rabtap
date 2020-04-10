@@ -72,7 +72,8 @@ func Example_cmdInfoByExchangeInTextFormat() {
 	//     │   └── header-q2 (queue, key='headers-q2', idle since 2017-05-25 19:14:47, [D])
 	//     └── test-topic (exchange, type 'topic', [D])
 	//         ├── topic-q1 (queue, key='topic-q1', idle since 2017-05-25 19:14:17, [D|AD|EX])
-	//         └── topic-q2 (queue, key='topic-q2', idle since 2017-05-25 19:14:21, [D])
+	//         ├── topic-q2 (queue, key='topic-q2', idle since 2017-05-25 19:14:21, [D])
+	//         └── test-topic (exchange, type 'topic', [D])
 
 }
 
@@ -182,11 +183,15 @@ const expectedResultDotByExchange = `graph broker {
 
 "exchange_test-topic" -- "boundqueue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
 "exchange_test-topic" -- "boundqueue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
+"exchange_test-topic" -- "exchange_test-topic" [fontsize=10; headport=n; label=""];
 
 "boundqueue_topic-q1" [shape="record"; label="{ topic-q1 | { D  | AD  | EX  } }"];
 
 
 "boundqueue_topic-q2" [shape="record"; label="{ topic-q2 | { D  | | } }"];
+
+
+"exchange_test-topic" [shape="record"; label="{ test-topic |topic | { D  | | } }"];
 
 }`
 

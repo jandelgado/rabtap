@@ -1,6 +1,10 @@
 
 # Changelog for rabtap
 
+## v1.23 (2020-04-09)
+
+* fix: avoid endless recursion in info command (#42)
+
 ## v1.22 (2020-01-28)
 
 * The `pub` command now allows ialso to replay messages from a direcory previously

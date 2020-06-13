@@ -1,5 +1,8 @@
-
 # Changelog for rabtap
+
+## v1.29 (2021-09-15)
+
+* new: add a docker image (ghcr.io/jandelgado/rabtap)
 
 ## v1.28 (2021-08-26)
 

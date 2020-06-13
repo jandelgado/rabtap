@@ -23,6 +23,36 @@ jobs:
           name: assets
           path: assets/
 
+  docker-image:
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    name: create docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: build Docker image
+        run: |
+          VERSION=$(git describe --tags)
+          docker build --build-arg "version=$VERSION" --tag ${IMAGE_NAME} .
+
+      - name: push Docker image
+        run: |
+          TAG=$(git describe --tags)
+          docker tag ${IMAGE_NAME} ${REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}
+          docker tag ${IMAGE_NAME} ${REGISTRY}/${IMAGE_NAME}:${TAG}
+          docker tag ${IMAGE_NAME} ${REGISTRY}/${IMAGE_NAME}:latest
+          docker push ${REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}
+          docker push ${REGISTRY}/${IMAGE_NAME}:${TAG}
+          docker push ${REGISTRY}/${IMAGE_NAME}:latest
+
   upload:
     name: Upload release assets
     runs-on: ubuntu-latest

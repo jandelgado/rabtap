@@ -17,6 +17,7 @@ and exchanges, inspect broker.
     * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
     * [Tap messages](#tap-messages)
 * [Installation](#installation)
+    * [Docker image](#docker-image)
     * [Pre-compiled binaries](#pre-compiled-binaries)
     * [Arch Linux](#arch-linux)
     * [Installation from source](#installation-from-source)
@@ -101,6 +102,14 @@ Output of rabtap in `tap` mode, showing message meta data and the message body:
 ![info mode](doc/images/tap.png)
 
 ## Installation
+
+### Docker image
+
+A docker image is provided so rabtap can be used as a docker container, e.g.
+
+```console
+$ docker run --rm -ti ghcr.io/jandelgado/rabtap:latest 
+```
 
 ### Pre-compiled binaries
 

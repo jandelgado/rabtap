@@ -31,6 +31,7 @@ and exchanges, inspect broker.
     * [Examples](#examples)
         * [Broker info](#broker-info)
         * [Wire-tapping messages](#wire-tapping-messages)
+            * [Tap all messages published or delivered](#tap-all-messages-published-or-delivered)
             * [Connect to multiple brokers](#connect-to-multiple-brokers)
             * [Message recorder](#message-recorder)
         * [Messages consumer (subscribe)](#messages-consumer-subscribe)
@@ -369,6 +370,23 @@ commands below.
 The following example connects to multiple exchanges:
 
 * `$ rabtap tap my-fanout-exchange:,my-topic-exchange:#,my-other-exchange:binding-key`
+
+##### Tap all messages published or delivered 
+
+The [RabbitMQ Firehose Tracer](https://www.rabbitmq.com/firehose.html) allows
+to "see" every message that is published or delivered. To use it, the firehose
+tracer has to be enabled first:
+
+```shell
+$ rabbitmqctl rabbitmqctl trace_on 
+```
+
+Then every message published or delivered will be CC'd to the topic exhange `amq.rabbitmq.trace`. 
+At this exchange, the messages can now be tapped with rabtap:
+
+```shell
+$ rabtap --uri amqp://guest:guest@localhost:5672/ tap amq.rabbitmq.trace:#
+```
 
 ##### Connect to multiple brokers
 
@@ -763,6 +781,6 @@ Jan Delgado (jdelgado at gmx dot net)
 
 ## Copyright and license
 
-Copyright (c) 2017-2019 Jan Delgado.
+Copyright (c) 2017-2020 Jan Delgado.
 rabtap is licensed under the GPLv3 license.
 

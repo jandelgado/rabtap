@@ -31,7 +31,7 @@ and exchanges, inspect broker.
     * [Examples](#examples)
         * [Broker info](#broker-info)
         * [Wire-tapping messages](#wire-tapping-messages)
-	    * [Tap all messages published or delivered](#tap-all-messages-published-or-delivered) 
+            * [Tap all messages published or delivered](#tap-all-messages-published-or-delivered)
             * [Connect to multiple brokers](#connect-to-multiple-brokers)
             * [Message recorder](#message-recorder)
         * [Messages consumer (subscribe)](#messages-consumer-subscribe)
@@ -373,8 +373,9 @@ The following example connects to multiple exchanges:
 
 ##### Tap all messages published or delivered 
 
-The [RabbitMQ Firehose Tracer](https://www.rabbitmq.com/firehose.html) allows to "see" every message that
-is published or delivered. TO use it, the firehose tracer has to be enabled first:
+The [RabbitMQ Firehose Tracer](https://www.rabbitmq.com/firehose.html) allows
+to "see" every message that is published or delivered. To use it, the firehose
+tracer has to be enabled first:
 
 ```shell
 $ rabbitmqctl rabbitmqctl trace_on 
@@ -384,7 +385,7 @@ Then every message published or delivered will be CC'd to the topic exhange `amq
 At this exchange, the messages can now be tapped with rabtap:
 
 ```shell
-$ rabtap tap amq.rabbitmq.trace:#`
+$ rabtap --uri amqp://guest:guest@localhost:5672/ tap amq.rabbitmq.trace:#
 ```
 
 ##### Connect to multiple brokers

@@ -28,19 +28,27 @@ Usage:
   rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
+              [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
+                       [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
+                                      [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
+                   [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
              [--delay=DELAY | --speed=FACTOR] [-jkv]
+             [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
-  rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
-  rabtap queue create QUEUE [--uri=URI] [-adkv]
+                                  [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap queue create QUEUE [--uri=URI] [-adkv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+                                                       [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
-  rabtap queue rm QUEUE [--uri=URI] [-kv]
-  rabtap queue purge QUEUE [--uri=URI] [-kv]
-  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
+                                                           [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap queue rm QUEUE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap queue purge QUEUE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap --version
 
 Arguments and options:
@@ -72,6 +80,9 @@ Arguments and options:
  -h, --help           print this help.
  -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
+ --cert-file=CERTFILE A Cert file to use for client authentication.
+ --key-file=KEYFILE   A Key file to use for client authentication.
+ --ca-file=CAFILE     A CA Cert file to use for client authentication.
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR).
@@ -147,6 +158,9 @@ const (
 )
 
 type commonArgs struct {
+	CertFile    string
+	KeyFile     string
+	CaFile      string
 	Verbose     bool
 	InsecureTLS bool
 	NoColor     bool
@@ -220,7 +234,22 @@ func parseAPIURI(args map[string]interface{}) (string, error) {
 }
 
 func parseCommonArgs(args map[string]interface{}) commonArgs {
+	var certFile string
+	var keyFile string
+	var caFile string
+	if args["--cert-file"] != nil {
+		certFile = args["--cert-file"].(string)
+	}
+	if args["--key-file"] != nil {
+		keyFile = args["--key-file"].(string)
+	}
+	if args["--ca-file"] != nil {
+		caFile = args["--ca-file"].(string)
+	}
 	return commonArgs{
+		CertFile:    certFile,
+		KeyFile:     keyFile,
+		CaFile:      caFile,
 		Verbose:     args["--verbose"].(bool),
 		InsecureTLS: args["--insecure"].(bool),
 		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != "")}

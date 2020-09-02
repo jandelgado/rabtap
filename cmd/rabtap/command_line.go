@@ -239,12 +239,18 @@ func parseCommonArgs(args map[string]interface{}) commonArgs {
 	var caFile string
 	if args["--cert-file"] != nil {
 		certFile = args["--cert-file"].(string)
+	} else {
+		certFile = os.Getenv("RABTAP_CERTFILE")
 	}
 	if args["--key-file"] != nil {
 		keyFile = args["--key-file"].(string)
+	} else {
+		keyFile = os.Getenv("RABTAP_KEYFILE")
 	}
 	if args["--ca-file"] != nil {
 		caFile = args["--ca-file"].(string)
+	} else {
+		caFile = os.Getenv("RABTAP_CAFILE")
 	}
 	return commonArgs{
 		CertFile:    certFile,

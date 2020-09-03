@@ -1,6 +1,11 @@
 
 # Changelog for rabtap
 
+## v1.24 (2020-09-03)
+
+* fix: make sure that headers in amqp.Publishing are always using amqp.Table
+  structures, which could caused problems before.
+
 ## v1.23 (2020-04-09)
 
 * fix: avoid endless recursion in info command (#42)

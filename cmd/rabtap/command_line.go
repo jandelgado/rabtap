@@ -124,6 +124,9 @@ Examples:
   rabtap info
   rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
+
+  # use RABTAP_CERTFILE | RABTAP_KEYFILE | RABTAP_CAFILE environments variables
+  # instead of specify --cert-file=CERTFILE --key-file=KEYFILE --ca-file=CAFILE
 `
 )
 

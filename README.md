@@ -27,6 +27,7 @@ and exchanges, inspect broker.
     * [Environment variables](#environment-variables)
         * [Default RabbitMQ broker](#default-rabbitmq-broker)
         * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
+        * [Default RabbitMQ TLS config](#default-rabbitmq-tls-config)
         * [Disable color output](#disable-color-output)
     * [Examples](#examples)
         * [Broker info](#broker-info)
@@ -128,19 +129,27 @@ Usage:
   rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
+              [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
+                       [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
+                                      [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
+                   [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
              [--delay=DELAY | --speed=FACTOR] [-jkv]
+             [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
-  rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
-  rabtap queue create QUEUE [--uri=URI] [-adkv]
+                                  [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap queue create QUEUE [--uri=URI] [-adkv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+                                                       [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
-  rabtap queue rm QUEUE [--uri=URI] [-kv]
-  rabtap queue purge QUEUE [--uri=URI] [-kv]
-  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
+                                                           [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap queue rm QUEUE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap queue purge QUEUE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
   rabtap --version
 
 Arguments and options:
@@ -159,7 +168,7 @@ Arguments and options:
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
                       If not set then messages will be delayed as recorded. 
-					  The value must be suffixed with a time unit, e.g. ms, s etc.
+                      The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
@@ -172,6 +181,9 @@ Arguments and options:
  -h, --help           print this help.
  -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
+ --cert-file=CERTFILE A Cert file to use for client authentication.
+ --key-file=KEYFILE   A Key file to use for client authentication.
+ --ca-file=CAFILE     A CA Cert file to use for client authentication.
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR).
@@ -182,7 +194,7 @@ Arguments and options:
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON 
-					  message format).
+                      message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
@@ -213,6 +225,9 @@ Examples:
   rabtap info
   rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
+
+  # use RABTAP_CERTFILE | RABTAP_KEYFILE | RABTAP_CAFILE environments variables
+  # instead of specify --cert-file=CERTFILE --key-file=KEYFILE --ca-file=CAFILE
 ```
 
 ### Basic commands
@@ -296,6 +311,19 @@ environment variable. Example:
 ```console
 $ export RABTAP_APIURI=http://guest:guest@localhost:15672/api
 $ rabtap info
+...
+```
+
+#### Default RabbitMQ TLS config
+
+The default TLS config certificates path can be set using the `RABTAP_CERTFILE` and `RABTAP_KEYFILE` and `RABTAP_CAFILE`
+environments variables. Example:
+
+```console
+$ export RABTAP_CERTFILE=/etc/rabbitmq/ssl/cert.pem
+$ export RABTAP_KEYFILE=/etc/rabbitmq/ssl/key.pem
+$ export RABTAP_CAFILE =/etc/rabbitmq/ssl/ca.pem
+$ echo "Hello" | rabtap pub amq.topic --routingkey "key"
 ...
 ```
 

@@ -26,9 +26,12 @@ func TestDefaultFilenameProviderReturnsFilenameInExpectedFormat(t *testing.T) {
 
 func TestGetTLSConfig(t *testing.T) {
 
-	tls := getTLSConfig(true)
+	var TLSCertFile string
+	var TLSKeyFile string
+	var TLSCaFile string
+	tls := getTLSConfig(true, TLSCertFile, TLSKeyFile, TLSCaFile)
 	assert.True(t, tls.InsecureSkipVerify)
-	tls = getTLSConfig(false)
+	tls = getTLSConfig(false, TLSCertFile, TLSKeyFile, TLSCaFile)
 	assert.False(t, tls.InsecureSkipVerify)
 }
 

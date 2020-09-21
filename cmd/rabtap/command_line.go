@@ -28,19 +28,27 @@ Usage:
   rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
+              [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
+                       [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
+                                      [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
+                   [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
              [--delay=DELAY | --speed=FACTOR] [-jkv]
+             [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
-  rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
-  rabtap queue create QUEUE [--uri=URI] [-adkv]
+                                  [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap queue create QUEUE [--uri=URI] [-adkv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+                                                       [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
-  rabtap queue rm QUEUE [--uri=URI] [-kv]
-  rabtap queue purge QUEUE [--uri=URI] [-kv]
-  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
+                                                           [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap queue rm QUEUE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap queue purge QUEUE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap --version
 
 Arguments and options:
@@ -72,6 +80,9 @@ Arguments and options:
  -h, --help           print this help.
  -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
+ --tls-cert-file=CERTFILE A Cert file to use for client authentication.
+ --tls-key-file=KEYFILE   A Key file to use for client authentication.
+ --tls-ca-file=CAFILE     A CA Cert file to use for client authentication.
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR).
@@ -113,6 +124,9 @@ Examples:
   rabtap info
   rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
+
+  # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
+  # instead of specify --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
 `
 )
 
@@ -147,6 +161,9 @@ const (
 )
 
 type commonArgs struct {
+	TLSCertFile string
+	TLSKeyFile  string
+	TLSCaFile   string
 	Verbose     bool
 	InsecureTLS bool
 	NoColor     bool
@@ -220,7 +237,28 @@ func parseAPIURI(args map[string]interface{}) (string, error) {
 }
 
 func parseCommonArgs(args map[string]interface{}) commonArgs {
+	var tlsCertFile string
+	var tlsKeyFile string
+	var tlsCaFile string
+	if args["--tls-cert-file"] != nil {
+		tlsCertFile = args["--tls-cert-file"].(string)
+	} else {
+		tlsCertFile = os.Getenv("RABTAP_TLS_CERTFILE")
+	}
+	if args["--tls-key-file"] != nil {
+		tlsKeyFile = args["--tls-key-file"].(string)
+	} else {
+		tlsKeyFile = os.Getenv("RABTAP_TLS_KEYFILE")
+	}
+	if args["--tls-ca-file"] != nil {
+		tlsCaFile = args["--tls-ca-file"].(string)
+	} else {
+		tlsCaFile = os.Getenv("RABTAP_TLS_CAFILE")
+	}
 	return commonArgs{
+		TLSCertFile: tlsCertFile,
+		TLSKeyFile:  tlsKeyFile,
+		TLSCaFile:   tlsCaFile,
 		Verbose:     args["--verbose"].(bool),
 		InsecureTLS: args["--insecure"].(bool),
 		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != "")}

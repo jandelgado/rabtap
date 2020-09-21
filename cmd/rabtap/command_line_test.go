@@ -45,6 +45,45 @@ func TestParseAmqpURIUseEnvironment(t *testing.T) {
 	assert.Equal(t, "URI", uri)
 }
 
+func TestParseTLSConfig(t *testing.T) {
+	args := map[string]interface{}{
+		"--tls-cert-file": "/tmp/tls-cert.pem",
+		"--tls-key-file":  "/tmp/tls-key.pem",
+		"--tls-ca-file":   "/tmp/tls-ca.pem",
+		"--verbose":       false,
+		"--insecure":      false,
+		"--no-color":      false,
+	}
+	commonArgs := parseCommonArgs(args)
+	assert.Equal(t, "/tmp/tls-cert.pem", commonArgs.TLSCertFile)
+	assert.Equal(t, "/tmp/tls-key.pem", commonArgs.TLSKeyFile)
+	assert.Equal(t, "/tmp/tls-ca.pem", commonArgs.TLSCaFile)
+}
+
+func TestParseTLSConfigUseEnvironment(t *testing.T) {
+	const key1 = "RABTAP_TLS_CERTFILE"
+	const key2 = "RABTAP_TLS_KEYFILE"
+	const key3 = "RABTAP_TLS_CAFILE"
+	os.Setenv(key1, "/tmp/tls-cert.pem")
+	os.Setenv(key2, "/tmp/tls-key.pem")
+	os.Setenv(key3, "/tmp/tls-ca.pem")
+	defer os.Unsetenv(key1)
+	defer os.Unsetenv(key2)
+	defer os.Unsetenv(key3)
+	args := map[string]interface{}{
+		"--tls-cert-file": nil,
+		"--tls-key-file":  nil,
+		"--tls-ca-file":   nil,
+		"--verbose":       false,
+		"--insecure":      false,
+		"--no-color":      false,
+	}
+	commonArgs := parseCommonArgs(args)
+	assert.Equal(t, "/tmp/tls-cert.pem", commonArgs.TLSCertFile)
+	assert.Equal(t, "/tmp/tls-key.pem", commonArgs.TLSKeyFile)
+	assert.Equal(t, "/tmp/tls-ca.pem", commonArgs.TLSCaFile)
+}
+
 func TestParseCommandLineArgsFailsWithInvalidSpec(t *testing.T) {
 	_, err := parseCommandLineArgsWithSpec("invalid spec", []string{"invalid"})
 	assert.NotNil(t, err)

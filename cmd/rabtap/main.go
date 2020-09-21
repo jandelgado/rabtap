@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -49,8 +50,33 @@ func defaultFilenameProvider() string {
 	return fmt.Sprintf("rabtap-%d", time.Now().UnixNano())
 }
 
-func getTLSConfig(insecureTLS bool) *tls.Config {
-	return &tls.Config{InsecureSkipVerify: insecureTLS}
+func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile string) *tls.Config {
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: insecureTLS,
+	}
+
+	if certFile != "" && keyFile != "" {
+		// Load client cert
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			failOnError(err, "invalid client tls cert/key file", os.Exit)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+		tlsConfig.BuildNameToCertificate()
+	}
+
+	if caFile != "" {
+		// Load CA cert
+		caCert, err := ioutil.ReadFile(caFile)
+		if err != nil {
+			failOnError(err, "invalid client tls ca file", os.Exit)
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		tlsConfig.RootCAs = caCertPool
+		tlsConfig.BuildNameToCertificate()
+	}
+	return tlsConfig
 }
 
 func startCmdInfo(args CommandLineArgs, title string) {
@@ -60,7 +86,7 @@ func startCmdInfo(args CommandLineArgs, title string) {
 	failOnError(err, "invalid api url", os.Exit)
 	cmdInfo(CmdInfoArg{
 		rootNode: title,
-		client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS)),
+		client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
 		treeConfig: BrokerInfoTreeBuilderConfig{
 			Mode:                args.InfoMode,
 			ShowConsumers:       args.ShowConsumers,
@@ -121,7 +147,7 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		routingKey: args.PubRoutingKey,
 		fixedDelay: args.Delay,
 		speed:      args.Speed,
-		tlsConfig:  getTLSConfig(args.InsecureTLS),
+		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		readerFunc: readerFunc})
 	failOnError(err, "error publishing message", os.Exit)
 }
@@ -141,7 +167,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 		amqpURI:            args.AmqpURI,
 		queue:              args.QueueName,
 		AutoAck:            args.AutoAck,
-		tlsConfig:          getTLSConfig(args.InsecureTLS),
+		tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		messageReceiveFunc: messageReceiveFunc})
 	failOnError(err, "error subscribing messages", os.Exit)
 }
@@ -157,7 +183,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	}
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
-	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS),
+	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		messageReceiveFunc)
 }
 
@@ -205,7 +231,7 @@ func main() {
 	}
 
 	initLogging(args.Verbose)
-	tlsConfig := getTLSConfig(args.InsecureTLS)
+	tlsConfig := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
 
 	// translate ^C (Interrput) in ctx.Done()
 	ctx, cancel := context.WithCancel(context.Background())

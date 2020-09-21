@@ -129,27 +129,27 @@ Usage:
   rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
-              [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+              [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
-                       [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+                       [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
-                                      [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+                                      [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
-                   [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+                   [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
              [--delay=DELAY | --speed=FACTOR] [-jkv]
-             [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+             [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
-                                  [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
-  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
-  rabtap queue create QUEUE [--uri=URI] [-adkv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+                                  [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap queue create QUEUE [--uri=URI] [-adkv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
-                                                       [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+                                                       [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
-                                                           [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
-  rabtap queue rm QUEUE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
-  rabtap queue purge QUEUE [--uri=URI] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
-  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] [--cert-file=CERTFILE] [--key-file=KEYFILE] [--ca-file=CAFILE]
+                                                           [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap queue rm QUEUE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap queue purge QUEUE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
   rabtap --version
 
 Arguments and options:
@@ -181,9 +181,9 @@ Arguments and options:
  -h, --help           print this help.
  -j, --json           Deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
- --cert-file=CERTFILE A Cert file to use for client authentication.
- --key-file=KEYFILE   A Key file to use for client authentication.
- --ca-file=CAFILE     A CA Cert file to use for client authentication.
+ --tls-cert-file=CERTFILE A Cert file to use for client authentication.
+ --tls-key-file=KEYFILE   A Key file to use for client authentication.
+ --tls-ca-file=CAFILE     A CA Cert file to use for client authentication.
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR).
@@ -227,7 +227,7 @@ Examples:
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 
   # use RABTAP_CERTFILE | RABTAP_KEYFILE | RABTAP_CAFILE environments variables
-  # instead of specify --cert-file=CERTFILE --key-file=KEYFILE --ca-file=CAFILE
+  # instead of specify --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
 ```
 
 ### Basic commands
@@ -316,13 +316,13 @@ $ rabtap info
 
 #### Default RabbitMQ TLS config
 
-The default TLS config certificates path can be set using the `RABTAP_CERTFILE` and `RABTAP_KEYFILE` and `RABTAP_CAFILE`
+The default TLS config certificates path can be set using the `RABTAP_TLS_CERTFILE` and `RABTAP_TLS_KEYFILE` and `RABTAP_TLS_CAFILE`
 environments variables. Example:
 
 ```console
-$ export RABTAP_CERTFILE=/etc/rabbitmq/ssl/cert.pem
-$ export RABTAP_KEYFILE=/etc/rabbitmq/ssl/key.pem
-$ export RABTAP_CAFILE =/etc/rabbitmq/ssl/ca.pem
+$ export RABTAP_TLS_CERTFILE=/etc/rabbitmq/ssl/cert.pem
+$ export RABTAP_TLS_KEYFILE=/etc/rabbitmq/ssl/key.pem
+$ export RABTAP_TLS_CAFILE =/etc/rabbitmq/ssl/ca.pem
 $ echo "Hello" | rabtap pub amq.topic --routingkey "key"
 ...
 ```

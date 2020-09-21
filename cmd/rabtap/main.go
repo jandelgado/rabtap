@@ -59,7 +59,7 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 		// Load client cert
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err != nil {
-			failOnError(err, "invalid client cert/key file", os.Exit)
+			failOnError(err, "invalid client tls cert/key file", os.Exit)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 		tlsConfig.BuildNameToCertificate()
@@ -69,7 +69,7 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 		// Load CA cert
 		caCert, err := ioutil.ReadFile(caFile)
 		if err != nil {
-			failOnError(err, "invalid client ca file", os.Exit)
+			failOnError(err, "invalid client tls ca file", os.Exit)
 		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
@@ -86,7 +86,7 @@ func startCmdInfo(args CommandLineArgs, title string) {
 	failOnError(err, "invalid api url", os.Exit)
 	cmdInfo(CmdInfoArg{
 		rootNode: title,
-		client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS, args.CertFile, args.KeyFile, args.CaFile)),
+		client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
 		treeConfig: BrokerInfoTreeBuilderConfig{
 			Mode:                args.InfoMode,
 			ShowConsumers:       args.ShowConsumers,
@@ -147,7 +147,7 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		routingKey: args.PubRoutingKey,
 		fixedDelay: args.Delay,
 		speed:      args.Speed,
-		tlsConfig:  getTLSConfig(args.InsecureTLS, args.CertFile, args.KeyFile, args.CaFile),
+		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		readerFunc: readerFunc})
 	failOnError(err, "error publishing message", os.Exit)
 }
@@ -167,7 +167,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 		amqpURI:            args.AmqpURI,
 		queue:              args.QueueName,
 		AutoAck:            args.AutoAck,
-		tlsConfig:          getTLSConfig(args.InsecureTLS, args.CertFile, args.KeyFile, args.CaFile),
+		tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		messageReceiveFunc: messageReceiveFunc})
 	failOnError(err, "error subscribing messages", os.Exit)
 }
@@ -183,7 +183,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	}
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
-	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS, args.CertFile, args.KeyFile, args.CaFile),
+	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		messageReceiveFunc)
 }
 
@@ -231,7 +231,7 @@ func main() {
 	}
 
 	initLogging(args.Verbose)
-	tlsConfig := getTLSConfig(args.InsecureTLS, args.CertFile, args.KeyFile, args.CaFile)
+	tlsConfig := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
 
 	// translate ^C (Interrput) in ctx.Done()
 	ctx, cancel := context.WithCancel(context.Background())

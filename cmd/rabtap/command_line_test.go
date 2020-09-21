@@ -45,6 +45,41 @@ func TestParseAmqpURIUseEnvironment(t *testing.T) {
 	assert.Equal(t, "URI", uri)
 }
 
+func TestParseTLSConfig(t *testing.T) {
+	args := map[string]interface{}{
+		"--tls-cert-file": []string{"/tmp/tls-cert.pem"},
+		"--tls-key-file": []string{"/tmp/tls-key.pem"},
+		"--tls-ca-file": []string{"/tmp/tls-ca.pem"}
+	}
+	commonArgs, err := parseCommonArgs(args)
+	assert.Nil(t, err)
+	assert.Equal(t, "/tmp/tls-cert.pem", commonArgs.TLSCertFile)
+	assert.Equal(t, "/tmp/tls-key.pem", commonArgs.TLSKeyFile)
+	assert.Equal(t, "/tmp/tls-ca.pem", commonArgs.TLSCaFile)
+}
+
+func TestParseTLSConfigUseEnvironment(t *testing.T) {
+	const key1 = "RABTAP_TLS_CERTFILE"
+	const key2 = "RABTAP_TLS_KEYFILE"
+	const key3 = "RABTAP_TLS_CAFILE"
+	os.Setenv(key1, "/tmp/tls-cert.pem")
+	os.Setenv(key2, "/tmp/tls-key.pem")
+	os.Setenv(key3, "/tmp/tls-ca.pem")
+	defer os.Unsetenv(key1)
+	defer os.Unsetenv(key2)
+	defer os.Unsetenv(key3)
+	args := map[string]interface{}{
+		"--tls-cert-file": []string{},
+		"--tls-key-file": []string{},
+		"--tls-ca-file": []string{}
+	}
+	commonArgs, err := parseCommonArgs(args)
+	assert.Nil(t, err)
+	assert.Equal(t, "/tmp/tls-cert.pem", commonArgs.TLSCertFile)
+	assert.Equal(t, "/tmp/tls-key.pem", commonArgs.TLSKeyFile)
+	assert.Equal(t, "/tmp/tls-ca.pem", commonArgs.TLSCaFile)
+}
+
 func TestParseCommandLineArgsFailsWithInvalidSpec(t *testing.T) {
 	_, err := parseCommandLineArgsWithSpec("invalid spec", []string{"invalid"})
 	assert.NotNil(t, err)
@@ -140,6 +175,9 @@ func TestCliTapWithMultipleUris(t *testing.T) {
 	assert.False(t, args.NoColor)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 }
 
 func TestCliAllOptsInTapCommand(t *testing.T) {
@@ -159,6 +197,9 @@ func TestCliAllOptsInTapCommand(t *testing.T) {
 	assert.True(t, args.Verbose)
 	assert.True(t, args.Silent)
 	assert.True(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 }
 
 func TestCliInfoCmd(t *testing.T) {
@@ -176,6 +217,9 @@ func TestCliInfoCmd(t *testing.T) {
 	assert.Equal(t, "byExchange", args.InfoMode)
 	assert.Equal(t, "text", args.Format)
 	assert.False(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 	assert.False(t, args.NoColor)
 	assert.False(t, args.OmitEmptyExchanges)
 }
@@ -233,6 +277,9 @@ func TestCliInfoCmdApiFromEnv(t *testing.T) {
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowConsumers)
 	assert.False(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 	assert.False(t, args.NoColor)
 	assert.Equal(t, "byExchange", args.InfoMode)
 }
@@ -255,6 +302,9 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	assert.True(t, args.ShowDefaultExchange)
 	assert.True(t, args.NoColor)
 	assert.True(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 	assert.True(t, args.OmitEmptyExchanges)
 }
 
@@ -273,6 +323,9 @@ func TestCliPubCmdFromFileMinimalOptsSet(t *testing.T) {
 	assert.Equal(t, 1., args.Speed)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 }
 func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
@@ -290,6 +343,9 @@ func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	assert.Equal(t, 1., args.Speed)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 }
 
 func TestCliPubCmdUriFromEnv(t *testing.T) {
@@ -339,6 +395,9 @@ func TestCliPubCmdFromStdinWithRoutingKeyJsonFormat(t *testing.T) {
 	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 }
 
 func TestCliPubCmdFromStdinWithJsonFormatDeprecated(t *testing.T) {
@@ -354,6 +413,9 @@ func TestCliPubCmdFromStdinWithJsonFormatDeprecated(t *testing.T) {
 	assert.Equal(t, "json", args.Format)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+	assert.Nil(t, args.TLSCertFile)
+	assert.Nil(t, args.TLSKeyFile)
+	assert.Nil(t, args.TLSCaFile)
 }
 
 func TestCliSubCmdInvalidFormatReturnsError(t *testing.T) {

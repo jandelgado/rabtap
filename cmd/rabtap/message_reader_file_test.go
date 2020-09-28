@@ -77,7 +77,6 @@ func TestReadMessageFromJSONStreamReturnsOneMessagePerCall(t *testing.T) {
 	{
 		"Body": "c2Vjb25kCg=="
 	}`
-	//reader := ioutil.NopCloser(bytes.NewReader([]byte("hello world"))) // r type is io.ReadCloser
 	reader := bytes.NewReader([]byte(data))
 	decoder := json.NewDecoder(reader)
 

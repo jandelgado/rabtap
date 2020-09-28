@@ -85,7 +85,7 @@ func ensureTable(m interface{}) interface{} {
 // timstamp where all ":" are replaced with "_"
 func CreateTimestampFilename(t time.Time) string {
 	basename := t.Format(time.RFC3339Nano)
-	return strings.Replace(basename, ":", "_", -1)
+	return strings.ReplaceAll(basename, ":", "_")
 }
 
 // NewRabtapPersistentMessage creates RabtapPersistentMessage object
@@ -109,7 +109,7 @@ func NewRabtapPersistentMessage(message rabtap.TapMessage) RabtapPersistentMessa
 		Exchange:                 m.Exchange,
 		RoutingKey:               m.RoutingKey,
 		XRabtapReceivedTimestamp: message.ReceivedTimestamp,
-		Body: m.Body,
+		Body:                     m.Body,
 	}
 }
 

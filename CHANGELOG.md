@@ -1,8 +1,9 @@
 
 # Changelog for rabtap
 
-## v1.24 (2020-09-03)
+## v1.24 (2020-09-28)
 
+* new: support TLS client certificates (contributed by Francois Gouteroux)
 * fix: make sure that headers in amqp.Publishing are always using amqp.Table
   structures, which could caused problems before.
 

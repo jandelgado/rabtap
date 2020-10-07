@@ -159,7 +159,7 @@ func createTopology(ch *amqp.Channel, exchanges []string, numTestQueues int) {
 			log.Printf("creating queue %s", queueName)
 			createQueue(ch, queueName)
 			bindingKey, headers := getBindingKeyForExchange(exchange, i)
-			log.Printf("binding queue %s to exchange %s with bindingkey `%s` and headers %#+v",
+			log.Printf("binding queue %s to exchange %s with bindingkey `%s` and headers %+v",
 				queueName, exchange, bindingKey, headers)
 			bindQueue(ch, queueName, exchange, bindingKey, headers)
 		}

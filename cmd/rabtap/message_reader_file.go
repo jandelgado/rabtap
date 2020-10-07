@@ -21,7 +21,6 @@ type MessageReaderFunc func() (RabtapPersistentMessage, bool, error)
 // -> readRawMessage
 func readMessageFromRawFile(reader io.Reader) ([]byte, error) {
 	return ioutil.ReadAll(reader)
-	//return amqp.Publishing{Body: buf}, false, err
 }
 
 // -> readJSONMessage

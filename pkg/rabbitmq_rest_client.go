@@ -481,28 +481,24 @@ type RabbitQueue struct {
 
 // RabbitBinding models the /bindings resource of the rabbitmq http api
 type RabbitBinding struct {
-	Source          string `json:"source"`
-	Vhost           string `json:"vhost"`
-	Destination     string `json:"destination"`
-	DestinationType string `json:"destination_type"`
-	RoutingKey      string `json:"routing_key"`
-	//Arguments       struct {
-	Arguments map[string]interface{} `json:"arguments,omitempty"`
-	//} `json:"arguments"`
-	PropertiesKey string `json:"properties_key"`
+	Source          string                 `json:"source"`
+	Vhost           string                 `json:"vhost"`
+	Destination     string                 `json:"destination"`
+	DestinationType string                 `json:"destination_type"`
+	RoutingKey      string                 `json:"routing_key"`
+	Arguments       map[string]interface{} `json:"arguments,omitempty"`
+	PropertiesKey   string                 `json:"properties_key"`
 }
 
 // RabbitExchange models the /exchanges resource of the rabbitmq http api
 type RabbitExchange struct {
-	Name       string                 `json:"name"`
-	Vhost      string                 `json:"vhost"`
-	Type       string                 `json:"type"`
-	Durable    bool                   `json:"durable"`
-	AutoDelete bool                   `json:"auto_delete"`
-	Internal   bool                   `json:"internal"`
-	Arguments  map[string]interface{} `json:"arguments,omitempty"`
-	//Arguments  struct {
-	//} `json:"arguments"`
+	Name         string                 `json:"name"`
+	Vhost        string                 `json:"vhost"`
+	Type         string                 `json:"type"`
+	Durable      bool                   `json:"durable"`
+	AutoDelete   bool                   `json:"auto_delete"`
+	Internal     bool                   `json:"internal"`
+	Arguments    map[string]interface{} `json:"arguments,omitempty"`
 	MessageStats struct {
 		PublishOut        int `json:"publish_out"`
 		PublishOutDetails struct {

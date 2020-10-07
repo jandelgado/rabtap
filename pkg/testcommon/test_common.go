@@ -144,7 +144,6 @@ func PublishTestMessages(t *testing.T, ch *amqp.Channel, numMessages int,
 	// inject messages into exchange. Each message should become visible
 	// in the tap-exchange defined above.
 	for i := 1; i <= numMessages; i++ {
-		//log.Printf("publishing message to exchange '%s' with routingkey '%s'", exchangeName, routingKey)
 		// publish the test message
 		err := ch.Publish(
 			exchangeName,
@@ -185,13 +184,11 @@ func VerifyTestMessageOnQueue(t *testing.T, ch *amqp.Channel, consumer string, n
 			if string(d.Body) == "Hello" {
 				numReceived++
 			}
-			//log.Printf("%s: %d received original message...", consumer, numReceived)
 
 			// Await NumExpectedMessages
 			if numReceived == numExpected {
 				success <- numReceived
 			}
 		}
-		//log.Printf("%s: Exiting receiver", consumer)
 	}()
 }

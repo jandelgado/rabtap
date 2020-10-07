@@ -46,11 +46,46 @@ type RabtapPersistentMessage struct {
 	Body []byte
 }
 
+// ensureTable returns an object where all map[string]interface{}
+// are replaced by amqp.Table{} so it is compatible with the amqp
+// libs type system when it comes to passing headers, which expects (nested)
+// amqp.Table structures.
+//
+// See https://github.com/streadway/amqp/blob/e6b33f460591b0acb2f13b04ef9cf493720ffe17/types.go#L227
+func ensureTable(m interface{}) interface{} {
+	switch x := m.(type) {
+
+	case []interface{}:
+		a := make([]interface{}, len(x))
+		for i := range x {
+			a[i] = ensureTable(x[i])
+		}
+		return a
+
+	case amqp.Table:
+		m := amqp.Table{}
+		for k, v := range x {
+			m[k] = ensureTable(v)
+		}
+		return m
+
+	case map[string]interface{}:
+		m := amqp.Table{}
+		for k, v := range x {
+			m[k] = ensureTable(v)
+		}
+		return m
+
+	default:
+		return x
+	}
+}
+
 // CreateTimestampFilename returns a filename based on a RFC3339Nano
 // timstamp where all ":" are replaced with "_"
 func CreateTimestampFilename(t time.Time) string {
 	basename := t.Format(time.RFC3339Nano)
-	return strings.Replace(basename, ":", "_", -1)
+	return strings.ReplaceAll(basename, ":", "_")
 }
 
 // NewRabtapPersistentMessage creates RabtapPersistentMessage object
@@ -80,8 +115,9 @@ func NewRabtapPersistentMessage(message rabtap.TapMessage) RabtapPersistentMessa
 
 // ToAmqpPublishing converts message to an amqp.Publishing object
 func (s RabtapPersistentMessage) ToAmqpPublishing() amqp.Publishing {
+	headers := ensureTable(s.Headers)
 	return amqp.Publishing{
-		Headers:         s.Headers,
+		Headers:         headers.(amqp.Table),
 		ContentType:     s.ContentType,
 		ContentEncoding: s.ContentEncoding,
 		Priority:        s.Priority,

@@ -14,9 +14,6 @@ import (
 	"sort"
 	"time"
 
-	//"net/http"
-	//_ "net/http/pprof"
-
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"
 )

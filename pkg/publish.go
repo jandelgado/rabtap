@@ -58,7 +58,7 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					*message.Publishing)
 
 				if err != nil {
-					s.logger.Print("publishing error %#+v", err)
+					s.logger.Printf("publishing error %w", err)
 					// error publishing message - reconnect.
 					return doReconnect, err
 				}

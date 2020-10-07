@@ -42,7 +42,7 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
 				return nil
 			}
-			log.Debugf("subscribe: messageReceiveLoop: new message %#+v", message)
+			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
 			tmpCh := make(rabtap.TapChannel)
 			go func() {
 				m := <-tmpCh

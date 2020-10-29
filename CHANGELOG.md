@@ -1,6 +1,11 @@
 
 # Changelog for rabtap
 
+## v1.25 (2020-10-30)
+
+* fix: rabtap info: workaround for RabbitMQ API returning an `"undefined"`
+  string where an integer was expected (#47)
+
 ## v1.24 (2020-09-28)
 
 * new: support TLS client certificates (contributed by Francois Gouteroux)

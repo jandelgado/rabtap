@@ -511,10 +511,12 @@ type RabbitExchange struct {
 	} `json:"message_stats,omitempty"`
 }
 
+type OptInt int
+
 // ChannelDetails model channel_details in RabbitConsumer
 type ChannelDetails struct {
 	PeerHost       string `json:"peer_host"`
-	PeerPort       int    `json:"peer_port"`
+	PeerPort       OptInt `json:"peer_port"`
 	ConnectionName string `json:"connection_name"`
 	User           string `json:"user"`
 	Number         int    `json:"number"`
@@ -522,12 +524,24 @@ type ChannelDetails struct {
 	Name           string `json:"name"`
 }
 
+// UnmarshalJSON is a workaround to deserialize int attributes in the
+// RabbitMQ API which are sometimes returned as strings, (i.e. the
+// value "undefined").
+func (d *OptInt) UnmarshalJSON(data []byte) error {
+	if data[0] == '"' {
+		return nil
+	}
+	type Alias int
+	aux := (*Alias)(d)
+	return json.Unmarshal(data, aux)
+}
+
 // UnmarshalJSON is a custom unmarshaler as a WORKAROUND for RabbitMQ API
 // returning "[]" instead of null.  To make sure deserialization does not
 // break, we catch this case, and return an empty ChannelDetails struct.
 // see e.g. https://github.com/rabbitmq/rabbitmq-management/issues/424
 func (d *ChannelDetails) UnmarshalJSON(data []byte) error {
-	// akias ChannelDetails to avoid recursion when callung Unmarshal
+	// alias ChannelDetails to avoid recursion when calling Unmarshal
 	type Alias ChannelDetails
 	aux := &struct {
 		*Alias

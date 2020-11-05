@@ -4,6 +4,7 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -170,6 +171,76 @@ func TestRabbitClientGetConnections(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(conn))
 	assert.Equal(t, "172.17.0.1:40874 -> 172.17.0.2:5672", conn[0].Name)
+}
+
+func TestRabbitClientDeserializePeerPortInConsumerToInt(t *testing.T) {
+	msg := `
+[
+  {
+    "arguments": {},
+    "ack_required": true,
+    "active": true,
+    "activity_status": "up",
+    "channel_details": {
+      "connection_name": "XXX",
+      "name": "XXX (1)",
+      "node": "XXX",
+      "number": 1,
+      "peer_host": "undefined",
+      "peer_port": 1234,
+      "user": "none"
+    },
+    "consumer_tag": "amq.ctag-InRAvLn4GW3j2mRwPmWJxA",
+    "exclusive": false,
+    "prefetch_count": 20,
+    "queue": {
+      "name": "logstream",
+      "vhost": "/"
+    }
+  }
+]
+`
+	var consumer []RabbitConsumer
+	err := json.Unmarshal([]byte(msg), &consumer)
+	assert.NoError(t, err)
+	assert.Equal(t, OptInt(1234), consumer[0].ChannelDetails.PeerPort)
+
+}
+
+func TestRabbitClientDeserializePeerPortInConsumerAsStringWithoutError(t *testing.T) {
+	// RabbitMQ sometimes returns "undefined" for the peer_port attribute,
+	// but we expect an integer.
+	msg := `
+[
+  {
+    "arguments": {},
+    "ack_required": true,
+    "active": true,
+    "activity_status": "up",
+    "channel_details": {
+      "connection_name": "XXX",
+      "name": "XXX (1)",
+      "node": "XXX",
+      "number": 1,
+      "peer_host": "undefined",
+      "peer_port": "undefined",
+      "user": "none"
+    },
+    "consumer_tag": "amq.ctag-InRAvLn4GW3j2mRwPmWJxA",
+    "exclusive": false,
+    "prefetch_count": 20,
+    "queue": {
+      "name": "logstream",
+      "vhost": "/"
+    }
+  }
+]
+`
+	var consumer []RabbitConsumer
+	err := json.Unmarshal([]byte(msg), &consumer)
+	assert.NoError(t, err)
+	assert.Equal(t, OptInt(0), consumer[0].ChannelDetails.PeerPort)
+
 }
 
 // test of GET /api/consumers endpoint workaround for empty channel_details

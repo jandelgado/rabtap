@@ -1,7 +1,7 @@
 # rabtap - RabbitMQ wire tap
 
 [![Build Status](https://travis-ci.org/jandelgado/rabtap.svg?branch=master)](https://travis-ci.org/jandelgado/rabtap)
-[![codecov](https://codecov.io/gh/jandelgado/rabtap/branch/master/graph/badge.svg)](https://codecov.io/gh/jandelgado/rabtap)
+[![Coverage Status](https://coveralls.io/repos/github/jandelgado/rabtap/badge.svg?branch=master)](https://coveralls.io/github/jandelgado/rabtap?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jandelgado/rabtap)](https://goreportcard.com/report/github.com/jandelgado/rabtap)
 
 Swiss army knife for RabbitMQ. Tap/Pub/Sub messages, create/delete/bind queues

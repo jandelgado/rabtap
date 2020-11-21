@@ -11,7 +11,7 @@ TOXICMD:=docker-compose exec toxiproxy /go/bin/toxiproxy-cli
 
 build: build-linux
 
-build-all:	build build-mac build-win
+build-all:	build-linux build-mac build-win
 
 build-mac:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
@@ -24,6 +24,13 @@ build-linux:
 build-win:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
 				"-s -w -X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_WIN64) 
+
+assets: build-all
+	mkdir -p assets
+	zip assets/rabtap-${VERSION}-windows-amd64.zip $(BINARY_WIN64) README.md
+	tar czf assets/rabtap-${VERSION}-darwin-amd64.tgz $(BINARY_DARWIN64) README.md
+	tar czf assets/rabtap-${VERSION}-linux-amd64.tgz $(BINARY_LINUX64) README.md
+	sha256sum assets/*zip > assets/SHASUMS256.txt
 
 tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)
@@ -66,4 +73,5 @@ dist-clean: clean
 clean:
 	cd cmd/rabtap && go clean -r
 	cd cmd/testgen && go clean -r
+	rm -rf assets bin
 

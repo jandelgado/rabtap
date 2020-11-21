@@ -1,6 +1,6 @@
 # rabtap - RabbitMQ wire tap
 
-[![Build Status](https://travis-ci.org/jandelgado/rabtap.svg?branch=master)](https://travis-ci.org/jandelgado/rabtap)
+![rBuild Status](https://github.com/jandelgado/rabtap/workflows/run%20tests/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/jandelgado/rabtap/badge.svg?branch=master)](https://coveralls.io/github/jandelgado/rabtap?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jandelgado/rabtap)](https://goreportcard.com/report/github.com/jandelgado/rabtap)
 

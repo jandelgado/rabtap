@@ -61,7 +61,6 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	}
 
 	if caFile != "" {
-		// Load CA cert
 		caCert, err := ioutil.ReadFile(caFile)
 		failOnError(err, "invalid tls ca file", os.Exit)
 		caCertPool := x509.NewCertPool()
@@ -159,16 +158,22 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	}
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
+
+	pred := continueMessageReceivePred
 	err = cmdSubscribe(ctx, CmdSubscribeArg{
-		amqpURL:            args.AMQPURL,
-		queue:              args.QueueName,
-		AutoAck:            args.AutoAck,
-		tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
-		messageReceiveFunc: messageReceiveFunc})
+		amqpURL:                args.AMQPURL,
+		queue:                  args.QueueName,
+		AutoAck:                args.AutoAck,
+		tlsConfig:              getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+		messageReceiveFunc:     messageReceiveFunc,
+		messageReceiveLoopPred: pred,
+	})
 	failOnError(err, "error subscribing messages", os.Exit)
 }
 
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
+	pred := continueMessageReceivePred
+
 	opts := MessageReceiveFuncOptions{
 		out:              NewColorableWriter(os.Stdout),
 		noColor:          args.NoColor,
@@ -180,7 +185,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
-		messageReceiveFunc)
+		messageReceiveFunc, pred)
 }
 
 func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) {

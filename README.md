@@ -337,7 +337,8 @@ $ rabtap info
 
 #### Default RabbitMQ TLS config
 
-The default TLS config certificates path can be set using the `RABTAP_TLS_CERTFILE` and `RABTAP_TLS_KEYFILE` and `RABTAP_TLS_CAFILE`
+The default TLS config certificates path can be set using the
+`RABTAP_TLS_CERTFILE` and `RABTAP_TLS_KEYFILE` and `RABTAP_TLS_CAFILE`
 environments variables. Example:
 
 ```console

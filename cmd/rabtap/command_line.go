@@ -32,11 +32,11 @@ Usage:
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] [--no-auto-ack] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
               [--routingkey=KEY | (--header=KV)...]
@@ -103,6 +103,7 @@ Arguments and options:
  --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
                       unacked messages on the broker which will be requeued
                       when the channel is closed.
+ --limit=NUM          Stop afer NUM messages are received.
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  --confirms           enable publisher confirms and wait for confirmations.
@@ -221,6 +222,8 @@ type commonArgs struct {
 	AMQPURL     *url.URL // pub, queue, exchange: amqp broker to use
 }
 
+const InfiniteMessages = int64(0)
+
 // CommandLineArgs represents the parsed command line arguments
 // TODO does not scale well - split in per-cmd structs
 type CommandLineArgs struct {
@@ -238,6 +241,7 @@ type CommandLineArgs struct {
 	Confirms            bool              // pub: wait for confirmations
 	Mandatory           bool              // pub: set mandatory flag
 	AutoAck             bool              // sub: auto ack enabled
+	Limit               int64             // sub: optional limit
 	QueueName           string            // queue create, remove, bind, sub
 	QueueBindingKey     string            // queue bind
 	ExchangeName        string            // exchange name  create, remove or queue bind
@@ -403,6 +407,14 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	result.Format = format
 
+	if args["--limit"] != nil {
+		limit, err := strconv.ParseInt(args["--limit"].(string), 10, 64)
+		if err != nil {
+			return result, err
+		}
+		result.Limit = limit
+	}
+
 	if args["--saveto"] != nil {
 		saveDir := args["--saveto"].(string)
 		result.SaveDir = &saveDir
@@ -566,6 +578,14 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		return result, err
 	}
 	result.Format = format
+
+	if args["--limit"] != nil {
+		limit, err := strconv.ParseInt(args["--limit"].(string), 10, 64)
+		if err != nil {
+			return result, err
+		}
+		result.Limit = limit
+	}
 
 	if args["--saveto"] != nil {
 		saveDir := args["--saveto"].(string)

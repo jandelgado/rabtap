@@ -1,15 +1,13 @@
-// Copyright (C) 2017-2019 Jan Delgado
+// subscribe to message producers
+// Copyright (C) 2017-2021 Jan Delgado
 
 package main
-
-// common functionality to subscribe to queues.
 
 import (
 	"context"
 	"fmt"
 	"io"
 	"path"
-	"sync"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -29,12 +27,43 @@ type MessageReceiveFuncOptions struct {
 // MessageReceiveFunc processes receiced messages from a tap.
 type MessageReceiveFunc func(rabtap.TapMessage) error
 
-func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
-	messageReceiveFunc MessageReceiveFunc) error {
+//var ErrMessageLoopEnded = errors.New("message loop ended")
 
-	wg := new(sync.WaitGroup)
+// messageReceiveLoopPred is called once for each a message that was received.
+// If it returns true, the subscriber loop continues, otherwise the loop
+// terminates.
+type MessageReceiveLoopPred func(rabtap.TapMessage) bool
+
+// createCountingMessageReceivePred returns a (stateful) predicate that will
+// return false after num messages where successfully received, thus limiting
+// the number of messages received
+func createCountingMessageReceivePred(num int) MessageReceiveLoopPred {
+	counter := 0
+	return func(_ rabtap.TapMessage) bool {
+		counter++
+		return counter <= num
+	}
+}
+
+// continueMessageReceivePred will never return false, resulting in an unlimited
+// receival of messages.
+func continueMessageReceivePred(msg rabtap.TapMessage) bool {
+	return true
+}
+
+func messageReceiveLoop(ctx context.Context,
+	messageChan rabtap.TapChannel,
+	messageReceiveFunc MessageReceiveFunc,
+	pred MessageReceiveLoopPred) error {
+
+	//wg := new(sync.WaitGroup)
 
 	for {
+		// if pred(count) {
+		//     //return ErrMessageLoopEnded
+		//     return nil
+		// }
+
 		select {
 		case <-ctx.Done():
 			log.Debugf("subscribe: cancel")
@@ -43,40 +72,49 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 		case message, more := <-messageChan:
 			if !more {
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
-				return nil
+				return nil //ErrMessageLoopEnded
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
 
-			// do actual output in a go-routine so we can terminate using
-			// ctx.Done() even if the terminal output is stopped with ctrl+s
-			tmpCh := make(rabtap.TapChannel)
-			go func() {
-				wg.Wait()
-				wg.Add(1)
-				m := <-tmpCh
-				// let the receiveFunc do the actual message processing
-				if err := messageReceiveFunc(m); err != nil {
-					log.Error(err)
-				}
-				wg.Done()
-			}()
-			select {
-			case tmpCh <- message:
-			case <-ctx.Done():
-				log.Debugf("subscribe: cancel (messageReceiveFunc)")
+			if err := messageReceiveFunc(message); err != nil {
+				log.Error(err)
+			}
+			if !pred(message) {
 				return nil
 			}
+
+			/*
+				// do actual output in a go-routine so we can terminate using
+				// ctrl+c/ctx.Done() even if the terminal output is stopped with ctrl+s
+				tmpCh := make(rabtap.TapChannel)
+				go func() {
+					wg.Wait()
+					wg.Add(1)
+					m := <-tmpCh
+					// let the receiveFunc do the actual message processing
+					var err error
+					if err = messageReceiveFunc(m); err != nil {
+						log.Error(err)
+					}
+					wg.Done()
+				}()
+				select {
+				case tmpCh <- message:
+				case <-ctx.Done():
+					log.Debugf("subscribe: cancel (messageReceiveFunc)")
+					return nil
+				}*/
 		}
 	}
 }
 
-// NullMessageReceiveFunc is used a sentinel to terminal a chain of
+// NullMessageReceiveFunc is used a sentinel to terminate a chain of
 // MessageReceiveFuncs
 func NullMessageReceiveFunc(rabtap.TapMessage) error {
 	return nil
 }
 
-func chainedMessageReceiveFunc(first MessageReceiveFunc, second MessageReceiveFunc) MessageReceiveFunc {
+func chainedMessageReceiveFunc(first, second MessageReceiveFunc) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
 		if err := first(message); err != nil {
 			return err

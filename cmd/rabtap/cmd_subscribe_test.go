@@ -32,10 +32,11 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 	go func() {
 		// we expect cmdSubscribe to return
 		cmdSubscribe(ctx, CmdSubscribeArg{
-			amqpURL:            amqpURL,
-			queue:              "queue",
-			tlsConfig:          &tls.Config{},
-			messageReceiveFunc: func(rabtap.TapMessage) error { return nil },
+			amqpURL:                amqpURL,
+			queue:                  "queue",
+			tlsConfig:              &tls.Config{},
+			messageReceiveFunc:     func(rabtap.TapMessage) error { return nil },
+			messageReceiveLoopPred: func(rabtap.TapMessage) bool { return true },
 		})
 		done <- true
 	}()
@@ -76,10 +77,12 @@ func TestCmdSub(t *testing.T) {
 
 	// subscribe to testQueue
 	go cmdSubscribe(ctx, CmdSubscribeArg{
-		amqpURL:            amqpURL,
-		queue:              testQueue,
-		tlsConfig:          tlsConfig,
-		messageReceiveFunc: receiveFunc})
+		amqpURL:                amqpURL,
+		queue:                  testQueue,
+		tlsConfig:              tlsConfig,
+		messageReceiveFunc:     receiveFunc,
+		messageReceiveLoopPred: func(rabtap.TapMessage) bool { return true },
+	})
 
 	time.Sleep(time.Second * 1)
 

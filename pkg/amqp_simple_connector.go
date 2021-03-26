@@ -8,7 +8,7 @@ import (
 
 // openAMQPChannel tries to open a channel on the given broker
 func openAMQPChannel(uri string, tlsConfig *tls.Config) (*amqp.Connection, *amqp.Channel, error) {
-	conn, err := amqp.DialTLS(uri, tlsConfig)
+	conn, err := DialTLS(uri, tlsConfig)
 	if err != nil {
 		return nil, nil, err
 	}

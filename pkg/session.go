@@ -60,7 +60,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 			var ch *amqp.Channel
 			var err error
 			for {
-				conn, err = amqp.DialTLS(url, tlsConfig)
+				conn, err = DialTLS(url, tlsConfig)
 				if err == nil {
 					ch, err = conn.Channel()
 					if err == nil {

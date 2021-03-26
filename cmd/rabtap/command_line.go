@@ -85,7 +85,7 @@ Arguments and options:
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
- --tls-ca-file=CAFILE     A CA Cert file to use for client authentication.
+ --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR).
@@ -111,14 +111,14 @@ Arguments and options:
 Examples:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.topic:#,amq.fanout:
-  rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
+  rabtap pub --uri amqp://guest:guest@localhost/ --exchange amq.topic message.json --format=json
   rabtap info --api http://guest:guest@localhost:15672/api
 
   # use RABTAP_AMQPURI environment variable to specify broker instead of --uri
   export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
   rabtap queue create JDQ
   rabtap queue bind JDQ to amq.topic --bindingkey=key
-  echo "Hello" | rabtap pub amq.topic --routingkey "key"
+  echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
   rabtap sub JDQ
   rabtap queue rm JDQ
 
@@ -129,7 +129,7 @@ Examples:
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 
   # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
-  # instead of specify --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
+  # instead of specifying --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
 `
 )
 

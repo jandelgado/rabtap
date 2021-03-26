@@ -123,33 +123,37 @@ compile from source.
 ## Usage
 
 ```
+
 rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
-              [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
-                       [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
-                                      [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
-                   [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
-  rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
-             [--delay=DELAY | --speed=FACTOR] [-jkv]
-             [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
+              [--delay=DELAY | --speed=FACTOR] [-jkv]
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
-                                  [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
-  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
-  rabtap queue create QUEUE [--uri=URI] [-adkv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] 
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap queue create QUEUE [--uri=URI] [-adkv] 
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
-                                                       [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
-                                                           [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
-  rabtap queue rm QUEUE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
-  rabtap queue purge QUEUE [--uri=URI] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
-  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] [--tls-cert-file=CERTFILE] [--tls-key-file=KEYFILE] [--tls-ca-file=CAFILE]
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap queue rm QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap queue purge QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] 
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap --version
 
 Arguments and options:
@@ -168,7 +172,7 @@ Arguments and options:
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
                       If not set then messages will be delayed as recorded. 
-                      The value must be suffixed with a time unit, e.g. ms, s etc.
+					  The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
@@ -183,7 +187,7 @@ Arguments and options:
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
- --tls-ca-file=CAFILE     A CA Cert file to use for client authentication.
+ --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR).
@@ -194,7 +198,7 @@ Arguments and options:
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON 
-                      message format).
+					  message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
@@ -209,14 +213,14 @@ Arguments and options:
 Examples:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.fanout:
   rabtap tap --uri amqp://guest:guest@localhost/ amq.topic:#,amq.fanout:
-  rabtap pub --uri amqp://guest:guest@localhost/ amq.topic message.json -j
+  rabtap pub --uri amqp://guest:guest@localhost/ --exchange amq.topic message.json --format=json
   rabtap info --api http://guest:guest@localhost:15672/api
 
   # use RABTAP_AMQPURI environment variable to specify broker instead of --uri
   export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
   rabtap queue create JDQ
   rabtap queue bind JDQ to amq.topic --bindingkey=key
-  echo "Hello" | rabtap pub amq.topic --routingkey "key"
+  echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
   rabtap sub JDQ
   rabtap queue rm JDQ
 
@@ -226,8 +230,8 @@ Examples:
   rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 
-  # use RABTAP_CERTFILE | RABTAP_KEYFILE | RABTAP_CAFILE environments variables
-  # instead of specify --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
+  # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
+  # instead of specifying --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
 ```
 
 ### Basic commands
@@ -323,7 +327,7 @@ environments variables. Example:
 $ export RABTAP_TLS_CERTFILE=/etc/rabbitmq/ssl/cert.pem
 $ export RABTAP_TLS_KEYFILE=/etc/rabbitmq/ssl/key.pem
 $ export RABTAP_TLS_CAFILE =/etc/rabbitmq/ssl/ca.pem
-$ echo "Hello" | rabtap pub amq.topic --routingkey "key"
+$ echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
 ...
 ```
 
@@ -405,14 +409,14 @@ The [RabbitMQ Firehose Tracer](https://www.rabbitmq.com/firehose.html) allows
 to "see" every message that is published or delivered. To use it, the firehose
 tracer has to be enabled first:
 
-```shell
+```console
 $ rabbitmqctl rabbitmqctl trace_on 
 ```
 
 Then every message published or delivered will be CC'd to the topic exhange `amq.rabbitmq.trace`. 
 At this exchange, the messages can now be tapped with rabtap:
 
-```shell
+```console
 $ rabtap --uri amqp://guest:guest@localhost:5672/ tap amq.rabbitmq.trace:#
 ```
 
@@ -467,8 +471,8 @@ single JSON document.
 
 The general form of the `pub` command is
 ```
-rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
-           [--delay=DELAY | --speed=FACTOR] [-jkv]
+rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] 
+           [--format=FORMAT] [--delay=DELAY | --speed=FACTOR] [-jkv]
 ```
 
 * `$ echo hello | rabtap pub amq.fanout` - publish "hello" to exchange amqp.fanout
@@ -479,10 +483,10 @@ rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--form
   will honor the `XRabtapReceived` timestamps of the messages and by default
   delay the messages as they were recorded. This behaviour can be overridden
   by the `--delay` and `--speed` options.
-* `$ rabtap pub amq.direct -r myKey --format=json messages.json --delay=0s` - as
+* `$ rabtap pub --exchange amq.direct -r myKey --format=json messages.json --delay=0s` - as
   before, but publish messages always to exchange `amq.direct` with routing key
   `myKey` and without any delays.
-* `$ rabtap pub amq.direct -r myKey --format=raw somedir --delay=0s` - as
+* `$ rabtap pub --exchange amq.direct -r myKey --format=raw somedir --delay=0s` - as
   before, but assuming that `somedir` is a directory, the messages are read
   from message files previously recorded to this directory and replayed in the
   order they were recorded.
@@ -499,7 +503,7 @@ The example taps messages on `broker1` and publishes the messages to the
 
 ```console
 $ rabtap tap --uri amqp://broker1 my-topic-exchange:# --format json | \
-  rabtap pub --uri amqp://broker2 amq.direct -r routingKey --format json
+  rabtap pub --uri amqp://broker2 --exchange amq.direct -r routingKey --format json
 ```
 
 #### Close connection
@@ -809,6 +813,6 @@ Jan Delgado (jdelgado at gmx dot net)
 
 ## Copyright and license
 
-Copyright (c) 2017-2020 Jan Delgado.
+Copyright (c) 2017-2021 Jan Delgado.
 rabtap is licensed under the GPLv3 license.
 

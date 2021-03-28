@@ -1,6 +1,10 @@
 
 # Changelog for rabtap
 
+## v1.27 (2021-03-28)
+
+* new: `info` and `close` commands are can now be cancelled by SIGTERM
+
 ## v1.26 (2021-03-26)
 
 * fix: make client certificate auth work. This implements a workaround until

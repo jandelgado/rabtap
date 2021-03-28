@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -59,7 +60,7 @@ func Example_startCmdInfo() {
 	defer mock.Close()
 
 	args, _ := ParseCommandLineArgs([]string{"info", "--api", mock.URL, "--no-color"})
-	startCmdInfo(args, "http://rootnode")
+	startCmdInfo(context.TODO(), args, "http://rootnode")
 
 	// Output:
 	// http://rootnode (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')

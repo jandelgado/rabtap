@@ -10,6 +10,7 @@ package rabtap
 //  $ sudo  docker run --rm -ti -p5672:5672 rabbitmq:3-management)
 
 import (
+	"context"
 	"crypto/tls"
 	"net/url"
 	"testing"
@@ -38,7 +39,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	// make sure exchange does not exist before creation
-	exchanges, err := client.Exchanges()
+	exchanges, err := client.Exchanges(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findExchange(testName, exchanges))
 
@@ -50,7 +51,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check if exchange was created
-	exchanges, err = client.Exchanges()
+	exchanges, err = client.Exchanges(context.TODO())
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findExchange(testName, exchanges))
 
@@ -59,7 +60,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check if exchange was deleted
-	exchanges, err = client.Exchanges()
+	exchanges, err = client.Exchanges(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findExchange(testName, exchanges))
 }

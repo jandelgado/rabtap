@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"net/url"
 	"os"
@@ -21,7 +22,7 @@ import (
 func exchangeExists(t *testing.T, apiURL *url.URL, exchange string) bool {
 	// TODO add a simple client to testcommon
 	client := rabtap.NewRabbitHTTPClient(apiURL, &tls.Config{})
-	exchanges, err := client.Exchanges()
+	exchanges, err := client.Exchanges(context.TODO())
 	require.Nil(t, err)
 	return rabtap.FindExchangeByName(exchanges, "/", exchange) != -1
 }

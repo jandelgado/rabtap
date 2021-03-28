@@ -10,6 +10,7 @@ package rabtap
 //  $ sudo  docker run --rm -ti -p5672:5672 rabbitmq:3-management)
 
 import (
+	"context"
 	"crypto/tls"
 	"net/url"
 	"testing"
@@ -76,7 +77,7 @@ func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
 	// make sure queue does not exist before creation
-	queues, err := client.Queues()
+	queues, err := client.Queues(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findQueue(queueTestName, queues))
 
@@ -88,28 +89,28 @@ func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check if queue was created
-	queues, err = client.Queues()
+	queues, err = client.Queues(context.TODO())
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findQueue(queueTestName, queues))
 
 	// bind queue to exchange
 	err = BindQueueToExchange(session, queueTestName, keyTestName, exchangeTestName)
 	assert.Nil(t, err)
-	bindings, err := client.Bindings()
+	bindings, err := client.Bindings(context.TODO())
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// unbind queue from exchange
 	err = UnbindQueueFromExchange(session, queueTestName, keyTestName, exchangeTestName)
 	assert.Nil(t, err)
-	bindings, err = client.Bindings()
+	bindings, err = client.Bindings(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// finally remove queue
 	err = RemoveQueue(session, queueTestName, false, false)
 	assert.Nil(t, err)
-	queues, err = client.Queues()
+	queues, err = client.Queues(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, -1, findQueue(queueTestName, queues))
 }

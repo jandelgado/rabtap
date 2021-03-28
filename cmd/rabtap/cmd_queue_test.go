@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"net/url"
 	"os"
@@ -50,7 +51,7 @@ func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 
 	// TODO add a simple client to testcommon
 	client := rabtap.NewRabbitHTTPClient(apiURL, &tls.Config{})
-	queues, err := client.Queues()
+	queues, err := client.Queues(context.TODO())
 	assert.Nil(t, err)
 	i := rabtap.FindQueueByName(queues, "/", testQueue)
 	require.True(t, i != -1)

@@ -3,6 +3,7 @@
 package rabtap
 
 import (
+	"context"
 	"crypto/tls"
 	"net/url"
 	"testing"
@@ -18,7 +19,7 @@ func TestDiscoveryUnknownExchange(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	_, err := DiscoverBindingsForExchange(client, "/", "unknown")
+	_, err := DiscoverBindingsForExchange(context.TODO(), client, "/", "unknown")
 	assert.NotNil(t, err)
 }
 
@@ -29,7 +30,7 @@ func TestDiscoveryDirectExchange(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	result, err := DiscoverBindingsForExchange(client, "/", "test-direct")
+	result, err := DiscoverBindingsForExchange(context.TODO(), client, "/", "test-direct")
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(result))
 	assert.Equal(t, "direct-q1", result[0])
@@ -43,7 +44,7 @@ func TestDiscoveryTopicExchange(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	result, err := DiscoverBindingsForExchange(client, "/", "test-topic")
+	result, err := DiscoverBindingsForExchange(context.TODO(), client, "/", "test-topic")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(result))
 	assert.Equal(t, "#", result[0])
@@ -55,7 +56,7 @@ func TestDiscoveryFanoutExchange(t *testing.T) {
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
-	result, err := DiscoverBindingsForExchange(client, "/", "test-fanout")
+	result, err := DiscoverBindingsForExchange(context.TODO(), client, "/", "test-fanout")
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(result))
@@ -68,7 +69,7 @@ func TestDiscoveryHeadersExchange(t *testing.T) {
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
-	result, err := DiscoverBindingsForExchange(client, "/", "test-headers")
+	result, err := DiscoverBindingsForExchange(context.TODO(), client, "/", "test-headers")
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(result))

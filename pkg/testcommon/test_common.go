@@ -58,7 +58,7 @@ func CaptureOutput(f func()) string {
 func IntegrationAPIURIFromEnv() string {
 	url := os.Getenv("RABBIT_API_URL")
 	if url == "" {
-		url = "http://guest:guest@127.0.0.1:15672/api"
+		url = "http://guest:password@localhost:15672/api"
 	}
 	return url
 }
@@ -67,7 +67,7 @@ func IntegrationAPIURIFromEnv() string {
 func IntegrationURIFromEnv() string {
 	uri := os.Getenv("AMQP_URI")
 	if uri == "" {
-		uri = "amqp://guest:guest@127.0.0.1:5672"
+		uri = "amqp://guest:password@localhost:5672"
 	}
 	return uri
 }
@@ -109,11 +109,11 @@ func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
 	for i := 0; i < numQueues; i++ {
 		queue, err := ch.QueueDeclare(
 			IntegrationQueueName(i), // name of the queue
-			false,                   // non durable
-			false,                   // delete when unused
-			true,                    // exclusive
-			false,                   // wait for response
-			nil)                     // arguments
+			false, // non durable
+			false, // delete when unused
+			true,  // exclusive
+			false, // wait for response
+			nil)   // arguments
 		require.Nil(t, err)
 
 		// set routing header if requested (used by headers testcase)

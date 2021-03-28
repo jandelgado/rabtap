@@ -55,9 +55,7 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	if certFile != "" && keyFile != "" {
 		// Load client cert
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			failOnError(err, "invalid client tls cert/key file", os.Exit)
-		}
+		failOnError(err, "invalid client tls cert/key file", os.Exit)
 		tlsConfig.Certificates = []tls.Certificate{cert}
 		tlsConfig.BuildNameToCertificate()
 	}
@@ -65,9 +63,7 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	if caFile != "" {
 		// Load CA cert
 		caCert, err := ioutil.ReadFile(caFile)
-		if err != nil {
-			failOnError(err, "invalid tls ca file", os.Exit)
-		}
+		failOnError(err, "invalid tls ca file", os.Exit)
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
 		tlsConfig.RootCAs = caCertPool

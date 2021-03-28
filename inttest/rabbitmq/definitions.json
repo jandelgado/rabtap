@@ -1,0 +1,44 @@
+{
+    "users": [
+        {
+            "name": "guest",
+            "password_hash": "aq/EUM4xdUwNbymy3r4nE9qTTRWehtsDrtmQuBpMFUtLIK+S",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": "administrator"
+        },
+        {
+            "name": "testuser",
+            "password_hash": "txn+nsYVkAaIMvDsH8Fsyb3RWMCMWihRUVCk/wICL1NBKKvz",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": "administrator"
+        }
+    ],
+
+    "vhosts": [
+        {
+            "name": "/"
+        }
+    ],
+    "parameters": [],
+    "policies": [],
+    "queues": [],
+    "exchanges": [],
+    "bindings": [],
+
+    "permissions": [
+        {
+            "user": "guest",
+            "vhost": "/",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        },
+        {
+            "user": "testuser",
+            "vhost": "/",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+version: '3'
+services:
+  rabbitmq:
+     image: rabbitmq:3.8-management-alpine
+     volumes:
+       - ./definitions.json:/etc/rabbitmq/definitions.json:z
+       - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:z
+       - ./enabled_plugins:/etc/rabbitmq/enabled_plugins:z
+       - ./../pki/certs:/certs:z
+     ports:
+       - 5672:5672
+       - 5671:5671
+       - 15672:15672
+       - 15671:15671

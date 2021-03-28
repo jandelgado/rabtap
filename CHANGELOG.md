@@ -1,8 +1,10 @@
 
 # Changelog for rabtap
 
-## v1.26 (to be released)
+## v1.26 (2021-03-26)
 
+* fix: make client certificate auth work. This implements a workaround until
+  https://github.com/streadway/amqp/pull/121 gets merged (#51)
 * drop travis-ci, using github-action now (#49)
 
 ## v1.25 (2020-10-30)

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"net/url"
 	"os"
@@ -33,20 +34,21 @@ func Example_cmdInfoByExchangeInTextFormat() {
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
-	cmdInfo(CmdInfoArg{
-		rootNode: "http://rabbitmq/api",
-		client:   client,
-		treeConfig: BrokerInfoTreeBuilderConfig{
-			Mode:                "byExchange",
-			ShowConsumers:       true,
-			ShowDefaultExchange: false,
-			QueueFilter:         TruePredicate,
-			OmitEmptyExchanges:  false},
-		renderConfig: BrokerInfoRendererConfig{
-			Format:    "text",
-			ShowStats: false,
-			NoColor:   true},
-		out: os.Stdout})
+	cmdInfo(context.TODO(),
+		CmdInfoArg{
+			rootNode: "http://rabbitmq/api",
+			client:   client,
+			treeConfig: BrokerInfoTreeBuilderConfig{
+				Mode:                "byExchange",
+				ShowConsumers:       true,
+				ShowDefaultExchange: false,
+				QueueFilter:         TruePredicate,
+				OmitEmptyExchanges:  false},
+			renderConfig: BrokerInfoRendererConfig{
+				Format:    "text",
+				ShowStats: false,
+				NoColor:   true},
+			out: os.Stdout})
 
 	// Output:
 	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
@@ -84,20 +86,21 @@ func Example_cmdInfoByConnectionInTextFormat() {
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
-	cmdInfo(CmdInfoArg{
-		rootNode: "http://rabbitmq/api",
-		client:   client,
-		treeConfig: BrokerInfoTreeBuilderConfig{
-			Mode:                "byConnection",
-			ShowConsumers:       true,
-			ShowDefaultExchange: false,
-			QueueFilter:         TruePredicate,
-			OmitEmptyExchanges:  false},
-		renderConfig: BrokerInfoRendererConfig{
-			Format:    "text",
-			ShowStats: false,
-			NoColor:   true},
-		out: os.Stdout})
+	cmdInfo(context.TODO(),
+		CmdInfoArg{
+			rootNode: "http://rabbitmq/api",
+			client:   client,
+			treeConfig: BrokerInfoTreeBuilderConfig{
+				Mode:                "byConnection",
+				ShowConsumers:       true,
+				ShowDefaultExchange: false,
+				QueueFilter:         TruePredicate,
+				OmitEmptyExchanges:  false},
+			renderConfig: BrokerInfoRendererConfig{
+				Format:    "text",
+				ShowStats: false,
+				NoColor:   true},
+			out: os.Stdout})
 
 	// Output:
 	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
@@ -203,17 +206,19 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
 	testfunc := func() {
-		cmdInfo(CmdInfoArg{
-			rootNode: "http://rabbitmq/api",
-			client:   client,
-			treeConfig: BrokerInfoTreeBuilderConfig{
-				Mode:                "byExchange",
-				ShowConsumers:       false,
-				ShowDefaultExchange: false,
-				QueueFilter:         TruePredicate,
-				OmitEmptyExchanges:  false},
-			renderConfig: BrokerInfoRendererConfig{Format: "dot"},
-			out:          os.Stdout})
+		cmdInfo(
+			context.TODO(),
+			CmdInfoArg{
+				rootNode: "http://rabbitmq/api",
+				client:   client,
+				treeConfig: BrokerInfoTreeBuilderConfig{
+					Mode:                "byExchange",
+					ShowConsumers:       false,
+					ShowDefaultExchange: false,
+					QueueFilter:         TruePredicate,
+					OmitEmptyExchanges:  false},
+				renderConfig: BrokerInfoRendererConfig{Format: "dot"},
+				out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
 	assert.Equal(t, strings.Trim(expectedResultDotByExchange, " \n"),
@@ -246,17 +251,19 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
 	testfunc := func() {
-		cmdInfo(CmdInfoArg{
-			rootNode: "http://rabbitmq/api",
-			client:   client,
-			treeConfig: BrokerInfoTreeBuilderConfig{
-				Mode:                "byConnection",
-				ShowConsumers:       false,
-				ShowDefaultExchange: false,
-				QueueFilter:         TruePredicate,
-				OmitEmptyExchanges:  false},
-			renderConfig: BrokerInfoRendererConfig{Format: "dot"},
-			out:          os.Stdout})
+		cmdInfo(
+			context.TODO(),
+			CmdInfoArg{
+				rootNode: "http://rabbitmq/api",
+				client:   client,
+				treeConfig: BrokerInfoTreeBuilderConfig{
+					Mode:                "byConnection",
+					ShowConsumers:       false,
+					ShowDefaultExchange: false,
+					QueueFilter:         TruePredicate,
+					OmitEmptyExchanges:  false},
+				renderConfig: BrokerInfoRendererConfig{Format: "dot"},
+				out:          os.Stdout})
 	}
 	result := testcommon.CaptureOutput(testfunc)
 	assert.Equal(t, strings.Trim(expectedResultDotByConnection, " \n"),

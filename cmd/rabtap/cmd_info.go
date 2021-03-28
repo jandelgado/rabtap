@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"os"
 
@@ -21,8 +22,8 @@ type CmdInfoArg struct {
 // cmdInfo queries the rabbitMQ brokers REST api and dispays infos
 // on exchanges, queues, bindings etc in a human readably fashion.
 // TODO proper error handling
-func cmdInfo(cmd CmdInfoArg) {
-	brokerInfo, err := cmd.client.BrokerInfo()
+func cmdInfo(ctx context.Context, cmd CmdInfoArg) {
+	brokerInfo, err := cmd.client.BrokerInfo(ctx)
 	failOnError(err, "failed retrieving info from rabbitmq REST api", os.Exit)
 
 	treeBuilder := NewBrokerInfoTreeBuilder(cmd.treeConfig)

@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"net/url"
 	"testing"
@@ -44,7 +45,7 @@ func TestCmdCloseConnection(t *testing.T) {
 	// we figure out the connections name by comparing the list of active
 	// connection before and after we created our test connection. Therefore,
 	// make sure this test runs isolated on the broker.
-	connsBefore, err := client.Connections()
+	connsBefore, err := client.Connections(context.TODO())
 	require.Nil(t, err)
 
 	// start the test connection to be terminated
@@ -53,7 +54,7 @@ func TestCmdCloseConnection(t *testing.T) {
 	// it takes a few seconds for the new connection to show up in the REST API
 	time.Sleep(time.Second * 5)
 
-	connsAfter, err := client.Connections()
+	connsAfter, err := client.Connections(context.TODO())
 	require.Nil(t, err)
 
 	// we add a notification callback and expect the cb to be called
@@ -66,7 +67,8 @@ func TestCmdCloseConnection(t *testing.T) {
 
 	// now close the newly created connection. TODO handle potential
 	// call to failOnError in cmdConnClose
-	err = cmdConnClose(url.String(), connToClose, "some reason", &tls.Config{})
+	err = cmdConnClose(context.TODO(),
+		url.String(), connToClose, "some reason", &tls.Config{})
 	require.Nil(t, err)
 
 	// ... and make sure it gets closed, notified by a message on the errorChan

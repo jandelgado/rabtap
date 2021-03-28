@@ -3,6 +3,7 @@
 package rabtap
 
 import (
+	"context"
 	"errors"
 
 	"github.com/streadway/amqp"
@@ -11,10 +12,10 @@ import (
 // DiscoverBindingsForExchange returns a string list of routing-keys that
 // are used by the given exchange and broker. This list can be used to
 // auto-tap to all queues on a given exchange
-func DiscoverBindingsForExchange(rabbitAPIClient *RabbitHTTPClient, vhost, exchangeName string) ([]string, error) {
+func DiscoverBindingsForExchange(ctx context.Context, rabbitAPIClient *RabbitHTTPClient, vhost, exchangeName string) ([]string, error) {
 
 	var bindingKeys []string
-	exchanges, err := rabbitAPIClient.Exchanges()
+	exchanges, err := rabbitAPIClient.Exchanges(ctx)
 
 	if err != nil {
 		return nil, err
@@ -37,7 +38,7 @@ func DiscoverBindingsForExchange(rabbitAPIClient *RabbitHTTPClient, vhost, excha
 	switch *exchangeType {
 	case amqp.ExchangeDirect:
 		// filter out all bindings for given exchange
-		bindings, err := rabbitAPIClient.Bindings()
+		bindings, err := rabbitAPIClient.Bindings(ctx)
 
 		if err != nil {
 			return nil, err

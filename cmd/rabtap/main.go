@@ -72,25 +72,28 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	return tlsConfig
 }
 
-func startCmdInfo(args CommandLineArgs, title string) {
+func startCmdInfo(ctx context.Context, args CommandLineArgs, title string) {
 	queueFilter, err := NewPredicateExpression(args.QueueFilter)
 	failOnError(err, fmt.Sprintf("invalid queue filter predicate '%s'", args.QueueFilter), os.Exit)
+
 	apiURL, err := url.Parse(args.APIURI)
 	failOnError(err, "invalid api url", os.Exit)
-	cmdInfo(CmdInfoArg{
-		rootNode: title,
-		client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
-		treeConfig: BrokerInfoTreeBuilderConfig{
-			Mode:                args.InfoMode,
-			ShowConsumers:       args.ShowConsumers,
-			ShowDefaultExchange: args.ShowDefaultExchange,
-			QueueFilter:         queueFilter,
-			OmitEmptyExchanges:  args.OmitEmptyExchanges},
-		renderConfig: BrokerInfoRendererConfig{
-			Format:    args.Format,
-			ShowStats: args.ShowStats,
-			NoColor:   args.NoColor},
-		out: NewColorableWriter(os.Stdout)})
+
+	cmdInfo(ctx,
+		CmdInfoArg{
+			rootNode: title,
+			client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
+			treeConfig: BrokerInfoTreeBuilderConfig{
+				Mode:                args.InfoMode,
+				ShowConsumers:       args.ShowConsumers,
+				ShowDefaultExchange: args.ShowDefaultExchange,
+				QueueFilter:         queueFilter,
+				OmitEmptyExchanges:  args.OmitEmptyExchanges},
+			renderConfig: BrokerInfoRendererConfig{
+				Format:    args.Format,
+				ShowStats: args.ShowStats,
+				NoColor:   args.NoColor},
+			out: NewColorableWriter(os.Stdout)})
 }
 
 // createMessageReaderForPublish returns a MessageReaderFunc that reads
@@ -183,7 +186,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) {
 	switch args.Cmd {
 	case InfoCmd:
-		startCmdInfo(args, args.APIURI)
+		startCmdInfo(ctx, args, args.APIURI)
 	case SubCmd:
 		startCmdSubscribe(ctx, args)
 	case PubCmd:
@@ -212,7 +215,7 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 		cmdQueueUnbindFromExchange(args.AmqpURI, args.QueueName,
 			args.QueueBindingKey, args.ExchangeName, tlsConfig)
 	case ConnCloseCmd:
-		cmdConnClose(args.APIURI, args.ConnName,
+		cmdConnClose(ctx, args.APIURI, args.ConnName,
 			args.CloseReason, tlsConfig)
 	}
 }

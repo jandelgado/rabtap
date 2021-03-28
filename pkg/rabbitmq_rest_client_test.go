@@ -3,6 +3,7 @@
 package rabtap
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -22,7 +23,7 @@ func TestGetAllResources(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	all, err := client.BrokerInfo()
+	all, err := client.BrokerInfo(context.TODO())
 
 	assert.Nil(t, err)
 	assert.Equal(t, "3.6.9", all.Overview.ManagementVersion)
@@ -36,7 +37,7 @@ func TestGetAllResources(t *testing.T) {
 func TestGetAllResourcesOnInvalidHostReturnErr(t *testing.T) {
 	url, _ := url.Parse("localhost:1")
 	client := NewRabbitHTTPClient(url, &tls.Config{})
-	_, err := client.BrokerInfo()
+	_, err := client.BrokerInfo(context.TODO())
 	assert.NotNil(t, err)
 }
 
@@ -46,7 +47,7 @@ func TestGetResourceInvalidUriReturnsError(t *testing.T) {
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
-	_, err := client.getResource(httpRequest{"invalid", reflect.TypeOf(RabbitOverview{})})
+	_, err := client.getResource(context.TODO(), httpRequest{"invalid", reflect.TypeOf(RabbitOverview{})})
 	assert.NotNil(t, err)
 }
 
@@ -62,7 +63,7 @@ func TestGetResourceStatusNot200(t *testing.T) {
 
 	url, _ := url.Parse(ts.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
-	_, err := client.getResource(httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
+	_, err := client.getResource(context.TODO(), httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
 	assert.NotNil(t, err) // TODO check error
 
 }
@@ -78,7 +79,7 @@ func TestGetResourceInvalidJSON(t *testing.T) {
 
 	url, _ := url.Parse(ts.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
-	_, err := client.getResource(httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
+	_, err := client.getResource(context.TODO(), httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
 	assert.NotNil(t, err) // TODO check error
 }
 
@@ -90,7 +91,7 @@ func TestRabbitClientGetExchanges(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	result, err := client.Exchanges()
+	result, err := client.Exchanges(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, 12, len(result))
 	assert.Equal(t, "", (result)[0].Name)
@@ -108,7 +109,7 @@ func TestRabbitClientGetQueues(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	result, err := client.Queues()
+	result, err := client.Queues(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, 8, len(result))
 	assert.Equal(t, "/", (result)[0].Vhost)
@@ -124,7 +125,7 @@ func TestRabbitClientGetOverview(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	result, err := client.Overview()
+	result, err := client.Overview(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, "3.6.9", result.ManagementVersion)
 }
@@ -137,7 +138,7 @@ func TestRabbitClientGetBindings(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	_, err := client.Bindings()
+	_, err := client.Bindings(context.TODO())
 	assert.Nil(t, err)
 	// TODO
 
@@ -151,7 +152,7 @@ func TestRabbitClientGetConsumers(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	consumer, err := client.Consumers()
+	consumer, err := client.Consumers(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(consumer))
 	assert.Equal(t, "some_consumer", consumer[0].ConsumerTag)
@@ -167,7 +168,7 @@ func TestRabbitClientGetConnections(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	conn, err := client.Connections()
+	conn, err := client.Connections(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(conn))
 	assert.Equal(t, "172.17.0.1:40874 -> 172.17.0.2:5672", conn[0].Name)
@@ -251,7 +252,7 @@ func TestRabbitClientGetConsumersChannelDetailsIsEmptyArray(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	consumer, err := client.Consumers()
+	consumer, err := client.Consumers(context.TODO())
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(consumer))
 
@@ -269,7 +270,8 @@ func TestRabbitClientCloseExistingConnection(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	err := client.CloseConnection("172.17.0.1:40874 -> 172.17.0.2:5672", "reason")
+	err := client.CloseConnection(context.TODO(),
+		"172.17.0.1:40874 -> 172.17.0.2:5672", "reason")
 	assert.Nil(t, err)
 }
 
@@ -281,7 +283,7 @@ func TestRabbitClientCloseNonExistingConnectionRaisesError(t *testing.T) {
 	url, _ := url.Parse(mock.URL)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	err := client.CloseConnection("DOES NOT EXIST", "reason")
+	err := client.CloseConnection(context.TODO(), "DOES NOT EXIST", "reason")
 	assert.NotNil(t, err)
 }
 

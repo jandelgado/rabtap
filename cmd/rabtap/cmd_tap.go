@@ -17,6 +17,7 @@ import (
 func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig *tls.Config,
 	messageReceiveFunc MessageReceiveFunc) {
 
+	ctx, cancel := context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
 
 	tapMessageChannel := make(rabtap.TapChannel)
@@ -28,7 +29,10 @@ func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig 
 		})
 	}
 	g.Go(func() error {
-		return messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc)
+		pred := func(int) bool { return false }
+		err := messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc, pred)
+		cancel()
+		return err
 	})
 	if err := g.Wait(); err != nil {
 		log.Errorf("tap failed with %v", err)

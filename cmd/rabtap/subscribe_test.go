@@ -22,6 +22,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCreateEqualsPredReturnsPredicateThatMatchesGivenValue(t *testing.T) {
+	pred := createEqualsPred(99)
+	assert.True(t, pred(99))
+	assert.False(t, pred(0))
+}
+
 func TestChainMessageReceiveFuncCallsBothFunctions(t *testing.T) {
 	firstCalled := false
 	secondCalled := false
@@ -177,7 +183,8 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 		done <- true
 		return nil
 	}
-	go func() { _ = messageReceiveLoop(ctx, messageChan, receiveFunc) }()
+	falsePred := func(int) bool { return false }
+	go func() { _ = messageReceiveLoop(ctx, messageChan, receiveFunc, falsePred) }()
 
 	messageChan <- rabtap.TapMessage{}
 	<-done // TODO add timeout
@@ -190,6 +197,7 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 	messageChan := make(rabtap.TapChannel)
 
 	close(messageChan)
-	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc)
+	falsePred := func(int) bool { return false }
+	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, falsePred)
 	assert.Nil(t, err)
 }

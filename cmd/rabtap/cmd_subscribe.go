@@ -25,6 +25,7 @@ type CmdSubscribeArg struct {
 func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 	log.Debugf("cmdSub: subscribing to queue %s", cmd.queue)
 
+	ctx, cancel := context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
 
 	messageChannel := make(rabtap.TapChannel)
@@ -32,7 +33,12 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURI, cmd.tlsConfig, log)
 
 	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel) })
-	g.Go(func() error { return messageReceiveLoop(ctx, messageChannel, cmd.messageReceiveFunc) })
+	g.Go(func() error {
+		pred := func(int) bool { return false }
+		err := messageReceiveLoop(ctx, messageChannel, cmd.messageReceiveFunc, pred)
+		cancel()
+		return err
+	})
 
 	if err := g.Wait(); err != nil {
 		log.Errorf("subscribe failed with %v", err)

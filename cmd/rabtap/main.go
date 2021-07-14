@@ -61,7 +61,6 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	}
 
 	if caFile != "" {
-		// Load CA cert
 		caCert, err := ioutil.ReadFile(caFile)
 		failOnError(err, "invalid tls ca file", os.Exit)
 		caCertPool := x509.NewCertPool()

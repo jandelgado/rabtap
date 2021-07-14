@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -28,10 +29,29 @@ type MessageReceiveFuncOptions struct {
 // MessageReceiveFunc processes receiced messages from a tap.
 type MessageReceiveFunc func(rabtap.TapMessage) error
 
-func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
-	messageReceiveFunc MessageReceiveFunc) error {
+var ErrMessageLoopEnded = errors.New("message loop ended")
 
+// messageReceiveLoopPred takes the current iteration and returns true
+// if the loop should continued, or false if it should terminate.
+type messageReceiveLoopPred func(int) bool
+
+func createEqualsPred(val int) messageReceiveLoopPred {
+	return func(a int) bool {
+		return val == a
+	}
+}
+
+func messageReceiveLoop(ctx context.Context,
+	messageChan rabtap.TapChannel,
+	messageReceiveFunc MessageReceiveFunc, pred messageReceiveLoopPred) error {
+
+	count := 0
 	for {
+		if pred(count) {
+			return nil
+		}
+		//count++
+
 		select {
 		case <-ctx.Done():
 			log.Debugf("subscribe: cancel")
@@ -40,22 +60,11 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 		case message, more := <-messageChan:
 			if !more {
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
-				return nil
+				return nil //ErrMessageLoopEnded
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
-			tmpCh := make(rabtap.TapChannel)
-			go func() {
-				m := <-tmpCh
-				// let the receiveFunc do the actual message processing
-				if err := messageReceiveFunc(m); err != nil {
-					log.Error(err)
-				}
-			}()
-			select {
-			case tmpCh <- message:
-			case <-ctx.Done():
-				log.Debugf("subscribe: cancel (messageReceiveFunc)")
-				return nil
+			if err := messageReceiveFunc(message); err != nil {
+				log.Error(err)
 			}
 		}
 	}

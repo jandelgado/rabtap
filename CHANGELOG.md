@@ -10,6 +10,8 @@
 * fix: make client certificate auth work. This implements a workaround until
   https://github.com/streadway/amqp/pull/121 gets merged (#51)
 * drop travis-ci, using github-action now (#49)
+* new: option `--num=NUM` in tap and sub commands to limit number of received
+       messages.
 
 ## v1.25 (2020-10-30)
 

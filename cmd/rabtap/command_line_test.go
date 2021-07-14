@@ -127,13 +127,13 @@ func TestParsePubSubFormatArgRaisesErrorForInvalidOption(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestCliTapSingleUriFromEnv(t *testing.T) {
+func TestCliTapCmdSingleUriFromEnv(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	os.Setenv(key, "URI")
 	defer os.Unsetenv(key)
 
 	args, err := ParseCommandLineArgs(
-		[]string{"tap", "exchange1:binding1", "--silent"})
+		[]string{"tap", "exchange1:binding1", "--silent", "--num=99"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, TapCmd, args.Cmd)
@@ -144,16 +144,23 @@ func TestCliTapSingleUriFromEnv(t *testing.T) {
 	assert.Equal(t, "exchange1", args.TapConfig[0].Exchanges[0].Exchange)
 	assert.Equal(t, "binding1", args.TapConfig[0].Exchanges[0].BindingKey)
 	assert.False(t, args.NoColor)
+	assert.Equal(t, int64(99), args.NumMessages)
 }
 
-func TestCliTapSingleMissingUri(t *testing.T) {
+func TestCliTapCmdSingleMissingUri(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
 	defer os.Unsetenv(key)
 	_, err := ParseCommandLineArgs(
 		[]string{"tap", "exchange1:binding1"})
 	assert.NotNil(t, err)
 }
-func TestCliTapWithMultipleUris(t *testing.T) {
+
+func TestCliTapCmdInvalidNumReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"tap", "exchange:binding", "--uri=uri", "--num=invalid"})
+	assert.NotNil(t, err)
+}
+
+func TestCliTapCmdWithMultipleUris(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=broker1", "exchange1:binding1,exchange2:binding2",
 			"tap", "--uri=broker2", "exchange3:binding3,exchange4:binding4",
@@ -176,6 +183,7 @@ func TestCliTapWithMultipleUris(t *testing.T) {
 	assert.Equal(t, "exchange4", args.TapConfig[1].Exchanges[1].Exchange)
 	assert.Equal(t, "binding4", args.TapConfig[1].Exchanges[1].BindingKey)
 	assert.Equal(t, "savedir", *args.SaveDir)
+	assert.Equal(t, InfiniteMessages, args.NumMessages)
 	assert.False(t, args.NoColor)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
@@ -397,18 +405,24 @@ func TestCliPubCmdFromStdinWithJsonFormatDeprecated(t *testing.T) {
 
 func TestCliSubCmdInvalidFormatReturnsError(t *testing.T) {
 	_, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--format=invalid"})
-	assert.NotNil(t, err)
+	assert.Error(t, err)
+}
+
+func TestCliSubCmdInvalidNumReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--num=invalid"})
+	assert.Error(t, err)
 }
 
 func TestCliSubCmdSaveToDir(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir"})
+		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir", "--num=99"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, SubCmd, args.Cmd)
 	assert.Equal(t, "queuename", args.QueueName)
 	assert.Equal(t, "uri", args.AmqpURI)
 	assert.Equal(t, "dir", *args.SaveDir)
+	assert.Equal(t, int64(99), args.NumMessages)
 	assert.True(t, args.AutoAck)
 }
 

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"sync"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -31,6 +32,8 @@ type MessageReceiveFunc func(rabtap.TapMessage) error
 func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 	messageReceiveFunc MessageReceiveFunc) error {
 
+	wg := new(sync.WaitGroup)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -43,13 +46,19 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 				return nil
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
+
+			// do actual output in a go-routine so we can terminate using
+			// ctx.Done() even if the terminal output is stopped with ctrl+s
 			tmpCh := make(rabtap.TapChannel)
 			go func() {
+				wg.Wait()
+				wg.Add(1)
 				m := <-tmpCh
 				// let the receiveFunc do the actual message processing
 				if err := messageReceiveFunc(m); err != nil {
 					log.Error(err)
 				}
+				wg.Done()
 			}()
 			select {
 			case tmpCh <- message:

@@ -1,6 +1,12 @@
 
 # Changelog for rabtap
 
+## v1.28 (2021-08-xx)
+
+* fix: do not print messages to stdout in parallel, which can result in 
+       garbled output when the queue is filled up and messages are read 
+       at high frequency.
+       
 ## v1.27 (2021-03-28)
 
 * new: `info` and `close` commands are can now be cancelled by SIGTERM
@@ -9,7 +15,7 @@
 
 * fix: make client certificate auth work. This implements a workaround until
   https://github.com/streadway/amqp/pull/121 gets merged (#51)
-* drop travis-ci, using github-action now (#49)
+* drop travis-ci, using github-actions now (#49)
 
 ## v1.25 (2020-10-30)
 

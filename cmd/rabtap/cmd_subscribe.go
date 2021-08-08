@@ -15,7 +15,7 @@ import (
 
 // CmdSubscribeArg contains arguments for the subscribe command
 type CmdSubscribeArg struct {
-	amqpURI            *url.URL
+	amqpURL            *url.URL
 	queue              string
 	tlsConfig          *tls.Config
 	messageReceiveFunc MessageReceiveFunc
@@ -30,7 +30,7 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 
 	messageChannel := make(rabtap.TapChannel)
 	config := rabtap.AmqpSubscriberConfig{Exclusive: false, AutoAck: cmd.AutoAck}
-	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURI, cmd.tlsConfig, log)
+	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURL, cmd.tlsConfig, log)
 
 	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel) })
 	g.Go(func() error { return messageReceiveLoop(ctx, messageChannel, cmd.messageReceiveFunc) })

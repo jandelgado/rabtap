@@ -42,7 +42,7 @@ func TestNewTapConfigurationIsConstructedCorrecly(t *testing.T) {
 	tc, err := NewTapConfiguration(url, "e1:b1,e2:b2")
 
 	assert.Nil(t, err)
-	assert.Equal(t, url, tc.AmqpURI)
+	assert.Equal(t, url, tc.AMQPURL)
 	assert.Equal(t, 2, len(tc.Exchanges))
 	assert.Equal(t, "e1", tc.Exchanges[0].Exchange)
 	assert.Equal(t, "b1", tc.Exchanges[0].BindingKey)

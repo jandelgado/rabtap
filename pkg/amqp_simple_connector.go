@@ -23,9 +23,9 @@ func openAMQPChannel(uri *url.URL, tlsConfig *tls.Config) (*amqp.Connection, *am
 // SimpleAmqpConnector opens an AMQP connection and channel, and calls
 // a function with the channel as argument. Use this function for simple,
 // one-shot operations like creation of queues, exchanges etc.
-func SimpleAmqpConnector(amqpURI *url.URL, tlsConfig *tls.Config,
+func SimpleAmqpConnector(amqpURL *url.URL, tlsConfig *tls.Config,
 	run func(session Session) error) error {
-	conn, chn, err := openAMQPChannel(amqpURI, tlsConfig)
+	conn, chn, err := openAMQPChannel(amqpURL, tlsConfig)
 	if err != nil {
 		return err
 	}

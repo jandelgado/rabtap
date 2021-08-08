@@ -79,7 +79,7 @@ func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) 
 	cmdInfo(ctx,
 		CmdInfoArg{
 			rootNode: titleURL, // the title is constructed from this URL
-			client:   rabtap.NewRabbitHTTPClient(args.APIURI, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
+			client:   rabtap.NewRabbitHTTPClient(args.APIURL, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
 			treeConfig: BrokerInfoTreeBuilderConfig{
 				Mode:                args.InfoMode,
 				ShowConsumers:       args.ShowConsumers,
@@ -135,7 +135,7 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 	readerFunc, err := createMessageReaderForPublishFunc(args.Source, args.Format)
 	failOnError(err, "message-reader", os.Exit)
 	err = cmdPublish(ctx, CmdPublishArg{
-		amqpURI:    args.AmqpURI,
+		amqpURL:    args.AMQPURL,
 		exchange:   args.PubExchange,
 		routingKey: args.PubRoutingKey,
 		fixedDelay: args.Delay,
@@ -157,7 +157,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 	err = cmdSubscribe(ctx, CmdSubscribeArg{
-		amqpURI:            args.AmqpURI,
+		amqpURL:            args.AMQPURL,
 		queue:              args.QueueName,
 		AutoAck:            args.AutoAck,
 		tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
@@ -183,7 +183,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) {
 	switch args.Cmd {
 	case InfoCmd:
-		startCmdInfo(ctx, args, args.APIURI)
+		startCmdInfo(ctx, args, args.APIURL)
 	case SubCmd:
 		startCmdSubscribe(ctx, args)
 	case PubCmd:
@@ -191,28 +191,28 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 	case TapCmd:
 		startCmdTap(ctx, args)
 	case ExchangeCreateCmd:
-		cmdExchangeCreate(CmdExchangeCreateArg{amqpURI: args.AmqpURI,
+		cmdExchangeCreate(CmdExchangeCreateArg{amqpURL: args.AMQPURL,
 			exchange: args.ExchangeName, exchangeType: args.ExchangeType,
 			durable: args.Durable, autodelete: args.Autodelete,
 			tlsConfig: tlsConfig})
 	case ExchangeRemoveCmd:
-		cmdExchangeRemove(args.AmqpURI, args.ExchangeName, tlsConfig)
+		cmdExchangeRemove(args.AMQPURL, args.ExchangeName, tlsConfig)
 	case QueueCreateCmd:
-		cmdQueueCreate(CmdQueueCreateArg{amqpURI: args.AmqpURI,
+		cmdQueueCreate(CmdQueueCreateArg{amqpURL: args.AMQPURL,
 			queue: args.QueueName, durable: args.Durable,
 			autodelete: args.Autodelete, tlsConfig: tlsConfig})
 	case QueueRemoveCmd:
-		cmdQueueRemove(args.AmqpURI, args.QueueName, tlsConfig)
+		cmdQueueRemove(args.AMQPURL, args.QueueName, tlsConfig)
 	case QueuePurgeCmd:
-		cmdQueuePurge(args.AmqpURI, args.QueueName, tlsConfig)
+		cmdQueuePurge(args.AMQPURL, args.QueueName, tlsConfig)
 	case QueueBindCmd:
-		cmdQueueBindToExchange(args.AmqpURI, args.QueueName,
+		cmdQueueBindToExchange(args.AMQPURL, args.QueueName,
 			args.QueueBindingKey, args.ExchangeName, tlsConfig)
 	case QueueUnbindCmd:
-		cmdQueueUnbindFromExchange(args.AmqpURI, args.QueueName,
+		cmdQueueUnbindFromExchange(args.AMQPURL, args.QueueName,
 			args.QueueBindingKey, args.ExchangeName, tlsConfig)
 	case ConnCloseCmd:
-		cmdConnClose(ctx, args.APIURI, args.ConnName,
+		cmdConnClose(ctx, args.APIURL, args.ConnName,
 			args.CloseReason, tlsConfig)
 	}
 }

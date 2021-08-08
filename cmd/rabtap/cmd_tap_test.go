@@ -38,7 +38,7 @@ func TestCmdTap(t *testing.T) {
 		{Exchange: "int-test-exchange",
 			BindingKey: "my-routing-key"}}
 	tapConfig := []rabtap.TapConfiguration{
-		{AmqpURI: testcommon.IntegrationURIFromEnv(),
+		{AMQPURL: testcommon.IntegrationURIFromEnv(),
 			Exchanges: exchangeConfig}}
 
 	ctx, cancel := context.WithCancel(context.Background())

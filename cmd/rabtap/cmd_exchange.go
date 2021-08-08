@@ -14,7 +14,7 @@ import (
 
 // CmdExchangeCreateArg contains argument for cmdExchangeCreate
 type CmdExchangeCreateArg struct {
-	amqpURI      *url.URL
+	amqpURL      *url.URL
 	exchange     string
 	exchangeType string
 	durable      bool
@@ -24,7 +24,7 @@ type CmdExchangeCreateArg struct {
 
 // exchangeCreate creates a new exchange on the given broker
 func cmdExchangeCreate(cmd CmdExchangeCreateArg) {
-	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURI,
+	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL,
 		cmd.tlsConfig,
 		func(session rabtap.Session) error {
 			log.Debugf("creating exchange %s with type %s",
@@ -35,8 +35,8 @@ func cmdExchangeCreate(cmd CmdExchangeCreateArg) {
 }
 
 // exchangeCreate removes an exchange on the given broker
-func cmdExchangeRemove(amqpURI *url.URL, exchangeName string, tlsConfig *tls.Config) {
-	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
+func cmdExchangeRemove(amqpURL *url.URL, exchangeName string, tlsConfig *tls.Config) {
+	failOnError(rabtap.SimpleAmqpConnector(amqpURL,
 		tlsConfig,
 		func(session rabtap.Session) error {
 			log.Debugf("removing exchange %s", exchangeName)

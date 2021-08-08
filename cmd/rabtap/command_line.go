@@ -64,7 +64,7 @@ Arguments and options:
  CONNECTION           name of a connection.
  DIR                  directory to read messages from.
  -a, --autodelete     create auto delete exchange/queue.
- --api=APIURI         connect to given API server. If APIURI is omitted,
+ --api=APIURI         connect to given API server. If APIURL is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
@@ -171,7 +171,7 @@ type commonArgs struct {
 	Verbose     bool
 	InsecureTLS bool
 	NoColor     bool
-	AmqpURI     *url.URL // pub, queue, exchange: amqp broker to use
+	AMQPURL     *url.URL // pub, queue, exchange: amqp broker to use
 }
 
 // CommandLineArgs represents the parsed command line arguments
@@ -181,7 +181,7 @@ type CommandLineArgs struct {
 	commonArgs
 
 	TapConfig []rabtap.TapConfiguration // configuration in tap mode
-	APIURI    *url.URL
+	APIURL    *url.URL
 
 	PubExchange         *string        // pub: exchange to publish to
 	PubRoutingKey       *string        // pub: routing key, defaults to ""
@@ -208,38 +208,38 @@ type CommandLineArgs struct {
 	CloseReason         string         // conn: reason of close
 }
 
-// getAmqpURI returns the ith entry of amqpURIs array or the value
+// getAMQPURL returns the ith entry of amqpURLs array or the value
 // of the RABTAP_AMQPURI environment variable if i is out of array
 // bounds or the returned value would be empty.
-func getAmqpURI(amqpURIs []string, i int) (*url.URL, error) {
+func getAMQPURL(amqpURLs []string, i int) (*url.URL, error) {
 	var u string
-	if i >= len(amqpURIs) {
+	if i >= len(amqpURLs) {
 		u = os.Getenv("RABTAP_AMQPURI")
 		if u == "" {
 			return nil, fmt.Errorf("--uri omitted but RABTAP_AMQPURI not set in environment")
 		}
 	} else {
-		u = amqpURIs[i]
+		u = amqpURLs[i]
 	}
 	return url.Parse(u)
 }
 
-func parseAmqpURI(args map[string]interface{}) (*url.URL, error) {
-	amqpURIs := args["--uri"].([]string)
-	return getAmqpURI(amqpURIs, 0)
+func parseAMQPURL(args map[string]interface{}) (*url.URL, error) {
+	amqpURLs := args["--uri"].([]string)
+	return getAMQPURL(amqpURLs, 0)
 }
 
 func parseAPIURI(args map[string]interface{}) (*url.URL, error) {
-	var apiURI string
+	var apiURL string
 	if args["--api"] != nil {
-		apiURI = args["--api"].(string)
+		apiURL = args["--api"].(string)
 	} else {
-		apiURI = os.Getenv("RABTAP_APIURI")
+		apiURL = os.Getenv("RABTAP_APIURI")
 	}
-	if apiURI == "" {
+	if apiURL == "" {
 		return nil, fmt.Errorf("--api omitted but RABTAP_APIURI not set in environment")
 	}
-	return url.Parse(apiURI)
+	return url.Parse(apiURL)
 }
 
 func parseCommonArgs(args map[string]interface{}) commonArgs {
@@ -296,7 +296,7 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result.Format = format
 
 	var err error
-	if result.APIURI, err = parseAPIURI(args); err != nil {
+	if result.APIURL, err = parseAPIURI(args); err != nil {
 		return result, err
 	}
 	return result, nil
@@ -307,7 +307,7 @@ func parseConnCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		commonArgs: parseCommonArgs(args)}
 
 	var err error
-	if result.APIURI, err = parseAPIURI(args); err != nil {
+	if result.APIURL, err = parseAPIURI(args); err != nil {
 		return result, err
 	}
 	if args["close"].(bool) {
@@ -356,7 +356,7 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		saveDir := args["--saveto"].(string)
 		result.SaveDir = &saveDir
 	}
-	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
+	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
 		return result, err
 	}
 	return result, nil
@@ -368,7 +368,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		QueueName:  args["QUEUE"].(string),
 	}
 	var err error
-	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
+	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
 		return result, err
 	}
 	switch {
@@ -401,7 +401,7 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 		ExchangeType: args["--type"].(string)}
 
 	var err error
-	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
+	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
 		return result, err
 	}
 	switch {
@@ -426,7 +426,7 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	result.Format = format
 
-	if result.AmqpURI, err = parseAmqpURI(args); err != nil {
+	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
 		return result, err
 	}
 	if args["--exchange"] != nil {
@@ -474,16 +474,16 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		saveDir := args["--saveto"].(string)
 		result.SaveDir = &saveDir
 	}
-	amqpURIs := args["--uri"].([]string)
+	amqpURLs := args["--uri"].([]string)
 	exchanges := args["EXCHANGES"].([]string)
 	for i, exchange := range exchanges {
 		// eihter the amqp uri is provided with --uri URI or the value
 		// is used from the RABTAP_AMQPURI environment variable.
-		amqpURI, err := getAmqpURI(amqpURIs, i)
+		amqpURL, err := getAMQPURL(amqpURLs, i)
 		if err != nil {
 			return result, err
 		}
-		tapConfig, err := rabtap.NewTapConfiguration(amqpURI, exchange)
+		tapConfig, err := rabtap.NewTapConfiguration(amqpURL, exchange)
 		if err != nil {
 			return result, err
 		}

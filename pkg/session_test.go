@@ -26,7 +26,7 @@ func TestSessionProvidesConnectionAndChannel(t *testing.T) {
 	defer cancel()
 
 	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log, FailEarly)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv().String(), &tls.Config{}, log, FailEarly)
 
 	sessionFactory := <-sessions
 	session := <-sessionFactory
@@ -40,7 +40,7 @@ func TestSessionShutsDownProperlyWhenCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log, FailEarly)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv().String(), &tls.Config{}, log, FailEarly)
 
 	sessionFactory, more := <-sessions
 	assert.True(t, more)
@@ -57,7 +57,7 @@ func TestSessionCanBeCancelledWhenSessionIsNotReadFromChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log, FailEarly)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv().String(), &tls.Config{}, log, FailEarly)
 
 	sessionFactory, more := <-sessions
 	assert.True(t, more)
@@ -111,7 +111,7 @@ func TestSessionNewChannelReturnsNewChannel(t *testing.T) {
 	defer cancel()
 
 	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log, FailEarly)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv().String(), &tls.Config{}, log, FailEarly)
 
 	sessionFactory := <-sessions
 	session := <-sessionFactory

@@ -2,13 +2,14 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"net/url"
 
 	"github.com/streadway/amqp"
 )
 
 // openAMQPChannel tries to open a channel on the given broker
-func openAMQPChannel(uri string, tlsConfig *tls.Config) (*amqp.Connection, *amqp.Channel, error) {
-	conn, err := DialTLS(uri, tlsConfig)
+func openAMQPChannel(uri *url.URL, tlsConfig *tls.Config) (*amqp.Connection, *amqp.Channel, error) {
+	conn, err := DialTLS(uri.String(), tlsConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -22,27 +23,12 @@ func openAMQPChannel(uri string, tlsConfig *tls.Config) (*amqp.Connection, *amqp
 // SimpleAmqpConnector opens an AMQP connection and channel, and calls
 // a function with the channel as argument. Use this function for simple,
 // one-shot operations like creation of queues, exchanges etc.
-func SimpleAmqpConnector(amqpURI string, tlsConfig *tls.Config,
+func SimpleAmqpConnector(amqpURI *url.URL, tlsConfig *tls.Config,
 	run func(session Session) error) error {
 	conn, chn, err := openAMQPChannel(amqpURI, tlsConfig)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-	// Wait for channel close in case of errors,e.g. unbind of nonexistent
-	// queue. But seems to not produce an error. So leave it out for now.
-	// errCh := make(chan *amqp.Error)
-	// chn.NotifyClose(errCh)
-	err = run(Session{conn, chn})
-
-	if err != nil {
-		return err
-	}
-	// Wait for channel close in case of errors - see above
-	// select {
-	// case amqpErr := <-errCh:
-	//     return errors.New(amqpErr.Reason)
-	// case <-time.After(1 * time.Second):
-	// }
-	return nil
+	return run(Session{conn, chn})
 }

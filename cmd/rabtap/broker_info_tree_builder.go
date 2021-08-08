@@ -29,7 +29,7 @@ type BrokerInfoTreeBuilderConfig struct {
 // BrokerInfoTreeBuilder transforms a rabtap.BrokerInfo into a tree
 // representation that can be easily rendered (e.g. into text, dot fomats)
 type BrokerInfoTreeBuilder interface {
-	BuildTree(rootNodeURL string, brokerInfo rabtap.BrokerInfo) (*rootNode, error)
+	BuildTree(rootNodeURL *url.URL, brokerInfo rabtap.BrokerInfo) (*rootNode, error)
 }
 
 type brokerInfoTreeBuilderByConnection struct{ config BrokerInfoTreeBuilderConfig }
@@ -74,7 +74,7 @@ func (s *baseNode) HasChildren() bool {
 type rootNode struct {
 	baseNode
 	Overview rabtap.RabbitOverview
-	URL      url.URL
+	URL      *url.URL
 }
 
 type vhostNode struct {
@@ -260,15 +260,10 @@ func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 	return create(exchange, brokerInfo)
 }
 
-func (s defaultBrokerInfoTreeBuilder) createRootNode(rootNodeURL string,
-	overview rabtap.RabbitOverview) (*rootNode, error) {
-	// root of node is URL of rabtap.RabbitMQ broker.
-	url, err := url.Parse(rootNodeURL)
-	if err != nil {
-		return nil, err
-	}
+func (s defaultBrokerInfoTreeBuilder) createRootNode(rootNodeURL *url.URL,
+	overview rabtap.RabbitOverview) *rootNode {
 	b := baseNode{[]interface{}{}}
-	return &rootNode{b, overview, *url}, nil
+	return &rootNode{b, overview, rootNodeURL}
 }
 
 // buildTree renders given brokerInfo into a tree:
@@ -279,15 +274,11 @@ func (s defaultBrokerInfoTreeBuilder) createRootNode(rootNodeURL string,
 //           +--Consumer  (optional)
 //              +--Connection
 //
-func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(rootNodeURL string,
+func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(rootNodeURL *url.URL,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
 
 	b := baseNode{[]interface{}{}}
-	rootNode, err := s.createRootNode(rootNodeURL, brokerInfo.Overview)
-
-	if err != nil {
-		return nil, err
-	}
+	rootNode := s.createRootNode(rootNodeURL, brokerInfo.Overview)
 
 	for vhost := range rabtap.UniqueVhosts(brokerInfo.Exchanges) {
 		vhostNode := vhostNode{b, vhost}
@@ -313,15 +304,12 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(rootNodeURL string,
 //        +--Consumer
 //           +--Queue
 // TODO add filtering
-func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(rootNodeURL string,
+func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(rootNodeURL *url.URL,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
 
-	url, err := url.Parse(rootNodeURL)
-	if err != nil {
-		return nil, err
-	}
 	b := baseNode{[]interface{}{}}
-	rootNode := rootNode{b, brokerInfo.Overview, *url}
+	rootNode := s.createRootNode(rootNodeURL, brokerInfo.Overview)
+
 	for vhost := range rabtap.UniqueVhosts(brokerInfo.Exchanges) {
 		vhostNode := vhostNode{b, vhost}
 		for _, conn := range brokerInfo.Connections {
@@ -346,19 +334,21 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(rootNodeURL string,
 		}
 		rootNode.Add(&vhostNode)
 	}
-	return &rootNode, nil
+	return rootNode, nil
 }
 
 func (s brokerInfoTreeBuilderByConnection) BuildTree(
-	rootNodeURL string,
+	rootNodeURL *url.URL,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
+
 	builder := newDefaultBrokerInfoTreeBuilder(s.config)
 	return builder.buildTreeByConnection(rootNodeURL, brokerInfo)
 }
 
 func (s brokerInfoTreeBuilderByExchange) BuildTree(
-	rootNodeURL string,
+	rootNodeURL *url.URL,
 	brokerInfo rabtap.BrokerInfo) (*rootNode, error) {
+
 	builder := newDefaultBrokerInfoTreeBuilder(s.config)
 	return builder.buildTreeByExchange(rootNodeURL, brokerInfo)
 }

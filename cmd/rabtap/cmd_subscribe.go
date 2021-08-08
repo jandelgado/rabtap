@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"net/url"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"golang.org/x/sync/errgroup"
@@ -14,7 +15,7 @@ import (
 
 // CmdSubscribeArg contains arguments for the subscribe command
 type CmdSubscribeArg struct {
-	amqpURI            string
+	amqpURI            *url.URL
 	queue              string
 	tlsConfig          *tls.Config
 	messageReceiveFunc MessageReceiveFunc

@@ -36,8 +36,9 @@ func NewBrokerInfoRendererText(config BrokerInfoRendererConfig) BrokerInfoRender
 }
 
 const (
+	//{{- with .URL }} {{ .Redacted | URLColor }} {{ end }}
 	tplRootNode = `
-	    {{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path | URLColor }} 
+	    {{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path | URLColor }}
 	 	{{- if .Overview }} (broker ver='{{ .Overview.RabbitmqVersion }}',
 		{{- "" }} mgmt ver='{{ .Overview.ManagementVersion }}',
 		{{- "" }} cluster='{{ .Overview.ClusterName }}{{end}}')`
@@ -138,10 +139,10 @@ func (s brokerInfoRendererText) renderBoundQueueElementAsString(queue rabtap.Rab
 	return resolveTemplate("bound-queue-tpl", tplBoundQueue, args, s.colorizer.GetFuncMap())
 }
 
-func (s brokerInfoRendererText) renderRootNodeAsString(rabbitURL url.URL, overview rabtap.RabbitOverview) string {
+func (s brokerInfoRendererText) renderRootNodeAsString(rabbitURL *url.URL, overview rabtap.RabbitOverview) string {
 	var args = struct {
 		Config   BrokerInfoRendererConfig
-		URL      url.URL
+		URL      *url.URL
 		Overview rabtap.RabbitOverview
 	}{s.config, rabbitURL, overview}
 	return resolveTemplate("rootnode", tplRootNode, args, s.colorizer.GetFuncMap())

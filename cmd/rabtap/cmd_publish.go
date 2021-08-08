@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"net/url"
 	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -16,7 +17,7 @@ import (
 
 // CmdPublishArg contains arguments for the publish command
 type CmdPublishArg struct {
-	amqpURI    string
+	amqpURI    *url.URL
 	tlsConfig  *tls.Config
 	exchange   *string
 	routingKey *string

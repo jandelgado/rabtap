@@ -17,15 +17,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/****
-func TestBrokerInfoPrintFailsOnInvalidUri(t *testing.T) {
-	// TODO
-	// brokerInfoPrinter := NewBrokerInfoTreeBuilder(BrokerInfoTreeBuilderConfig{})
-	// err := brokerInfoPrinter.Print(rabtap.BrokerInfo{}, "//:xxx::invalid uri", os.Stdout)
-	// assert.NotNil(t, err)
+func Example_startCmdInfo() {
+	// TODO move to cmd_info_test
+	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeEmpty)
+	defer mock.Close()
 
+	args, _ := ParseCommandLineArgs([]string{"info", "--api", mock.URL, "--no-color"})
+	titleURL, _ := url.Parse("http://guest:guest@rootnode/vhost")
+	startCmdInfo(context.TODO(), args, titleURL)
+
+	// Output:
+	// http://rootnode/vhost (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 }
-***/
 
 func Example_cmdInfoByExchangeInTextFormat() {
 
@@ -34,9 +37,10 @@ func Example_cmdInfoByExchangeInTextFormat() {
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
+	rootURL, _ := url.Parse("http://rabbitmq/api")
 	cmdInfo(context.TODO(),
 		CmdInfoArg{
-			rootNode: "http://rabbitmq/api",
+			rootNode: rootURL,
 			client:   client,
 			treeConfig: BrokerInfoTreeBuilderConfig{
 				Mode:                "byExchange",
@@ -85,10 +89,11 @@ func Example_cmdInfoByConnectionInTextFormat() {
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
+	rootURL, _ := url.Parse("http://rabbitmq/api")
 
 	cmdInfo(context.TODO(),
 		CmdInfoArg{
-			rootNode: "http://rabbitmq/api",
+			rootNode: rootURL,
 			client:   client,
 			treeConfig: BrokerInfoTreeBuilderConfig{
 				Mode:                "byConnection",
@@ -204,12 +209,13 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
+	rootURL, _ := url.Parse("http://rabbitmq/api")
 
 	testfunc := func() {
 		cmdInfo(
 			context.TODO(),
 			CmdInfoArg{
-				rootNode: "http://rabbitmq/api",
+				rootNode: rootURL,
 				client:   client,
 				treeConfig: BrokerInfoTreeBuilderConfig{
 					Mode:                "byExchange",
@@ -249,12 +255,13 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
+	rootURL, _ := url.Parse("http://rabbitmq/api")
 
 	testfunc := func() {
 		cmdInfo(
 			context.TODO(),
 			CmdInfoArg{
-				rootNode: "http://rabbitmq/api",
+				rootNode: rootURL,
 				client:   client,
 				treeConfig: BrokerInfoTreeBuilderConfig{
 					Mode:                "byConnection",

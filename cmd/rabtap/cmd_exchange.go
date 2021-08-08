@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/tls"
+	"net/url"
 	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -13,7 +14,7 @@ import (
 
 // CmdExchangeCreateArg contains argument for cmdExchangeCreate
 type CmdExchangeCreateArg struct {
-	amqpURI      string
+	amqpURI      *url.URL
 	exchange     string
 	exchangeType string
 	durable      bool
@@ -34,7 +35,7 @@ func cmdExchangeCreate(cmd CmdExchangeCreateArg) {
 }
 
 // exchangeCreate removes an exchange on the given broker
-func cmdExchangeRemove(amqpURI, exchangeName string, tlsConfig *tls.Config) {
+func cmdExchangeRemove(amqpURI *url.URL, exchangeName string, tlsConfig *tls.Config) {
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
 		tlsConfig,
 		func(session rabtap.Session) error {

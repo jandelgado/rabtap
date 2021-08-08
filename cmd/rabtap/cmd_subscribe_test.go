@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"net/url"
 	"os"
 	"syscall"
 	"testing"
@@ -27,10 +28,11 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan bool)
+	amqpURL, _ := url.Parse("amqp://invalid.url:5672/")
 	go func() {
 		// we expect cmdSubscribe to return
 		cmdSubscribe(ctx, CmdSubscribeArg{
-			amqpURI:            "invalid uri",
+			amqpURI:            amqpURL,
 			queue:              "queue",
 			tlsConfig:          &tls.Config{},
 			messageReceiveFunc: func(rabtap.TapMessage) error { return nil },
@@ -148,7 +150,7 @@ func TestCmdSubIntegration(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 	os.Args = []string{"rabtap", "sub",
-		"--uri", testcommon.IntegrationURIFromEnv(),
+		"--uri", amqpURI.String(),
 		testQueue,
 		"--format=raw",
 		"--no-color"}

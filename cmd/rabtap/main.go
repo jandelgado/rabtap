@@ -72,17 +72,14 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	return tlsConfig
 }
 
-func startCmdInfo(ctx context.Context, args CommandLineArgs, title string) {
+func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) {
 	queueFilter, err := NewPredicateExpression(args.QueueFilter)
 	failOnError(err, fmt.Sprintf("invalid queue filter predicate '%s'", args.QueueFilter), os.Exit)
 
-	apiURL, err := url.Parse(args.APIURI)
-	failOnError(err, "invalid api url", os.Exit)
-
 	cmdInfo(ctx,
 		CmdInfoArg{
-			rootNode: title,
-			client:   rabtap.NewRabbitHTTPClient(apiURL, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
+			rootNode: titleURL, // the title is constructed from this URL
+			client:   rabtap.NewRabbitHTTPClient(args.APIURI, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
 			treeConfig: BrokerInfoTreeBuilderConfig{
 				Mode:                args.InfoMode,
 				ShowConsumers:       args.ShowConsumers,

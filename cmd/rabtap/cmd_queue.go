@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/tls"
+	"net/url"
 	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -13,7 +14,7 @@ import (
 
 // CmdQueueCreateArg contains the arguments for cmdQueueCreate
 type CmdQueueCreateArg struct {
-	amqpURI    string
+	amqpURI    *url.URL
 	queue      string
 	durable    bool
 	autodelete bool
@@ -34,7 +35,7 @@ func cmdQueueCreate(cmd CmdQueueCreateArg) {
 
 // cmdQueueRemove removes an exchange on the given broker
 // TODO(JD) add ifUnused, ifEmpty parameters
-func cmdQueueRemove(amqpURI, queueName string, tlsConfig *tls.Config) {
+func cmdQueueRemove(amqpURI *url.URL, queueName string, tlsConfig *tls.Config) {
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
 		tlsConfig,
 		func(session rabtap.Session) error {
@@ -44,7 +45,7 @@ func cmdQueueRemove(amqpURI, queueName string, tlsConfig *tls.Config) {
 }
 
 // cmdQueuePurge purges a queue, i.e. removes all queued elements
-func cmdQueuePurge(amqpURI, queueName string, tlsConfig *tls.Config) {
+func cmdQueuePurge(amqpURI *url.URL, queueName string, tlsConfig *tls.Config) {
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
 		tlsConfig,
 		func(session rabtap.Session) error {
@@ -58,7 +59,7 @@ func cmdQueuePurge(amqpURI, queueName string, tlsConfig *tls.Config) {
 }
 
 // cmdQueueBindToExchange binds a queue to an exchange
-func cmdQueueBindToExchange(amqpURI, queueName, key, exchangeName string,
+func cmdQueueBindToExchange(amqpURI *url.URL, queueName, key, exchangeName string,
 	tlsConfig *tls.Config) {
 
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,
@@ -71,7 +72,7 @@ func cmdQueueBindToExchange(amqpURI, queueName, key, exchangeName string,
 }
 
 // cmdQueueUnbindFromExchange unbinds a queue from an exchange
-func cmdQueueUnbindFromExchange(amqpURI, queueName, key, exchangeName string,
+func cmdQueueUnbindFromExchange(amqpURI *url.URL, queueName, key, exchangeName string,
 	tlsConfig *tls.Config) {
 
 	failOnError(rabtap.SimpleAmqpConnector(amqpURI,

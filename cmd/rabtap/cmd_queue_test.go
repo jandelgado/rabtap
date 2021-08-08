@@ -30,7 +30,7 @@ func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 	const testKey = testQueue
 	const testExchange = "amq.direct"
 
-	amqpURI := testcommon.IntegrationURIFromEnv()
+	amqpURI := testcommon.IntegrationURIFromEnv().String()
 	apiURL, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 
 	os.Args = []string{"rabtap", "queue", "create", testQueue, "--uri", amqpURI}

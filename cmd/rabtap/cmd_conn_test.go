@@ -68,7 +68,7 @@ func TestCmdCloseConnection(t *testing.T) {
 	// now close the newly created connection. TODO handle potential
 	// call to failOnError in cmdConnClose
 	err = cmdConnClose(context.TODO(),
-		url.String(), connToClose, "some reason", &tls.Config{})
+		url, connToClose, "some reason", &tls.Config{})
 	require.Nil(t, err)
 
 	// ... and make sure it gets closed, notified by a message on the errorChan

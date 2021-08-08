@@ -10,6 +10,7 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"net/url"
 	"testing"
 	"time"
 
@@ -21,7 +22,9 @@ func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 
 	ctx := context.Background()
 	log := testcommon.NewTestLogger()
-	conn := NewAmqpConnector("amqp://localhost:1", &tls.Config{}, log)
+
+	url, _ := url.Parse("amqp://localhost:1")
+	conn := NewAmqpConnector(url, &tls.Config{}, log)
 
 	worker := func(ctx context.Context, session Session) (ReconnectAction, error) {
 		assert.Fail(t, "worker unexpectedly called during test")

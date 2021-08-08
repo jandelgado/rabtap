@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"net/url"
 )
 
 // ReconnectAction signals if connection should be reconnected or not.
@@ -33,24 +34,24 @@ type AmqpWorkerFunc func(ctx context.Context, session Session) (ReconnectAction,
 // reconnects after connections losses
 type AmqpConnector struct {
 	logger    Logger
-	uri       string
+	url       *url.URL
 	tlsConfig *tls.Config
 }
 
 // NewAmqpConnector creates a new AmqpConnector object.
-func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger Logger) *AmqpConnector {
+func NewAmqpConnector(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpConnector {
 	return &AmqpConnector{
 		logger:    logger,
-		uri:       uri,
+		url:       url,
 		tlsConfig: tlsConfig}
 }
 
 // Connect  (re-)establishes the connection to RabbitMQ broker.
 func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) error {
 
-	sessions := redial(ctx, s.uri, s.tlsConfig, s.logger, FailEarly)
+	sessions := redial(ctx, s.url.String(), s.tlsConfig, s.logger, FailEarly)
 	for session := range sessions {
-		s.logger.Debugf("waiting for new session")
+		s.logger.Debugf("waiting for new session on %+v", s.url.Redacted())
 		sub, more := <-session
 		if !more {
 			// closed. TODO propagate errors from redial()

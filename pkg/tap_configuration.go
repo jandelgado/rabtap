@@ -4,6 +4,7 @@ package rabtap
 
 import (
 	"errors"
+	"net/url"
 	"strings"
 )
 
@@ -66,7 +67,7 @@ func NewExchangeConfiguration(exchangeAndBindingStr string) (*ExchangeConfigurat
 // TapConfiguration holds the set of ExchangeCOnfigurations to tap to for a
 // single RabbitMQ host
 type TapConfiguration struct {
-	AmqpURI   string
+	AmqpURI   *url.URL
 	Exchanges []ExchangeConfiguration
 }
 
@@ -74,7 +75,7 @@ type TapConfiguration struct {
 // broker specified by an URI and a list of exchanges and bindings in the
 // form of "exchange:binding,exchange:binding). Returns configuration object
 // or an error if parsing failed.
-func NewTapConfiguration(amqpURI string, exchangesAndBindings string) (*TapConfiguration, error) {
+func NewTapConfiguration(amqpURI *url.URL, exchangesAndBindings string) (*TapConfiguration, error) {
 	result := TapConfiguration{}
 	result.AmqpURI = amqpURI
 	for _, item := range strings.Split(exchangesAndBindings, ",") {

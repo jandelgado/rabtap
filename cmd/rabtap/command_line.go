@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -170,7 +171,7 @@ type commonArgs struct {
 	Verbose     bool
 	InsecureTLS bool
 	NoColor     bool
-	AmqpURI     string // pub, queue, exchange: amqp broker to use
+	AmqpURI     *url.URL // pub, queue, exchange: amqp broker to use
 }
 
 // CommandLineArgs represents the parsed command line arguments
@@ -180,7 +181,7 @@ type CommandLineArgs struct {
 	commonArgs
 
 	TapConfig []rabtap.TapConfiguration // configuration in tap mode
-	APIURI    string
+	APIURI    *url.URL
 
 	PubExchange         *string        // pub: exchange to publish to
 	PubRoutingKey       *string        // pub: routing key, defaults to ""
@@ -210,23 +211,25 @@ type CommandLineArgs struct {
 // getAmqpURI returns the ith entry of amqpURIs array or the value
 // of the RABTAP_AMQPURI environment variable if i is out of array
 // bounds or the returned value would be empty.
-func getAmqpURI(amqpURIs []string, i int) string {
+func getAmqpURI(amqpURIs []string, i int) (*url.URL, error) {
+	var u string
 	if i >= len(amqpURIs) {
-		return os.Getenv("RABTAP_AMQPURI")
+		u = os.Getenv("RABTAP_AMQPURI")
+		if u == "" {
+			return nil, fmt.Errorf("--uri omitted but RABTAP_AMQPURI not set in environment")
+		}
+	} else {
+		u = amqpURIs[i]
 	}
-	return amqpURIs[i]
+	return url.Parse(u)
 }
 
-func parseAmqpURI(args map[string]interface{}) (string, error) {
+func parseAmqpURI(args map[string]interface{}) (*url.URL, error) {
 	amqpURIs := args["--uri"].([]string)
-	uri := getAmqpURI(amqpURIs, 0)
-	if uri == "" {
-		return "", fmt.Errorf("--uri omitted but RABTAP_AMQPURI not set in environment")
-	}
-	return uri, nil
+	return getAmqpURI(amqpURIs, 0)
 }
 
-func parseAPIURI(args map[string]interface{}) (string, error) {
+func parseAPIURI(args map[string]interface{}) (*url.URL, error) {
 	var apiURI string
 	if args["--api"] != nil {
 		apiURI = args["--api"].(string)
@@ -234,9 +237,9 @@ func parseAPIURI(args map[string]interface{}) (string, error) {
 		apiURI = os.Getenv("RABTAP_APIURI")
 	}
 	if apiURI == "" {
-		return "", fmt.Errorf("--api omitted but RABTAP_APIURI not set in environment")
+		return nil, fmt.Errorf("--api omitted but RABTAP_APIURI not set in environment")
 	}
-	return apiURI, nil
+	return url.Parse(apiURI)
 }
 
 func parseCommonArgs(args map[string]interface{}) commonArgs {
@@ -476,9 +479,9 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	for i, exchange := range exchanges {
 		// eihter the amqp uri is provided with --uri URI or the value
 		// is used from the RABTAP_AMQPURI environment variable.
-		amqpURI := getAmqpURI(amqpURIs, i)
-		if amqpURI == "" {
-			return result, fmt.Errorf("--uri omitted but RABTAP_AMQPURI not set in environment")
+		amqpURI, err := getAmqpURI(amqpURIs, i)
+		if err != nil {
+			return result, err
 		}
 		tapConfig, err := rabtap.NewTapConfiguration(amqpURI, exchange)
 		if err != nil {

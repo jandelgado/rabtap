@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 
 	uuid "github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -22,7 +21,7 @@ type AmqpTap struct {
 
 // NewAmqpTap returns a new AmqpTap object associated with the RabbitMQ
 // broker denoted by the uri parameter.
-func NewAmqpTap(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpTap {
+func NewAmqpTap(uri string, tlsConfig *tls.Config, logger Logger) *AmqpTap {
 	config := AmqpSubscriberConfig{Exclusive: true, AutoAck: true}
 	return &AmqpTap{
 		AmqpSubscriber: NewAmqpSubscriber(config, uri, tlsConfig, logger)}
@@ -151,13 +150,14 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 		false,        // wait for response
 		amqp.Table{}); err != nil {
 
-		s.logger.Printf("tap: bind to exchange %s failed with %v", exchangeName, err)
+		s.logger.Errorf("tap: bind to exchange %s failed with %v", exchangeName, err)
+
 		// bind failed, so we must also delete our tap-exchange since it
 		// will not be auto-deleted when no binding exists.
 		// TODO handle errors
 		_ = session.NewChannel()
-		err3 := RemoveExchange(session, tapExchangeName, false)
-		s.logger.Printf("delete exchange: %v", err3)
+		err2 := RemoveExchange(session, tapExchangeName, false)
+		s.logger.Errorf("tap: delete of exchange %s failed with: %v", tapExchangeName, err2)
 		return err
 	}
 	return nil

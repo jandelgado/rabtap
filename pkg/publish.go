@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 
-	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -23,13 +22,13 @@ type PublishChannel chan *PublishMessage
 
 // AmqpPublish allows to send to a RabbitMQ exchange.
 type AmqpPublish struct {
-	logger     logrus.StdLogger
+	logger     Logger
 	connection *AmqpConnector
 }
 
 // NewAmqpPublish returns a new AmqpPublish object associated with the RabbitMQ
 // broker denoted by the uri parameter.
-func NewAmqpPublish(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpPublish {
+func NewAmqpPublish(uri string, tlsConfig *tls.Config, logger Logger) *AmqpPublish {
 	return &AmqpPublish{
 		connection: NewAmqpConnector(uri, tlsConfig, logger),
 		logger:     logger}
@@ -47,7 +46,7 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 			select {
 			case message, more := <-publishChannel:
 				if !more {
-					s.logger.Print("publishing channel closed.")
+					s.logger.Debugf("publishing channel closed.")
 					return doNotReconnect, nil
 				}
 				// TODO need to add notification hdlr to detect pub errors
@@ -58,7 +57,7 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					*message.Publishing)
 
 				if err != nil {
-					s.logger.Printf("publishing error %w", err)
+					s.logger.Errorf("publishing error %w", err)
 					// error publishing message - reconnect.
 					return doReconnect, err
 				}

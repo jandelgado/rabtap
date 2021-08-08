@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -37,7 +36,7 @@ func (s *Session) NewChannel() error {
 // channel in a Session struct. Closes returned chan when initial connection
 // attempt fails.
 func redial(ctx context.Context, url string, tlsConfig *tls.Config,
-	logger logrus.StdLogger, failEarly bool) chan chan Session {
+	logger Logger, failEarly bool) chan chan Session {
 
 	sessions := make(chan chan Session)
 
@@ -49,7 +48,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 			select {
 			case sessions <- sess:
 			case <-ctx.Done():
-				logger.Println("session: shutting down factory (cancel)")
+				logger.Infof("session: shutting down factory (cancel)")
 				close(sess)
 				return
 			}
@@ -67,14 +66,14 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 						break
 					}
 				}
-				logger.Printf("session: cannot (re-)dial: %v: %q", err, url)
+				logger.Errorf("session: cannot (re-)dial: %v: %q", err, url)
 				if failEarly {
 					close(sess)
 					return
 				}
 				select {
 				case <-ctx.Done():
-					logger.Println("session: shutting down factory (cancel)")
+					logger.Infof("session: shutting down factory (cancel)")
 					close(sess)
 					return
 				case <-time.After(retryDelay):
@@ -86,7 +85,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 			select {
 			case sess <- Session{conn, ch}:
 			case <-ctx.Done():
-				logger.Println("session: shutting down factory (cancel)")
+				logger.Infof("session: shutting down factory (cancel)")
 				close(sess)
 				return
 			}

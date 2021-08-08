@@ -10,8 +10,6 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"log"
-	"os"
 	"testing"
 	"time"
 
@@ -22,8 +20,7 @@ import (
 func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 
 	ctx := context.Background()
-	log := log.New(os.Stdout, "ampq_connector_inttest: ", log.Lshortfile)
-
+	log := testcommon.NewTestLogger()
 	conn := NewAmqpConnector("amqp://localhost:1", &tls.Config{}, log)
 
 	worker := func(ctx context.Context, session Session) (ReconnectAction, error) {
@@ -40,7 +37,7 @@ func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 func TestIntegrationWorkerInteraction(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
-	log := log.New(os.Stdout, "ampq_connector_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 
 	resultChan := make(chan int, 1)
 

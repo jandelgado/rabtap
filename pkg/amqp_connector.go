@@ -6,8 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-
-	"github.com/sirupsen/logrus"
 )
 
 // ReconnectAction signals if connection should be reconnected or not.
@@ -34,13 +32,13 @@ type AmqpWorkerFunc func(ctx context.Context, session Session) (ReconnectAction,
 // AmqpConnector manages the connection to the amqp broker and automatically
 // reconnects after connections losses
 type AmqpConnector struct {
-	logger    logrus.StdLogger
+	logger    Logger
 	uri       string
 	tlsConfig *tls.Config
 }
 
 // NewAmqpConnector creates a new AmqpConnector object.
-func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpConnector {
+func NewAmqpConnector(uri string, tlsConfig *tls.Config, logger Logger) *AmqpConnector {
 	return &AmqpConnector{
 		logger:    logger,
 		uri:       uri,
@@ -52,13 +50,13 @@ func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) erro
 
 	sessions := redial(ctx, s.uri, s.tlsConfig, s.logger, FailEarly)
 	for session := range sessions {
-		s.logger.Printf("waiting for new session ...")
+		s.logger.Debugf("waiting for new session")
 		sub, more := <-session
 		if !more {
 			// closed. TODO propagate errors from redial()
 			return errors.New("initial connection failed")
 		}
-		s.logger.Printf("got new amqp session ...")
+		s.logger.Debugf("got new amqp session ...")
 		action, err := worker(ctx, sub)
 		if !action.shouldReconnect() {
 			return err

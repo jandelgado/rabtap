@@ -8,7 +8,6 @@ import (
 	"time"
 
 	uuid "github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -22,12 +21,12 @@ type AmqpSubscriberConfig struct {
 type AmqpSubscriber struct {
 	config     AmqpSubscriberConfig
 	connection *AmqpConnector
-	logger     logrus.StdLogger
+	logger     Logger
 }
 
 // NewAmqpSubscriber returns a new AmqpSubscriber object associated with the
 // RabbitMQ broker denoted by the uri parameter.
-func NewAmqpSubscriber(config AmqpSubscriberConfig, uri string, tlsConfig *tls.Config, logger logrus.StdLogger) *AmqpSubscriber {
+func NewAmqpSubscriber(config AmqpSubscriberConfig, uri string, tlsConfig *tls.Config, logger Logger) *AmqpSubscriber {
 	return &AmqpSubscriber{
 		config:     config,
 		connection: NewAmqpConnector(uri, tlsConfig, logger),

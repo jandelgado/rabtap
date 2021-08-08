@@ -9,8 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
-	"log"
-	"os"
 	"testing"
 	"time"
 
@@ -27,7 +25,7 @@ func TestSessionProvidesConnectionAndChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log, FailEarly)
 
 	sessionFactory := <-sessions
@@ -41,7 +39,7 @@ func TestSessionShutsDownProperlyWhenCancelled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log, FailEarly)
 
 	sessionFactory, more := <-sessions
@@ -58,7 +56,7 @@ func TestSessionShutsDownProperlyWhenCancelled(t *testing.T) {
 func TestSessionCanBeCancelledWhenSessionIsNotReadFromChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log, FailEarly)
 
 	sessionFactory, more := <-sessions
@@ -77,7 +75,7 @@ func TestSessionFailsEarlyWhenNoConnectionIsPossible(t *testing.T) {
 
 	ctx := context.Background()
 
-	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 	sessions := redial(ctx, "amqp://localhost:1", &tls.Config{}, log, FailEarly)
 
 	sessionFactory, more := <-sessions
@@ -94,7 +92,7 @@ func TestSessionCanBeCancelledDuringRetryDelay(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 	sessions := redial(ctx, "amqp://localhost:1", &tls.Config{}, log, !FailEarly)
 
 	sessionFactory, more := <-sessions
@@ -112,7 +110,7 @@ func TestSessionNewChannelReturnsNewChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log, FailEarly)
 
 	sessionFactory := <-sessions
@@ -125,11 +123,11 @@ func TestSessionNewChannelReturnsNewChannel(t *testing.T) {
 	assert.NotEqual(t, chanOld, session.Channel)
 }
 
-func TestSessionNewChannelReturnsNewChannelWithmTLS(t *testing.T) {
+func TestSessionNewChannelReturnsNewChannelWithTLS(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 	url := "amqps://localhost:5671/"
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: false,
@@ -170,7 +168,7 @@ func TestSessionNewChannelFailsWithCertificateWithUnknownUser(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log := log.New(os.Stdout, "session_inttest: ", log.Lshortfile)
+	log := testcommon.NewTestLogger()
 	url := "amqps://localhost:5671/"
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: false,

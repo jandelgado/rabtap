@@ -5,6 +5,7 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"net/url"
 
 	"github.com/streadway/amqp"
 )
@@ -28,9 +29,9 @@ type AmqpPublish struct {
 
 // NewAmqpPublish returns a new AmqpPublish object associated with the RabbitMQ
 // broker denoted by the uri parameter.
-func NewAmqpPublish(uri string, tlsConfig *tls.Config, logger Logger) *AmqpPublish {
+func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpPublish {
 	return &AmqpPublish{
-		connection: NewAmqpConnector(uri, tlsConfig, logger),
+		connection: NewAmqpConnector(url, tlsConfig, logger),
 		logger:     logger}
 }
 
@@ -46,7 +47,7 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 			select {
 			case message, more := <-publishChannel:
 				if !more {
-					s.logger.Debugf("publishing channel closed.")
+					s.logger.Infof("publishing channel closed.")
 					return doNotReconnect, nil
 				}
 				// TODO need to add notification hdlr to detect pub errors

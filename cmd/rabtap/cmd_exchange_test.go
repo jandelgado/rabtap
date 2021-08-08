@@ -34,18 +34,18 @@ func TestIntegrationCmdExchangeCreateRemoveExchange(t *testing.T) {
 
 	const testExchange = "cmd-exchange-test"
 
-	amqpURI := testcommon.IntegrationURIFromEnv()
+	amqpURL := testcommon.IntegrationURIFromEnv()
 	apiURL, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 
 	assert.False(t, exchangeExists(t, apiURL, testExchange))
-	os.Args = []string{"rabtap", "exchange", "create", testExchange, "--uri", amqpURI}
+	os.Args = []string{"rabtap", "exchange", "create", testExchange, "--uri", amqpURL.String()}
 	main()
 	time.Sleep(2 * time.Second)
 	assert.True(t, exchangeExists(t, apiURL, testExchange))
 
 	// TODO validation
 
-	os.Args = []string{"rabtap", "exchange", "rm", testExchange, "--uri", amqpURI}
+	os.Args = []string{"rabtap", "exchange", "rm", testExchange, "--uri", amqpURL.String()}
 	main()
 	time.Sleep(2 * time.Second)
 	assert.False(t, exchangeExists(t, apiURL, testExchange))

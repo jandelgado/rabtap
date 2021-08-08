@@ -5,6 +5,7 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"net/url"
 	"time"
 
 	uuid "github.com/google/uuid"
@@ -26,10 +27,10 @@ type AmqpSubscriber struct {
 
 // NewAmqpSubscriber returns a new AmqpSubscriber object associated with the
 // RabbitMQ broker denoted by the uri parameter.
-func NewAmqpSubscriber(config AmqpSubscriberConfig, uri string, tlsConfig *tls.Config, logger Logger) *AmqpSubscriber {
+func NewAmqpSubscriber(config AmqpSubscriberConfig, url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpSubscriber {
 	return &AmqpSubscriber{
 		config:     config,
-		connection: NewAmqpConnector(uri, tlsConfig, logger),
+		connection: NewAmqpConnector(url, tlsConfig, logger),
 		logger:     logger}
 }
 

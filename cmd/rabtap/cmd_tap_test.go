@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jandelgado/rabtap/pkg"
+	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +38,7 @@ func TestCmdTap(t *testing.T) {
 		{Exchange: "int-test-exchange",
 			BindingKey: "my-routing-key"}}
 	tapConfig := []rabtap.TapConfiguration{
-		{AmqpURI: testcommon.IntegrationURIFromEnv(),
+		{AMQPURL: testcommon.IntegrationURIFromEnv(),
 			Exchanges: exchangeConfig}}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -94,7 +94,7 @@ func TestCmdTapIntegration(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 	os.Args = []string{"rabtap", "tap",
-		"--uri", testcommon.IntegrationURIFromEnv(),
+		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		"amq.topic:" + testKey,
 		"--format=raw",
 		"--no-color"}

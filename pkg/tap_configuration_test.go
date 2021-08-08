@@ -3,6 +3,7 @@
 package rabtap
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,11 +36,13 @@ func TestSplitExchangeAndBindingRaisesErrorMissingKey(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestNewTapConfiguration(t *testing.T) {
+func TestNewTapConfigurationIsConstructedCorrecly(t *testing.T) {
 
-	tc, err := NewTapConfiguration("uri", "e1:b1,e2:b2")
+	url, _ := url.Parse("uri")
+	tc, err := NewTapConfiguration(url, "e1:b1,e2:b2")
+
 	assert.Nil(t, err)
-	assert.Equal(t, "uri", tc.AmqpURI)
+	assert.Equal(t, url, tc.AMQPURL)
 	assert.Equal(t, 2, len(tc.Exchanges))
 	assert.Equal(t, "e1", tc.Exchanges[0].Exchange)
 	assert.Equal(t, "b1", tc.Exchanges[0].BindingKey)
@@ -49,7 +52,8 @@ func TestNewTapConfiguration(t *testing.T) {
 
 func TestFaultyTapConfiguration(t *testing.T) {
 
-	_, err := NewTapConfiguration("uri", "exchange")
+	url, _ := url.Parse("uri")
+	_, err := NewTapConfiguration(url, "exchange")
 
 	assert.NotNil(t, err)
 }

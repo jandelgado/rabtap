@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"sync"
 	"testing"
@@ -64,12 +65,16 @@ func IntegrationAPIURIFromEnv() string {
 }
 
 // IntegrationURIFromEnv return the amqp URL to use for tests
-func IntegrationURIFromEnv() string {
-	uri := os.Getenv("AMQP_URI")
-	if uri == "" {
-		uri = "amqp://guest:password@localhost:5672"
+func IntegrationURIFromEnv() *url.URL {
+	u := os.Getenv("AMQP_URI")
+	if u == "" {
+		u = "amqp://guest:password@localhost:5672"
 	}
-	return uri
+	URL, err := url.Parse(u)
+	if err != nil {
+		panic(err)
+	}
+	return URL
 }
 
 // IntegrationQueueName returns the name of the ith test queue
@@ -87,7 +92,7 @@ func IntegrationQueueName(i int) string {
 func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
 	numQueues int, addRoutingHeader bool) (*amqp.Connection, *amqp.Channel) {
 
-	conn, err := amqp.Dial(IntegrationURIFromEnv())
+	conn, err := amqp.Dial(IntegrationURIFromEnv().String())
 	require.Nil(t, err)
 	ch, err := conn.Channel()
 	require.Nil(t, err)
@@ -109,11 +114,11 @@ func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
 	for i := 0; i < numQueues; i++ {
 		queue, err := ch.QueueDeclare(
 			IntegrationQueueName(i), // name of the queue
-			false, // non durable
-			false, // delete when unused
-			true,  // exclusive
-			false, // wait for response
-			nil)   // arguments
+			false,                   // non durable
+			false,                   // delete when unused
+			true,                    // exclusive
+			false,                   // wait for response
+			nil)                     // arguments
 		require.Nil(t, err)
 
 		// set routing header if requested (used by headers testcase)

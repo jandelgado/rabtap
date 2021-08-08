@@ -30,21 +30,21 @@ func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 	const testKey = testQueue
 	const testExchange = "amq.direct"
 
-	amqpURI := testcommon.IntegrationURIFromEnv()
+	amqpURL := testcommon.IntegrationURIFromEnv().String()
 	apiURL, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 
-	os.Args = []string{"rabtap", "queue", "create", testQueue, "--uri", amqpURI}
+	os.Args = []string{"rabtap", "queue", "create", testQueue, "--uri", amqpURL}
 	main()
 
 	os.Args = []string{"rabtap", "queue", "bind", testQueue, "to", testExchange,
 		"--bindingkey", testQueue,
-		"--uri", amqpURI}
+		"--uri", amqpURL}
 	main()
 
 	// TODO publish some messages
 
 	// purge queue and check size
-	os.Args = []string{"rabtap", "queue", "purge", testQueue, "--uri", amqpURI}
+	os.Args = []string{"rabtap", "queue", "purge", testQueue, "--uri", amqpURL}
 	main()
 
 	time.Sleep(2 * time.Second)
@@ -63,11 +63,11 @@ func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 	// unbind queue
 	os.Args = []string{"rabtap", "queue", "unbind", testQueue, "from", testExchange,
 		"--bindingkey", testQueue,
-		"--uri", amqpURI}
+		"--uri", amqpURL}
 	main()
 
 	// remove queue
-	os.Args = []string{"rabtap", "queue", "rm", testQueue, "--uri", amqpURI}
+	os.Args = []string{"rabtap", "queue", "rm", testQueue, "--uri", amqpURL}
 	main()
 
 	// TODO check that queue is removed

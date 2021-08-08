@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"net/url"
 	"os"
 	"syscall"
 	"testing"
@@ -27,10 +28,11 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan bool)
+	amqpURL, _ := url.Parse("amqp://invalid.url:5672/")
 	go func() {
 		// we expect cmdSubscribe to return
 		cmdSubscribe(ctx, CmdSubscribeArg{
-			amqpURI:            "invalid uri",
+			amqpURL:            amqpURL,
 			queue:              "queue",
 			tlsConfig:          &tls.Config{},
 			messageReceiveFunc: func(rabtap.TapMessage) error { return nil },
@@ -54,7 +56,7 @@ func TestCmdSub(t *testing.T) {
 	testExchange := ""
 	//	testExchange := "sub-exchange-test"
 	tlsConfig := &tls.Config{}
-	amqpURI := testcommon.IntegrationURIFromEnv()
+	amqpURL := testcommon.IntegrationURIFromEnv()
 
 	done := make(chan bool)
 	receiveFunc := func(message rabtap.TapMessage) error {
@@ -68,13 +70,13 @@ func TestCmdSub(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// create and bind queue
-	cmdQueueCreate(CmdQueueCreateArg{amqpURI: amqpURI,
+	cmdQueueCreate(CmdQueueCreateArg{amqpURL: amqpURL,
 		queue: testQueue, tlsConfig: tlsConfig})
-	defer cmdQueueRemove(amqpURI, testQueue, tlsConfig)
+	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig)
 
 	// subscribe to testQueue
 	go cmdSubscribe(ctx, CmdSubscribeArg{
-		amqpURI:            amqpURI,
+		amqpURL:            amqpURL,
 		queue:              testQueue,
 		tlsConfig:          tlsConfig,
 		messageReceiveFunc: receiveFunc})
@@ -87,7 +89,7 @@ func TestCmdSub(t *testing.T) {
 	cmdPublish(
 		ctx,
 		CmdPublishArg{
-			amqpURI:    amqpURI,
+			amqpURL:    amqpURL,
 			exchange:   &testExchange,
 			routingKey: &testKey,
 			tlsConfig:  tlsConfig,
@@ -120,11 +122,11 @@ func TestCmdSubIntegration(t *testing.T) {
 	testExchange := "" // default exchange
 
 	tlsConfig := &tls.Config{}
-	amqpURI := testcommon.IntegrationURIFromEnv()
+	amqpURL := testcommon.IntegrationURIFromEnv()
 
-	cmdQueueCreate(CmdQueueCreateArg{amqpURI: amqpURI,
+	cmdQueueCreate(CmdQueueCreateArg{amqpURL: amqpURL,
 		queue: testQueue, tlsConfig: tlsConfig})
-	defer cmdQueueRemove(amqpURI, testQueue, tlsConfig)
+	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig)
 
 	_, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
 	err := ch.Publish(
@@ -148,7 +150,7 @@ func TestCmdSubIntegration(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 	os.Args = []string{"rabtap", "sub",
-		"--uri", testcommon.IntegrationURIFromEnv(),
+		"--uri", amqpURL.String(),
 		testQueue,
 		"--format=raw",
 		"--no-color"}

@@ -3,11 +3,9 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"testing"
 
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -52,16 +50,4 @@ func TestFailOnError(t *testing.T) {
 	failOnError(nil, "test", exitFunc)
 	assert.False(t, exitFuncCalled)
 
-}
-
-func Example_startCmdInfo() {
-	// TODO move to cmd_info_test
-	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeEmpty)
-	defer mock.Close()
-
-	args, _ := ParseCommandLineArgs([]string{"info", "--api", mock.URL, "--no-color"})
-	startCmdInfo(context.TODO(), args, "http://rootnode")
-
-	// Output:
-	// http://rootnode (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 }

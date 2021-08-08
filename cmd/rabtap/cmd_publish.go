@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"net/url"
 	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -16,7 +17,7 @@ import (
 
 // CmdPublishArg contains arguments for the publish command
 type CmdPublishArg struct {
-	amqpURI    string
+	amqpURL    *url.URL
 	tlsConfig  *tls.Config
 	exchange   *string
 	routingKey *string
@@ -116,7 +117,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	errChan := make(chan error)
-	publisher := rabtap.NewAmqpPublish(cmd.amqpURI, cmd.tlsConfig, log)
+	publisher := rabtap.NewAmqpPublish(cmd.amqpURL, cmd.tlsConfig, log)
 	publishChannel := make(rabtap.PublishChannel)
 
 	delayFunc := func(first, second *RabtapPersistentMessage) {

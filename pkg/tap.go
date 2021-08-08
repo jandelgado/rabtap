@@ -7,6 +7,7 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"net/url"
 
 	uuid "github.com/google/uuid"
 	"github.com/streadway/amqp"
@@ -21,10 +22,10 @@ type AmqpTap struct {
 
 // NewAmqpTap returns a new AmqpTap object associated with the RabbitMQ
 // broker denoted by the uri parameter.
-func NewAmqpTap(uri string, tlsConfig *tls.Config, logger Logger) *AmqpTap {
+func NewAmqpTap(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpTap {
 	config := AmqpSubscriberConfig{Exclusive: true, AutoAck: true}
 	return &AmqpTap{
-		AmqpSubscriber: NewAmqpSubscriber(config, uri, tlsConfig, logger)}
+		AmqpSubscriber: NewAmqpSubscriber(config, url, tlsConfig, logger)}
 }
 
 func getTapExchangeNameForExchange(exchange, postfix string) string {
@@ -150,14 +151,13 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 		false,        // wait for response
 		amqp.Table{}); err != nil {
 
-		s.logger.Errorf("tap: bind to exchange %s failed with %v", exchangeName, err)
-
 		// bind failed, so we must also delete our tap-exchange since it
 		// will not be auto-deleted when no binding exists.
 		// TODO handle errors
 		_ = session.NewChannel()
-		err2 := RemoveExchange(session, tapExchangeName, false)
-		s.logger.Errorf("tap: delete of exchange %s failed with: %v", tapExchangeName, err2)
+		if err2 := RemoveExchange(session, tapExchangeName, false); err2 != nil {
+			s.logger.Errorf("failed to remove exchange %s", tapExchangeName)
+		}
 		return err
 	}
 	return nil

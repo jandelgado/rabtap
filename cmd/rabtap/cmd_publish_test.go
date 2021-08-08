@@ -5,10 +5,7 @@
 package main
 
 import (
-	"context"
-	"crypto/tls"
 	"errors"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -111,23 +108,6 @@ func TestPublishMessageStreamPropagatesMessageReadError(t *testing.T) {
 	assert.Equal(t, errors.New("error"), err)
 }
 
-func TestCmdPublishFailsWithInvaludBrokerURI(t *testing.T) {
-	ctx := context.Background()
-
-	tlsConfig := &tls.Config{}
-	dum := ""
-	args := CmdPublishArg{
-		amqpURI:    "invalid",
-		exchange:   &dum,
-		routingKey: &dum,
-		tlsConfig:  tlsConfig,
-		readerFunc: func() (RabtapPersistentMessage, bool, error) {
-			return RabtapPersistentMessage{}, false, io.EOF
-		}}
-	err := cmdPublish(ctx, args)
-	assert.NotNil(t, err)
-}
-
 func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 	// integrative test publishing a raw file
 
@@ -158,7 +138,7 @@ func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 	// execution: run publish command through call of main(), the actual
 	// message is in tmpfile.Name()
 	os.Args = []string{"rabtap", "pub",
-		"--uri", testcommon.IntegrationURIFromEnv(),
+		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		"--exchange=exchange",
 		tmpfile.Name(),
 		"--routingkey", routingKey}
@@ -244,7 +224,7 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 	// message is in tmpfile.Name(). We expect exchange and routingkey to
 	// be taken from the JSON metadata as they are not specified.
 	os.Args = []string{"rabtap", "pub",
-		"--uri", testcommon.IntegrationURIFromEnv(),
+		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		tmpfile.Name(),
 		"--format=json"}
 	main()
@@ -307,7 +287,7 @@ func TestCmdPublishFilesFromDirectory(t *testing.T) {
 	// message is read from the provided directory. We expect exchange and
 	// routingkey to be taken from the JSON metadata as they are not specified.
 	os.Args = []string{"rabtap", "pub",
-		"--uri", testcommon.IntegrationURIFromEnv(),
+		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		dir,
 		"--format=raw"}
 	main()

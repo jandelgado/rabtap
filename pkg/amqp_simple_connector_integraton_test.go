@@ -5,6 +5,7 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"net/url"
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
@@ -23,9 +24,11 @@ func TestSimpleAmqpConnector(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestSimpleAmqpConnectorWithError(t *testing.T) {
+func TestSimpleAmqpConnectorFailsOnConnectionError(t *testing.T) {
 	called := false
-	err := SimpleAmqpConnector("invalid_uri",
+
+	url, _ := url.Parse("amqp://localhost:1")
+	err := SimpleAmqpConnector(url,
 		&tls.Config{},
 		func(_ Session) error {
 			// should not be called.

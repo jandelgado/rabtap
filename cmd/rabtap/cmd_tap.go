@@ -22,7 +22,7 @@ func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig 
 	tapMessageChannel := make(rabtap.TapChannel)
 
 	for _, config := range tapConfig {
-		tap := rabtap.NewAmqpTap(config.AmqpURI, tlsConfig, log)
+		tap := rabtap.NewAmqpTap(config.AMQPURL, tlsConfig, log)
 		g.Go(func() error {
 			return tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel)
 		})

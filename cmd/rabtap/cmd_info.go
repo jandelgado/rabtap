@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"io"
+	"net/url"
 	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -12,7 +13,7 @@ import (
 
 // CmdInfoArg contains arguments for the info command
 type CmdInfoArg struct {
-	rootNode     string
+	rootNode     *url.URL
 	client       *rabtap.RabbitHTTPClient
 	treeConfig   BrokerInfoTreeBuilderConfig
 	renderConfig BrokerInfoRendererConfig

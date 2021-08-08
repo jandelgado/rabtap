@@ -109,12 +109,12 @@ func newDotRendererTpl() dotRendererTpl {
 	}
 }
 
-func (s brokerInfoRendererDot) renderRootNodeAsString(name string, children []dotNode, rabbitURL url.URL, overview rabtap.RabbitOverview) string {
+func (s brokerInfoRendererDot) renderRootNodeAsString(name string, children []dotNode, rabbitURL *url.URL, overview rabtap.RabbitOverview) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
-		URL      url.URL
+		URL      *url.URL
 		Overview rabtap.RabbitOverview
 	}{name, children, s.config, rabbitURL, overview}
 	funcMap := map[string]interface{}{"q": strconv.Quote}

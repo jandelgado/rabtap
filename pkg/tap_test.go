@@ -11,8 +11,6 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"log"
-	"os"
 	"testing"
 	"time"
 
@@ -42,7 +40,8 @@ func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 	tapExchangeName, tapQueueName string,
 	success chan<- int) *AmqpTap {
 
-	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log.New(os.Stderr, "", log.LstdFlags))
+	log := testcommon.NewTestLogger()
+	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	resultChannel := make(TapChannel)
 	// TODO cancel and return cancel func
 	ctx, cancel := context.WithCancel(context.Background())
@@ -209,7 +208,8 @@ func TestIntegrationTopicExchangeTapWildcard(t *testing.T) {
 func TestIntegrationInvalidExchange(t *testing.T) {
 
 	tapMessages := make(TapChannel)
-	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log.New(os.Stderr, "", log.LstdFlags))
+	log := testcommon.NewTestLogger()
+	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	ctx := context.Background()
 	err := tap.EstablishTap(
 		ctx,

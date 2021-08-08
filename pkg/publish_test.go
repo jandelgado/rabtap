@@ -12,8 +12,6 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"log"
-	"os"
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
@@ -31,7 +29,8 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 	conn, ch := testcommon.IntegrationTestConnection(t, "direct-exchange", "direct", 2, false)
 	defer conn.Close()
 
-	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log.New(os.Stderr, "", log.LstdFlags))
+	log := testcommon.NewTestLogger()
+	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	publishChannel := make(PublishChannel)
 	ctx := context.Background()
 	go publisher.EstablishConnection(ctx, publishChannel)
@@ -44,10 +43,8 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 			Publishing: &amqp.Publishing{Body: []byte("Hello")}}
 	}
 
-	log.Println("receiving message...")
 	doneChan := make(chan int)
 	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer", numPublishingMessages, "queue-1", doneChan)
 	numReceivedOriginal := <-doneChan
 	assert.Equal(t, numPublishingMessages, numReceivedOriginal)
-	log.Println("good bye.")
 }

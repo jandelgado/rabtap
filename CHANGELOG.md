@@ -6,6 +6,7 @@
 * fix: do not print messages to stdout in parallel, which can result in 
        garbled output when the queue is filled up and messages are read 
        at high frequency.
+* improved logging capabilities while reducing dependencies 
        
 ## v1.27 (2021-03-28)
 

@@ -5,6 +5,7 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -71,6 +72,8 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 
 		reliable := true
 
+		numPublished, numConfirmed, numReturned := 0, 0, 0
+
 		// errors receives channel errors (e.g. publishing to non-existant exchange)
 		errors := make(chan *amqp.Error, 1)
 		// return receivces unroutable messages back from the server
@@ -78,9 +81,11 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 		// confirms receives confirmations from the server
 		confirms := make(chan amqp.Confirmation, 1)
 
+		skipDefer := false
+
 		if reliable {
 			if err := session.Confirm(false); err != nil {
-				s.logger.Printf("WARNING Channel could not be put into confirm mode: %s", err)
+				s.logger.Errorf("Channel could not be put into confirm mode: %s", err)
 			} else {
 
 				errors = session.Channel.NotifyClose(errors)
@@ -88,32 +93,57 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 				session.Confirm(false)
 				confirms = session.NotifyPublish(confirms)
 
-				// wait a while for outstanding confirmations
+				// wait a while for outstanding errors and returned messages
+				// since these can arrive after we finished publishing.
+
+				// TODO when an error was detected on the errors channel (event loop),
+				//      then the defer needs not to be run (???)
 				defer func() {
-					s.logger.Printf("waiting for confirms & returns...")
-					timeout := time.After(time.Second * 2)
+
+					if skipDefer {
+						s.logger.Debugf("skipping defer")
+						return // no need to wait for events
+					}
+
+					s.logger.Debugf("waiting for confirms & returns...")
+					timeout := time.After(time.Second * 1)
+					// wait for pending returned messages from the broker, whem
+					// e.g. a message could not be routed. in this case the
+					// message WILL be confirmed (ACK=true), but an async
+					// return message will be send, for which we wait here.
 					for {
+						// we got a feedback for all messages  -> no need to
+						// further wait for feedback from the broker
+						// if numPublished == (numReturned + numConfirmed) {
+						//     return
+						// }
+
 						select {
 						case <-timeout:
-							s.logger.Printf("Done waiting for confirmations & returns")
 							return
 
 						case err, more := <-errors:
 							if !more {
-								continue
+								continue //return // error chan closed -> channel closed -> no need to wait here
 							}
-							s.logger.Printf("y publishing error:%+v", err)
+							s.logger.Errorf("y publishing error: %v", err)
+
 						case returned, more := <-returns:
 							if !more {
 								continue
 							}
-							s.logger.Printf("y message returned by server: %s -> %s: %s", returned.Exchange, returned.RoutingKey, returned.ReplyText)
+							s.logger.Errorf("y server returned message for exchange %s with routingkey %s: %s",
+								returned.Exchange, returned.RoutingKey, returned.ReplyText)
+							numReturned++
 
-						case confirmed, more := <-confirms:
-							if !more {
-								continue
-							}
-							s.logger.Printf("y delivery with delivery tag: %d - %v", confirmed.DeliveryTag, confirmed.Ack)
+							// case confirmed, more := <-confirms:
+							//     if !more {
+							//         continue
+							//     }
+							//     s.logger.Debugf("y CONFIRM %+v", confirmed)
+							//     if !confirmed.Ack {
+							//         s.logger.Errorf("y delivery with delivery tag: %d not ACKed", confirmed.DeliveryTag)
+							//     }
 						}
 					}
 				}()
@@ -124,20 +154,31 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 		for {
 			select {
 			case err := <-errors:
-				s.logger.Printf("x publishing error:%+v", err)
+				// all errors render the channel invalid, so reconnect
+				s.logger.Errorf("x publishing error (async): %v", err)
+				skipDefer = true
+				return doReconnect, fmt.Errorf("publishing error (async) %w", err)
 
-			case returned := <-returns:
-				s.logger.Printf("x message returned by server: %s -> %s: %s", returned.Exchange, returned.RoutingKey, returned.ReplyText)
+			case returned, more := <-returns:
+				if more {
+					numReturned++
+					s.logger.Errorf("x server returned message for exchange %s with routingkey %s: %s",
+						returned.Exchange, returned.RoutingKey, returned.ReplyText)
+				}
 
-			case confirmed := <-confirms:
-				s.logger.Printf("x delivery with delivery tag: %d - %v", confirmed.DeliveryTag, confirmed.Ack)
+			// case confirmed := <-confirms:
+			//     // TODO keep track of Acked/Nacked messages
+			//     s.logger.Debugf("x CONFIRM %+v", confirmed)
+			//     if !confirmed.Ack {
+			//         s.logger.Errorf("x delivery with delivery tag: %d not ACKed", confirmed.DeliveryTag)
+			//     }
 
 			case message, more := <-publishChannel:
 				if !more {
-					s.logger.Infof("publishing channel closed.")
+					s.logger.Infof("x publishing channel closed.")
 					return doNotReconnect, nil
 				}
-				//TODO need to add notification hdlr to detect pub errors
+
 				err := session.Publish(message.Exchange,
 					message.RoutingKey,
 					reliable, // not mandatory	// ENABLE RETURNS
@@ -145,9 +186,24 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					*message.Publishing)
 
 				if err != nil {
-					s.logger.Errorf("publishing error %w", err)
+					s.logger.Errorf("x publishing error %v, reconnecting", err)
 					// error publishing message - reconnect.
 					return doReconnect, err
+				}
+				numPublished++
+
+				// wait for the confirmation before publishing a new message
+				select {
+				case <-time.After(2 * time.Second): // TODO MEMORY LEAK when not firing FIXME
+					s.logger.Errorf("x no confirmation for TODO")
+				case confirmed := <-confirms:
+					numConfirmed++
+					// TODO keep track of Acked/Nacked messages
+					if !confirmed.Ack {
+						s.logger.Errorf("x delivery with delivery tag #%d was not ACKed by the server", confirmed.DeliveryTag)
+					} else {
+						s.logger.Debugf("x delivery with delivery tag #%d was ACKed by the server", confirmed.DeliveryTag)
+					}
 				}
 
 			case <-ctx.Done():

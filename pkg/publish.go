@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2021 Jan Delgado
 
 package rabtap
 
@@ -27,35 +27,28 @@ type PublishChannel chan *PublishMessage
 type AmqpPublish struct {
 	logger     Logger
 	connection *AmqpConnector
+	mandatory  bool
+	reliable   bool
 }
 
 // NewAmqpPublish returns a new AmqpPublish object associated with the RabbitMQ
 // broker denoted by the uri parameter.
-func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpPublish {
+func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
+	mandatory, reliable bool, logger Logger) *AmqpPublish {
 	return &AmqpPublish{
 		connection: NewAmqpConnector(url, tlsConfig, logger),
+		mandatory:  mandatory,
+		reliable:   reliable,
 		logger:     logger}
 }
-
-// One would typically keep a channel of publishings, a sequence number, and a
-// set of unacknowledged sequence numbers and loop until the publishing channel
-// is closed.
-// func confirmOne(confirms <-chan amqp.Confirmation) {
-//     log.Printf("waiting for confirmation of one publishing")
-
-//     if confirmed := <-confirms; confirmed.Ack {
-//         log.Printf("confirmed delivery with delivery tag: %d", confirmed.DeliveryTag)
-//     } else {
-//         log.Printf("failed delivery of delivery tag: %d", confirmed.DeliveryTag)
-//     }
-// }
 
 // createWorkerFunc receives messages on the provided channel and publishes
 // the messages on an rabbitmq exchange
 // TODO retry on failed publish
 // TODO publish notification handler to detect problems
 
-// Mandatory flag:
+// Mandatory flag
+// --------------
 // When a published message cannot be routed to any queue (e.g. because there are
 // no bindings defined for the target exchange), and the publisher set the
 // mandatory message property to false (this is the default), the message is
@@ -66,112 +59,73 @@ func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpPub
 // publisher must have a returned message handler set up in order to handle the
 //
 // See https://www.rabbitmq.com/publishers.html#unroutable
+//
+// The immedeate flag is not supported since RabbitMQ 3.0.
+//
 func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorkerFunc {
 
 	return func(ctx context.Context, session Session) (ReconnectAction, error) {
 
-		reliable := true
-
-		numPublished, numConfirmed, numReturned := 0, 0, 0
-
 		// errors receives channel errors (e.g. publishing to non-existant exchange)
-		errors := make(chan *amqp.Error, 1)
+		errors := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
 		// return receivces unroutable messages back from the server
-		returns := make(chan amqp.Return, 1)
-		// confirms receives confirmations from the server
-		confirms := make(chan amqp.Confirmation, 1)
+		returns := session.NotifyReturn(make(chan amqp.Return))
+		// confirms receives confirmations from the server (if enabled below)
+		confirms := session.NotifyPublish(make(chan amqp.Confirmation, 1))
 
-		skipDefer := false
-
-		if reliable {
+		if s.reliable {
 			if err := session.Confirm(false); err != nil {
 				s.logger.Errorf("Channel could not be put into confirm mode: %s", err)
-			} else {
-
-				errors = session.Channel.NotifyClose(errors)
-				returns = session.NotifyReturn(returns)
-				session.Confirm(false)
-				confirms = session.NotifyPublish(confirms)
-
-				// wait a while for outstanding errors and returned messages
-				// since these can arrive after we finished publishing.
-
-				// TODO when an error was detected on the errors channel (event loop),
-				//      then the defer needs not to be run (???)
-				defer func() {
-
-					if skipDefer {
-						s.logger.Debugf("skipping defer")
-						return // no need to wait for events
-					}
-
-					s.logger.Debugf("waiting for confirms & returns...")
-					timeout := time.After(time.Second * 1)
-					// wait for pending returned messages from the broker, whem
-					// e.g. a message could not be routed. in this case the
-					// message WILL be confirmed (ACK=true), but an async
-					// return message will be send, for which we wait here.
-					for {
-						// we got a feedback for all messages  -> no need to
-						// further wait for feedback from the broker
-						// if numPublished == (numReturned + numConfirmed) {
-						//     return
-						// }
-
-						select {
-						case <-timeout:
-							return
-
-						case err, more := <-errors:
-							if !more {
-								continue //return // error chan closed -> channel closed -> no need to wait here
-							}
-							s.logger.Errorf("y publishing error: %v", err)
-
-						case returned, more := <-returns:
-							if !more {
-								continue
-							}
-							s.logger.Errorf("y server returned message for exchange %s with routingkey %s: %s",
-								returned.Exchange, returned.RoutingKey, returned.ReplyText)
-							numReturned++
-
-							// case confirmed, more := <-confirms:
-							//     if !more {
-							//         continue
-							//     }
-							//     s.logger.Debugf("y CONFIRM %+v", confirmed)
-							//     if !confirmed.Ack {
-							//         s.logger.Errorf("y delivery with delivery tag: %d not ACKed", confirmed.DeliveryTag)
-							//     }
-						}
-					}
-				}()
-
 			}
 		}
+		// wait a while for outstanding errors and returned messages
+		// since these can arrive after we finished publishing.
+
+		// TODO when an error was detected on the errors channel (event loop),
+		//      then the defer needs not to be run (???)
+		defer func() {
+
+			s.logger.Debugf("waiting for confirms & returns... ")
+			timeout := time.After(time.Second * 1) // TODO config/const
+
+			// wait for pending returned messages from the broker, whem
+			// e.g. a message could not be routed. in this case the
+			// message WILL be confirmed (ACK=true), but an async
+			// return message will be send, for which we wait here.
+			for {
+				select {
+				case <-timeout:
+					return
+
+				case returned, more := <-returns:
+					if !more {
+						continue
+					}
+					s.logger.Errorf("y server returned message for exchange %s with routingkey %s: %s",
+						returned.Exchange, returned.RoutingKey, returned.ReplyText)
+
+				// these events singal closing of the channel
+				case err, more := <-errors:
+					if !more {
+						continue //return // error chan closed -> channel closed -> no need to wait here
+					}
+					s.logger.Errorf("y channel error: %v", err)
+				}
+			}
+		}()
 
 		for {
 			select {
 			case err := <-errors:
 				// all errors render the channel invalid, so reconnect
-				s.logger.Errorf("x publishing error (async): %v", err)
-				skipDefer = true
-				return doReconnect, fmt.Errorf("publishing error (async) %w", err)
+				s.logger.Errorf("x channel error (async): %v", err)
+				return doReconnect, fmt.Errorf("channel error (async) %w", err)
 
 			case returned, more := <-returns:
 				if more {
-					numReturned++
 					s.logger.Errorf("x server returned message for exchange %s with routingkey %s: %s",
 						returned.Exchange, returned.RoutingKey, returned.ReplyText)
 				}
-
-			// case confirmed := <-confirms:
-			//     // TODO keep track of Acked/Nacked messages
-			//     s.logger.Debugf("x CONFIRM %+v", confirmed)
-			//     if !confirmed.Ack {
-			//         s.logger.Errorf("x delivery with delivery tag: %d not ACKed", confirmed.DeliveryTag)
-			//     }
 
 			case message, more := <-publishChannel:
 				if !more {
@@ -179,30 +133,34 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					return doNotReconnect, nil
 				}
 
-				err := session.Publish(message.Exchange,
+				if err := session.Publish(message.Exchange,
 					message.RoutingKey,
-					reliable, // not mandatory	// ENABLE RETURNS
-					false,    //true, // not immeadiate
-					*message.Publishing)
+					s.mandatory,
+					// immeadiate flag was removed with RabbitMQ 3, see
+					// https://blog.rabbitmq.com/posts/2012/11/breaking-things-with-rabbitmq-3-0
+					false,
+					*message.Publishing); err != nil {
 
-				if err != nil {
 					s.logger.Errorf("x publishing error %v, reconnecting", err)
-					// error publishing message - reconnect.
-					return doReconnect, err
-				}
-				numPublished++
+				} else {
 
-				// wait for the confirmation before publishing a new message
-				select {
-				case <-time.After(2 * time.Second): // TODO MEMORY LEAK when not firing FIXME
-					s.logger.Errorf("x no confirmation for TODO")
-				case confirmed := <-confirms:
-					numConfirmed++
-					// TODO keep track of Acked/Nacked messages
-					if !confirmed.Ack {
-						s.logger.Errorf("x delivery with delivery tag #%d was not ACKed by the server", confirmed.DeliveryTag)
-					} else {
-						s.logger.Debugf("x delivery with delivery tag #%d was ACKed by the server", confirmed.DeliveryTag)
+					// wait for the confirmation before publishing a new message
+					if s.reliable {
+						select {
+						case <-time.After(2 * time.Second): // TODO MEMORY LEAK when not firing FIXME
+							s.logger.Errorf("x no confirmation for %s %s", message.Exchange, message.RoutingKey)
+						case confirmed := <-confirms:
+							// TODO keep track of Acked/Nacked messages
+							if !confirmed.Ack {
+								s.logger.Errorf("x delivery to exchange %s with routingkey %s and delivery tag #%d was not ACKed by the server",
+									message.Exchange, message.RoutingKey, confirmed.DeliveryTag)
+							} else {
+								s.logger.Debugf("x delivery with delivery tag #%d was ACKed by the server",
+									confirmed.DeliveryTag)
+							}
+						case <-ctx.Done():
+							return doNotReconnect, nil
+						}
 					}
 				}
 

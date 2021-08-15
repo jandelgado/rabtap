@@ -6,4 +6,4 @@ assets/
 cmd/testgen/testgen
 cmd/rabtap/main
 *.out
-
+messages.json

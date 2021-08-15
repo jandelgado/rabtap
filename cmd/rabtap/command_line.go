@@ -37,7 +37,7 @@ Usage:
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
-              [--delay=DELAY | --speed=FACTOR] [-jkv]
+              [--reliable] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
@@ -82,11 +82,12 @@ Arguments and options:
                       * for info command: controls generated output format. Valid 
                         options are: "text", "dot". Default: text
  -h, --help           print this help.
- -j, --json           Deprecated. Use "--format json" instead.
+ -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
+ --mandatory          enable mandatory publishing.
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR).
@@ -95,6 +96,7 @@ Arguments and options:
                       when the channel is closed.
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
+ --reliable           enable publisher confirms and wait for confirmations.
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON 
 					  message format).
@@ -188,6 +190,8 @@ type CommandLineArgs struct {
 	Source              *string        // pub: file to send
 	Speed               float64        // pub: speed factor
 	Delay               *time.Duration // pub: fixed delay in ms
+	Reliable            bool           // pub: wait for confirmations
+	Mandatory           bool           // pub: set mandatory flag
 	AutoAck             bool           // sub: auto ack enabled
 	QueueName           string         // queue create, remove, bind, sub
 	QueueBindingKey     string         // queue bind
@@ -206,6 +210,7 @@ type CommandLineArgs struct {
 	Silent              bool           // suppress message printing
 	ConnName            string         // conn: name of connection
 	CloseReason         string         // conn: reason of close
+
 }
 
 // getAMQPURL returns the ith entry of amqpURLs array or the value
@@ -418,6 +423,8 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:        PubCmd,
+		Reliable:   args["--reliable"].(bool),
+		Mandatory:  args["--mandatory"].(bool),
 		commonArgs: parseCommonArgs(args)}
 
 	format, err := parsePubSubFormatArg(args)

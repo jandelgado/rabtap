@@ -59,6 +59,9 @@ func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) erro
 		}
 		s.logger.Debugf("got new amqp session ...")
 		action, err := worker(ctx, sub)
+		if err != nil {
+			s.logger.Errorf("worker failed with %v", err)
+		}
 		if !action.shouldReconnect() {
 			return err
 		}

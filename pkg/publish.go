@@ -99,7 +99,7 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					if !more {
 						continue
 					}
-					s.logger.Errorf("server returned message for exchange %s with routingkey %s: %s",
+					s.logger.Errorf("server returned message for exchange '%s' with routingkey '%s': %s",
 						returned.Exchange, returned.RoutingKey, returned.ReplyText)
 
 				// these events singal closing of the channel
@@ -116,12 +116,12 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 			select {
 			case err := <-errors:
 				// all errors render the channel invalid, so reconnect
-				s.logger.Errorf("channel error (async): %v", err)
-				return doReconnect, fmt.Errorf("channel error (async) %w", err)
+				s.logger.Errorf("channel error: %v", err)
+				return doReconnect, fmt.Errorf("channel error: %w", err)
 
 			case returned, more := <-returns:
 				if more {
-					s.logger.Errorf("server returned message for exchange %s with routingkey %s: %s",
+					s.logger.Errorf("server returned message for exchange '%s' with routingkey '%s': %s",
 						returned.Exchange, returned.RoutingKey, returned.ReplyText)
 				}
 
@@ -145,10 +145,10 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					if s.confirms {
 						select {
 						case <-time.After(2 * time.Second): // TODO MEMORY LEAK when not firing FIXME
-							s.logger.Errorf("no confirmation for %s %s", message.Exchange, message.RoutingKey)
+							s.logger.Errorf("no confirmation for publish to '%s' with routing key '%s'", message.Exchange, message.RoutingKey)
 						case confirmed := <-confirms:
 							if !confirmed.Ack {
-								s.logger.Errorf("delivery to exchange %s with routingkey %s and delivery tag #%d was not ACKed by the server",
+								s.logger.Errorf("delivery to exchange '%s' with routingkey '%s' and delivery tag #%d was not ACKed by the server",
 									message.Exchange, message.RoutingKey, confirmed.DeliveryTag)
 							} else {
 								s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",

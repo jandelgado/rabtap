@@ -124,6 +124,9 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 	publishChannel := make(rabtap.PublishChannel)
 
 	delayFunc := func(first, second *RabtapPersistentMessage) {
+		if first == nil || second == nil {
+			return
+		}
 		delay := durationBetweenMessages(first, second, cmd.speed, cmd.fixedDelay)
 		log.Infof("sleeping for %s", delay)
 		time.Sleep(delay) // TODO make interuptable

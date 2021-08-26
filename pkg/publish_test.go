@@ -31,8 +31,8 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 
 	log := testcommon.NewTestLogger()
 	mandatory := true
-	reliable := true
-	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, mandatory, reliable, log)
+	confirms := true
+	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, mandatory, confirms, log)
 	publishChannel := make(PublishChannel)
 	ctx := context.Background()
 	go publisher.EstablishConnection(ctx, publishChannel)

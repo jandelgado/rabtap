@@ -24,7 +24,7 @@ type CmdPublishArg struct {
 	readerFunc MessageReaderFunc
 	speed      float64
 	fixedDelay *time.Duration
-	reliable   bool
+	confirms   bool
 	mandatory  bool
 }
 
@@ -120,7 +120,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 
 	errChan := make(chan error)
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURL,
-		cmd.tlsConfig, cmd.mandatory, cmd.reliable, log)
+		cmd.tlsConfig, cmd.mandatory, cmd.confirms, log)
 	publishChannel := make(rabtap.PublishChannel)
 
 	delayFunc := func(first, second *RabtapPersistentMessage) {

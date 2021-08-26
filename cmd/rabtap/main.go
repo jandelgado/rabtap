@@ -142,7 +142,7 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		speed:      args.Speed,
 		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		mandatory:  args.Mandatory,
-		reliable:   args.Reliable,
+		confirms:   args.Confirms,
 		readerFunc: readerFunc})
 	failOnError(err, "error publishing message", os.Exit)
 }

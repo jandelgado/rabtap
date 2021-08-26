@@ -1,7 +1,7 @@
 // command line parsing for rabtap
 // TODO split in per-command parsers
 // TODO use docopt's bind feature to simplify mappings
-// Copyright (C) 2017-2019 Jan Delgado
+// Copyright (C) 2017-2021 Jan Delgado
 
 package main
 
@@ -37,7 +37,7 @@ Usage:
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
-              [--reliable] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
+              [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
@@ -87,7 +87,7 @@ Arguments and options:
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
- --mandatory          enable mandatory publishing.
+ --mandatory          enable mandatory publishing (messages must be delivered to queue).
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (also environment variable NO_COLOR).
@@ -96,7 +96,7 @@ Arguments and options:
                       when the channel is closed.
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
- --reliable           enable publisher confirms and wait for confirmations.
+ --confirms           enable publisher confirms and wait for confirmations.
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON 
 					  message format).
@@ -190,7 +190,7 @@ type CommandLineArgs struct {
 	Source              *string        // pub: file to send
 	Speed               float64        // pub: speed factor
 	Delay               *time.Duration // pub: fixed delay in ms
-	Reliable            bool           // pub: wait for confirmations
+	Confirms            bool           // pub: wait for confirmations
 	Mandatory           bool           // pub: set mandatory flag
 	AutoAck             bool           // sub: auto ack enabled
 	QueueName           string         // queue create, remove, bind, sub
@@ -423,7 +423,7 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:        PubCmd,
-		Reliable:   args["--reliable"].(bool),
+		Confirms:   args["--confirms"].(bool),
 		Mandatory:  args["--mandatory"].(bool),
 		commonArgs: parseCommonArgs(args)}
 

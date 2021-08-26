@@ -28,25 +28,23 @@ type AmqpPublish struct {
 	logger     Logger
 	connection *AmqpConnector
 	mandatory  bool
-	reliable   bool
+	confirms   bool
 }
 
 // NewAmqpPublish returns a new AmqpPublish object associated with the RabbitMQ
 // broker denoted by the uri parameter.
 func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
-	mandatory, reliable bool, logger Logger) *AmqpPublish {
+	mandatory, confirms bool, logger Logger) *AmqpPublish {
 	return &AmqpPublish{
 		connection: NewAmqpConnector(url, tlsConfig, logger),
 		mandatory:  mandatory,
-		reliable:   reliable,
+		confirms:   confirms,
 		logger:     logger}
 }
 
-// createWorkerFunc receives messages on the provided channel and publishes
-// the messages on an rabbitmq exchange
-// TODO retry on failed publish
-// TODO publish notification handler to detect problems
-
+// createWorkerFunc creates a function that receives messages on the provided
+// channel and publishes the messages on an rabbitmq exchange
+//
 // Mandatory flag:
 // When a published message cannot be routed to any queue (e.g. because there are
 // no bindings defined for the target exchange), and the publisher set the
@@ -59,7 +57,8 @@ func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
 //
 // See https://www.rabbitmq.com/publishers.html#unroutable
 //
-// The immedeate flag is not supported since RabbitMQ 3.0.
+// The immedeate flag is not supported since RabbitMQ 3.0, see
+// https://blog.rabbitmq.com/posts/2012/11/breaking-things-with-rabbitmq-3-0
 //
 func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorkerFunc {
 
@@ -72,7 +71,7 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 		// confirms receives confirmations from the server (if enabled below)
 		confirms := session.NotifyPublish(make(chan amqp.Confirmation, 1))
 
-		if s.reliable {
+		if s.confirms {
 			if err := session.Confirm(false); err != nil {
 				s.logger.Errorf("Channel could not be put into confirm mode: %s", err)
 			}
@@ -100,15 +99,15 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					if !more {
 						continue
 					}
-					s.logger.Errorf("y server returned message for exchange %s with routingkey %s: %s",
+					s.logger.Errorf("server returned message for exchange %s with routingkey %s: %s",
 						returned.Exchange, returned.RoutingKey, returned.ReplyText)
 
 				// these events singal closing of the channel
 				case err, more := <-errors:
 					if !more {
-						continue //return // error chan closed -> channel closed -> no need to wait here
+						continue
 					}
-					s.logger.Errorf("y channel error: %v", err)
+					s.logger.Errorf("channel error: %v", err)
 				}
 			}
 		}()
@@ -117,44 +116,42 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 			select {
 			case err := <-errors:
 				// all errors render the channel invalid, so reconnect
-				s.logger.Errorf("x channel error (async): %v", err)
+				s.logger.Errorf("channel error (async): %v", err)
 				return doReconnect, fmt.Errorf("channel error (async) %w", err)
 
 			case returned, more := <-returns:
 				if more {
-					s.logger.Errorf("x server returned message for exchange %s with routingkey %s: %s",
+					s.logger.Errorf("server returned message for exchange %s with routingkey %s: %s",
 						returned.Exchange, returned.RoutingKey, returned.ReplyText)
 				}
 
 			case message, more := <-publishChannel:
 				if !more {
-					s.logger.Infof("x publishing channel closed.")
+					s.logger.Debugf("publishing channel closed.")
 					return doNotReconnect, nil
 				}
 
 				if err := session.Publish(message.Exchange,
 					message.RoutingKey,
 					s.mandatory,
-					// immeadiate flag was removed with RabbitMQ 3, see
-					// https://blog.rabbitmq.com/posts/2012/11/breaking-things-with-rabbitmq-3-0
+					// immeadiate flag was removed with RabbitMQ 3
 					false,
 					*message.Publishing); err != nil {
 
-					s.logger.Errorf("x publishing error %v, reconnecting", err)
+					s.logger.Errorf("publishing error %v, reconnecting", err)
 				} else {
 
 					// wait for the confirmation before publishing a new message
-					if s.reliable {
+					if s.confirms {
 						select {
 						case <-time.After(2 * time.Second): // TODO MEMORY LEAK when not firing FIXME
-							s.logger.Errorf("x no confirmation for %s %s", message.Exchange, message.RoutingKey)
+							s.logger.Errorf("no confirmation for %s %s", message.Exchange, message.RoutingKey)
 						case confirmed := <-confirms:
-							// TODO keep track of Acked/Nacked messages
 							if !confirmed.Ack {
-								s.logger.Errorf("x delivery to exchange %s with routingkey %s and delivery tag #%d was not ACKed by the server",
+								s.logger.Errorf("delivery to exchange %s with routingkey %s and delivery tag #%d was not ACKed by the server",
 									message.Exchange, message.RoutingKey, confirmed.DeliveryTag)
 							} else {
-								s.logger.Debugf("x delivery with delivery tag #%d was ACKed by the server",
+								s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",
 									confirmed.DeliveryTag)
 							}
 						case <-ctx.Done():

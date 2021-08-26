@@ -320,7 +320,7 @@ func TestCliPubCmdFromFileMinimalOptsSet(t *testing.T) {
 	assert.Equal(t, "raw", args.Format)
 	assert.Nil(t, args.Delay)
 	assert.Equal(t, 1., args.Speed)
-	assert.False(t, args.Reliable)
+	assert.False(t, args.Confirms)
 	assert.False(t, args.Mandatory)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
@@ -329,7 +329,7 @@ func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"pub", "--uri=uri", "--exchange=exchange", "file",
 			"--routingkey=key", "--delay=5s", "--format=json",
-			"--reliable", "--mandatory"})
+			"--confirms", "--mandatory"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
@@ -340,7 +340,7 @@ func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	assert.Equal(t, "json", args.Format)
 	assert.Equal(t, 5*time.Second, *args.Delay)
 	assert.Equal(t, 1., args.Speed)
-	assert.True(t, args.Reliable)
+	assert.True(t, args.Confirms)
 	assert.True(t, args.Mandatory)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)

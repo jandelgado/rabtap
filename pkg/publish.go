@@ -47,13 +47,12 @@ func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
 // TODO retry on failed publish
 // TODO publish notification handler to detect problems
 
-// Mandatory flag
-// --------------
+// Mandatory flag:
 // When a published message cannot be routed to any queue (e.g. because there are
 // no bindings defined for the target exchange), and the publisher set the
 // mandatory message property to false (this is the default), the message is
 // discarded or republished to an alternate exchange, if any.
-
+//
 // When a published message cannot be routed to any queue, and the publisher set
 // the mandatory message property to true, the message will be returned to it. The
 // publisher must have a returned message handler set up in order to handle the

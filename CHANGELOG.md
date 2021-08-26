@@ -1,20 +1,22 @@
 
 # Changelog for rabtap
 
-## v1.28 (2021-08-xx)
+## v1.28 (2021-08-26)
 
 * fix: do not print messages to stdout in parallel, which can result in 
        garbled output when the queue is filled up and messages are read 
        at high frequency.
 * new: listen for channel errors and print an error when a message is e.g. 
   published to a non-existing exchange.
-* new: `--reliable` option for `pub` command: wait for publisher confirmations
+* new: `--confirms` option for `pub` command: wait for publisher confirmations
   from the server and log an error if a confirmation is negative or not
   received. 
 * new: `--mandatory` option for `pub` command: publish message with mandatory
   flag set. If set and a message can not be delivered to a queue, the server
-  returns the message and rabtap will print and error when the returned message
+  returns the message and rabtap will log error when the returned message
   is received (e.g. unroutable messages)
+* new: listen for channel close events messages by the broker (e.g. 
+  when publishing to an non-existant exchange)
 * improved logging capabilities while reducing dependencies 
        
 ## v1.27 (2021-03-28)

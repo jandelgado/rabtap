@@ -31,6 +31,51 @@ type AmqpPublish struct {
 	confirms   bool
 }
 
+type PublishErrorReason int
+
+const (
+	PublishErrorAckTimeout PublishErrorReason = iota
+	PublishErrorNack
+	PublishErrorPublishFailed
+	PublishErrorReturned
+	PublishErrorChannelError
+)
+
+// PublishError is sent back trough the error channel when there are problems
+// during the publishing of messages
+type PublishError struct {
+	Reason PublishErrorReason
+	// Publishing stores the original message, if available (AckTimeout, Nack,
+	// PublishFailed)
+	Message *PublishMessage
+	// ReturnedMessage stores the returned message in case of PublishErrorReturned
+	ReturnedMessage *amqp.Return
+	// Cause holds the error when a ChannelError happened
+	Cause error
+}
+
+type PublishErrorChannel chan *PublishError
+
+func (s *PublishError) Error() string {
+	switch s.Reason {
+	case PublishErrorAckTimeout:
+		return fmt.Sprintf("timeout waiting for ACK publishing to exchange '%s' with routingkey '%s'",
+			s.Message.Exchange, s.Message.RoutingKey)
+	case PublishErrorNack:
+		return fmt.Sprintf("NACK from server publishing to exchange '%s' with routingkey '%s'",
+			s.Message.Exchange, s.Message.RoutingKey)
+	case PublishErrorPublishFailed:
+		return fmt.Sprintf("publish to exchange '%s' with routingkey '%s' failed: %s",
+			s.Message.Exchange, s.Message.RoutingKey, s.Cause)
+	case PublishErrorReturned:
+		return fmt.Sprintf("server returned message for exchange '%s' with routingkey '%s': %s",
+			s.ReturnedMessage.Exchange, s.ReturnedMessage.RoutingKey, s.ReturnedMessage.ReplyText)
+	case PublishErrorChannelError:
+		return fmt.Sprintf("channel error: %s", s.Cause)
+	}
+	return "unexpected error"
+}
+
 // NewAmqpPublish returns a new AmqpPublish object associated with the RabbitMQ
 // broker denoted by the uri parameter.
 func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
@@ -60,7 +105,9 @@ func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
 // The immedeate flag is not supported since RabbitMQ 3.0, see
 // https://blog.rabbitmq.com/posts/2012/11/breaking-things-with-rabbitmq-3-0
 //
-func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorkerFunc {
+func (s *AmqpPublish) createWorkerFunc(
+	publishCh PublishChannel,
+	errorCh PublishErrorChannel) AmqpWorkerFunc {
 
 	return func(ctx context.Context, session Session) (ReconnectAction, error) {
 
@@ -99,15 +146,14 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 					if !more {
 						continue
 					}
-					s.logger.Errorf("server returned message for exchange '%s' with routingkey '%s': %s",
-						returned.Exchange, returned.RoutingKey, returned.ReplyText)
+					errorCh <- &PublishError{Reason: PublishErrorReturned, ReturnedMessage: &returned}
 
-				// these events singal closing of the channel
+				// these events singal closing of the channel TODO relevant here?
 				case err, more := <-errors:
 					if !more {
 						continue
 					}
-					s.logger.Errorf("channel error: %v", err)
+					errorCh <- &PublishError{Reason: PublishErrorChannelError, Cause: err}
 				}
 			}
 		}()
@@ -116,40 +162,38 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 			select {
 			case err := <-errors:
 				// all errors render the channel invalid, so reconnect
-				s.logger.Errorf("channel error: %v", err)
+				errorCh <- &PublishError{Reason: PublishErrorChannelError, Cause: err}
 				return doReconnect, fmt.Errorf("channel error: %w", err)
 
 			case returned, more := <-returns:
 				if more {
-					s.logger.Errorf("server returned message for exchange '%s' with routingkey '%s': %s",
-						returned.Exchange, returned.RoutingKey, returned.ReplyText)
+					errorCh <- &PublishError{Reason: PublishErrorReturned, ReturnedMessage: &returned}
 				}
 
-			case message, more := <-publishChannel:
+			case message, more := <-publishCh:
 				if !more {
 					s.logger.Debugf("publishing channel closed.")
 					return doNotReconnect, nil
 				}
 
-				if err := session.Publish(message.Exchange,
+				err := session.Publish(message.Exchange,
 					message.RoutingKey,
 					s.mandatory,
-					// immeadiate flag was removed with RabbitMQ 3
-					false,
-					*message.Publishing); err != nil {
+					false, // immeadiate flag was removed with RabbitMQ 3
+					*message.Publishing)
 
-					s.logger.Errorf("publishing error %v, reconnecting", err)
+				if err != nil {
+					errorCh <- &PublishError{Reason: PublishErrorPublishFailed, Message: message, Cause: err}
 				} else {
 
 					// wait for the confirmation before publishing a new message
 					if s.confirms {
 						select {
 						case <-time.After(2 * time.Second): // TODO MEMORY LEAK when not firing FIXME
-							s.logger.Errorf("no confirmation for publish to '%s' with routing key '%s'", message.Exchange, message.RoutingKey)
+							errorCh <- &PublishError{Reason: PublishErrorAckTimeout, Message: message}
 						case confirmed := <-confirms:
 							if !confirmed.Ack {
-								s.logger.Errorf("delivery to exchange '%s' with routingkey '%s' and delivery tag #%d was not ACKed by the server",
-									message.Exchange, message.RoutingKey, confirmed.DeliveryTag)
+								errorCh <- &PublishError{Reason: PublishErrorNack, Message: message}
 							} else {
 								s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",
 									confirmed.DeliveryTag)
@@ -169,6 +213,9 @@ func (s *AmqpPublish) createWorkerFunc(publishChannel PublishChannel) AmqpWorker
 }
 
 // EstablishConnection sets up the connection to the broker
-func (s *AmqpPublish) EstablishConnection(ctx context.Context, publishChannel PublishChannel) error {
-	return s.connection.Connect(ctx, s.createWorkerFunc(publishChannel))
+func (s *AmqpPublish) EstablishConnection(
+	ctx context.Context,
+	publishChannel PublishChannel,
+	errorChannel PublishErrorChannel) error {
+	return s.connection.Connect(ctx, s.createWorkerFunc(publishChannel, errorChannel))
 }

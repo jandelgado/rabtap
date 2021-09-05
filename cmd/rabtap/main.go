@@ -144,7 +144,7 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		mandatory:  args.Mandatory,
 		confirms:   args.Confirms,
 		readerFunc: readerFunc})
-	failOnError(err, "error publishing message", os.Exit)
+	failOnError(err, "publish", os.Exit)
 }
 
 func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {

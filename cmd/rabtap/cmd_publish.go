@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net/url"
 	"time"
@@ -77,30 +78,32 @@ func selectOptionalOrDefault(optionalStr *string, defaultStr string) string {
 
 // publishMessageStream publishes messages from the provided message stream
 // provided by readNextMessageFunc. When done closes the publishChannel
-func publishMessageStream(publishChannel rabtap.PublishChannel,
+func publishMessageStream(publishCh rabtap.PublishChannel,
 	optExchange, optRoutingKey *string,
 	readNextMessageFunc MessageReaderFunc,
 	delayFunc DelayFunc) error {
+
+	defer func() {
+		close(publishCh)
+	}()
+
 	var lastMsg *RabtapPersistentMessage
 	for {
 		msg, more, err := readNextMessageFunc()
 		switch err {
 		case io.EOF:
-			close(publishChannel)
 			return nil
 		case nil:
 			delayFunc(lastMsg, &msg)
 			routingKey := selectOptionalOrDefault(optRoutingKey, msg.RoutingKey)
 			exchange := selectOptionalOrDefault(optExchange, msg.Exchange)
-			publishMessage(publishChannel, exchange, routingKey, msg.ToAmqpPublishing())
+			publishMessage(publishCh, exchange, routingKey, msg.ToAmqpPublishing())
 			lastMsg = &msg
 		default:
-			close(publishChannel)
 			return err
 		}
 
 		if !more {
-			close(publishChannel)
 			return nil
 		}
 	}
@@ -118,18 +121,22 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	errChan := make(chan error)
+	resultCh := make(chan error, 1)
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURL,
 		cmd.tlsConfig, cmd.mandatory, cmd.confirms, log)
-	publishChannel := make(rabtap.PublishChannel)
+	publishCh := make(rabtap.PublishChannel)
+	errorCh := make(rabtap.PublishErrorChannel)
 
 	delayFunc := func(first, second *RabtapPersistentMessage) {
 		if first == nil || second == nil {
 			return
 		}
 		delay := durationBetweenMessages(first, second, cmd.speed, cmd.fixedDelay)
-		log.Infof("sleeping for %s", delay)
-		time.Sleep(delay) // TODO make interuptable
+		log.Infof("publish delay: sleeping for %s", delay)
+		select {
+		case <-time.After(delay):
+		case <-ctx.Done():
+		}
 	}
 
 	go func() {
@@ -138,12 +145,28 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 		// and select. So we don't put the goroutine in the error group to
 		// avoid blocking when e.g. the user presses CTRL+S and then CTRL+C.
 		// TODO find better solution
-		errChan <- publishMessageStream(publishChannel, cmd.exchange,
+		resultCh <- publishMessageStream(publishCh, cmd.exchange,
 			cmd.routingKey, cmd.readerFunc, delayFunc)
 	}()
 
 	g.Go(func() error {
-		return publisher.EstablishConnection(ctx, publishChannel)
+		numPublishErrors := 0
+		// log all publishing errors
+		for err := range errorCh {
+			numPublishErrors++
+			log.Errorf("publishing error: %v", err)
+		}
+		if numPublishErrors > 0 {
+			return fmt.Errorf("published with errors")
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		err := publisher.EstablishConnection(ctx, publishCh, errorCh)
+		log.Info("Publisher ending")
+		close(errorCh)
+		return err
 	})
 
 	if err := g.Wait(); err != nil {
@@ -151,7 +174,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 	}
 
 	select {
-	case err := <-errChan:
+	case err := <-resultCh:
 		return err
 	default:
 	}

@@ -30,10 +30,14 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 	defer conn.Close()
 
 	log := testcommon.NewTestLogger()
-	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
+	mandatory := true
+	confirms := true
+	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, mandatory, confirms, log)
 	publishChannel := make(PublishChannel)
+	errorChannel := make(PublishErrorChannel)
 	ctx := context.Background()
-	go publisher.EstablishConnection(ctx, publishChannel)
+
+	go publisher.EstablishConnection(ctx, publishChannel, errorChannel)
 
 	// AmqpPublish now has started a go-routine which handles
 	// connection to broker and expects messages on the publishChannel

@@ -48,7 +48,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 			select {
 			case sessions <- sess:
 			case <-ctx.Done():
-				logger.Infof("session: shutting down factory (cancel)")
+				logger.Debugf("session: shutting down factory (cancel)")
 				close(sess)
 				return
 			}
@@ -73,7 +73,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 				}
 				select {
 				case <-ctx.Done():
-					logger.Infof("session: shutting down factory (cancel)")
+					logger.Debugf("session: shutting down factory (cancel)")
 					close(sess)
 					return
 				case <-time.After(retryDelay):
@@ -85,7 +85,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 			select {
 			case sess <- Session{conn, ch}:
 			case <-ctx.Done():
-				logger.Infof("session: shutting down factory (cancel)")
+				logger.Debugf("session: shutting down factory (cancel)")
 				close(sess)
 				return
 			}

@@ -10,7 +10,7 @@ require (
 	github.com/mattn/go-colorable v0.1.1
 	github.com/mattn/go-isatty v0.0.6 // indirect
 	github.com/sirupsen/logrus v1.3.0
-	github.com/streadway/amqp v0.0.0-20190225234609-30f8ed68076e
+	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859

@@ -472,12 +472,13 @@ single JSON document.
 The general form of the `pub` command is
 ```
 rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] 
-           [--format=FORMAT] [--delay=DELAY | --speed=FACTOR] [-jkv]
+           [--confirms] [--mandatory] [--format=FORMAT] 
+           [--delay=DELAY | --speed=FACTOR] [-jkv]
 ```
 
 * `$ echo hello | rabtap pub amq.fanout` - publish "hello" to exchange amqp.fanout
 * `$ rabtap pub messages.json --format=json`  - messages are read from file `messages.json`
-  in [raptab JSON format](#json-message-format). Target exchange and routing
+  in [rabtap JSON format](#json-message-format). Target exchange and routing
   keys are read from the messages meta data.  The `messages.json` file can
   contain multiple JSON documents as it is treated as a JSON stream.  Rabtap
   will honor the `XRabtapReceived` timestamps of the messages and by default
@@ -490,6 +491,11 @@ rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY]
   before, but assuming that `somedir` is a directory, the messages are read
   from message files previously recorded to this directory and replayed in the
   order they were recorded.
+* `--confirms` waits for publisher confirmations from the server and logs an
+  error if a confirmation is negative or not received. Slows down throughput.
+* `--mandatory` publishes message with the mandatory flag set. If set and a
+  message can not be delivered to a queue, the server returns the message and
+  rabtap will log an error.
 
 #### Poor mans shovel
 
@@ -558,7 +564,7 @@ http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbi
     :
     └── amq.topic (exchange, type 'topic', [D])
 $ rabtap queue rm myqueue
-$ raptap info
+$ rabtap info
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
 └── Vhost /
     :

@@ -492,10 +492,10 @@ rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY]
   from message files previously recorded to this directory and replayed in the
   order they were recorded.
 * `--confirms` waits for publisher confirmations from the server and logs an
-  error if a confirmation is negative or not received. 
-* `--mandatory` publishes message with the mandatory
-  flag set. If set and a message can not be delivered to a queue, the server
-  returns the message and rabtap will logs an error.
+  error if a confirmation is negative or not received. Slows down throughput.
+* `--mandatory` publishes message with the mandatory flag set. If set and a
+  message can not be delivered to a queue, the server returns the message and
+  rabtap will log an error.
 
 #### Poor mans shovel
 

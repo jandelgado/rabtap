@@ -3,9 +3,8 @@
 
 ## v1.28 (2021-08-26)
 
-* fix: do not print messages to stdout in parallel, which can result in 
-       garbled output when the queue is filled up and messages are read 
-       at high frequency.
+* fix: do not print messages to stdout in parallel, which can result in garbled
+  output when the queue is filled up and messages are read at high frequency.
 * new: listen for channel errors and print an error when a message is e.g. 
   published to a non-existing exchange.
 * new: `--confirms` option for `pub` command: wait for publisher confirmations
@@ -15,13 +14,13 @@
   flag set. If set and a message can not be delivered to a queue, the server
   returns the message and rabtap will log error when the returned message
   is received (e.g. unroutable messages)
-* new: listen for channel close events messages by the broker (e.g. 
-  when publishing to an non-existant exchange)
+* new: listen for channel close events messages by the broker (e.g.  when
+  publishing to an non-existant exchange)
 * improved logging capabilities while reducing dependencies 
        
 ## v1.27 (2021-03-28)
 
-* new: `info` and `close` commands are can now be cancelled by SIGTERM
+* new: `info` and `close` commands can now be cancelled by SIGTERM
 
 ## v1.26 (2021-03-26)
 

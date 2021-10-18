@@ -31,8 +31,6 @@ type CmdQueueBindArg struct {
 	tlsConfig  *tls.Config
 }
 
-type headerModeMap map[HeaderMode]string
-
 func amqpHeaderRoutingMode(mode HeaderMode) string {
 	modes := map[HeaderMode]string{
 		HeaderMatchAny: "any",

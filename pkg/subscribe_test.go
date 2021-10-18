@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
+	"github.com/streadway/amqp"
 )
 
 func TestSubscribe(t *testing.T) {
@@ -26,7 +27,7 @@ func TestSubscribe(t *testing.T) {
 	// bound to the connection which created them (other connections get
 	// error RESOURCE_LOCKED (405)).
 	CreateQueue(session, queueName, false /*durable*/, true /*ad*/, false /*excl*/)
-	BindQueueToExchange(session, queueName, keyName, "subtest-direct-exchange")
+	BindQueueToExchange(session, queueName, keyName, "subtest-direct-exchange", amqp.Table{})
 
 	finishChan := make(chan int)
 

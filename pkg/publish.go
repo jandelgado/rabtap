@@ -15,8 +15,7 @@ import (
 // PublishMessage is a message to be published by AmqpPublish via
 // a PublishChannel
 type PublishMessage struct {
-	Exchange   string
-	RoutingKey string
+	Routing    Routing
 	Publishing *amqp.Publishing
 }
 
@@ -59,17 +58,20 @@ type PublishErrorChannel chan *PublishError
 func (s *PublishError) Error() string {
 	switch s.Reason {
 	case PublishErrorAckTimeout:
-		return fmt.Sprintf("timeout waiting for ACK publishing to exchange '%s' with routingkey '%s'",
-			s.Message.Exchange, s.Message.RoutingKey)
+		return fmt.Sprintf("timeout waiting for ACK publishing with routing '%s'",
+			s.Message.Routing)
 	case PublishErrorNack:
-		return fmt.Sprintf("NACK from server publishing to exchange '%s' with routingkey '%s'",
-			s.Message.Exchange, s.Message.RoutingKey)
+		return fmt.Sprintf("NACK from server publishing with routing '%s'",
+			s.Message.Routing)
 	case PublishErrorPublishFailed:
-		return fmt.Sprintf("publish to exchange '%s' with routingkey '%s' failed: %s",
-			s.Message.Exchange, s.Message.RoutingKey, s.Cause)
+		return fmt.Sprintf("publish  with routing '%s' failed: %s",
+			s.Message.Routing, s.Cause)
 	case PublishErrorReturned:
-		return fmt.Sprintf("server returned message for exchange '%s' with routingkey '%s': %s",
-			s.ReturnedMessage.Exchange, s.ReturnedMessage.RoutingKey, s.ReturnedMessage.ReplyText)
+		routing := NewRouting(s.ReturnedMessage.Exchange,
+			s.ReturnedMessage.RoutingKey,
+			s.ReturnedMessage.Headers)
+		return fmt.Sprintf("server returned message for routing '%s': %s",
+			routing, s.ReturnedMessage.ReplyText)
 	case PublishErrorChannelError:
 		return fmt.Sprintf("channel error: %s", s.Cause)
 	}
@@ -176,8 +178,14 @@ func (s *AmqpPublish) createWorkerFunc(
 					return doNotReconnect, nil
 				}
 
-				err := session.Publish(message.Exchange,
-					message.RoutingKey,
+				message.Publishing.Headers = mergeTables(message.Publishing.Headers, message.Routing.Headers())
+				size := len((*message.Publishing).Body)
+				s.logger.Debugf("publish message with routing '%s' (%d bytes)",
+					message.Routing, size)
+
+				err := session.Publish(
+					message.Routing.Exchange(),
+					message.Routing.Key(),
 					s.mandatory,
 					false, // immeadiate flag was removed with RabbitMQ 3
 					*message.Publishing)

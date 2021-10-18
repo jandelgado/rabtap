@@ -22,6 +22,7 @@ type CmdPublishArg struct {
 	tlsConfig  *tls.Config
 	exchange   *string
 	routingKey *string
+	headers    map[string]string
 	readerFunc MessageReaderFunc
 	speed      float64
 	fixedDelay *time.Duration
@@ -55,15 +56,11 @@ func durationBetweenMessages(first, second *RabtapPersistentMessage,
 // publishMessage publishes a single message on the given exchange with the
 // provided routingkey
 func publishMessage(publishChannel rabtap.PublishChannel,
-	exchange, routingKey string,
+	routing rabtap.Routing,
 	amqpPublishing amqp.Publishing) {
 
-	log.Debugf("publishing message to exchange '%s' with routing key '%s'",
-		exchange, routingKey)
-
 	publishChannel <- &rabtap.PublishMessage{
-		Exchange:   exchange,
-		RoutingKey: routingKey,
+		Routing:    routing,
 		Publishing: &amqpPublishing}
 }
 
@@ -79,7 +76,9 @@ func selectOptionalOrDefault(optionalStr *string, defaultStr string) string {
 // publishMessageStream publishes messages from the provided message stream
 // provided by readNextMessageFunc. When done closes the publishChannel
 func publishMessageStream(publishCh rabtap.PublishChannel,
-	optExchange, optRoutingKey *string,
+	optExchange *string,
+	optRoutingKey *string,
+	headers map[string]string,
 	readNextMessageFunc MessageReaderFunc,
 	delayFunc DelayFunc) error {
 
@@ -95,9 +94,17 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 			return nil
 		case nil:
 			delayFunc(lastMsg, &msg)
+
+			// the per-message routing key (in case it was read from a json
+			// file) can be overriden by the command line, if set.
 			routingKey := selectOptionalOrDefault(optRoutingKey, msg.RoutingKey)
 			exchange := selectOptionalOrDefault(optExchange, msg.Exchange)
-			publishMessage(publishCh, exchange, routingKey, msg.ToAmqpPublishing())
+			routing := rabtap.NewRoutingFromStrings(exchange, routingKey, headers)
+
+			// during publishing, header information in msg.Header will be overriden
+			// by header information in the routing object (if present). The
+			// latter are set on the command line using --header K=V options.
+			publishMessage(publishCh, routing, msg.ToAmqpPublishing())
 			lastMsg = &msg
 		default:
 			return err
@@ -146,7 +153,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 		// avoid blocking when e.g. the user presses CTRL+S and then CTRL+C.
 		// TODO find better solution
 		resultCh <- publishMessageStream(publishCh, cmd.exchange,
-			cmd.routingKey, cmd.readerFunc, delayFunc)
+			cmd.routingKey, cmd.headers, cmd.readerFunc, delayFunc)
 	}()
 
 	g.Go(func() error {

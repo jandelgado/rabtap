@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
+	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -94,14 +95,14 @@ func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 	assert.NotEqual(t, -1, findQueue(queueTestName, queues))
 
 	// bind queue to exchange
-	err = BindQueueToExchange(session, queueTestName, keyTestName, exchangeTestName)
+	err = BindQueueToExchange(session, queueTestName, keyTestName, exchangeTestName, amqp.Table{})
 	assert.Nil(t, err)
 	bindings, err := client.Bindings(context.TODO())
 	assert.Nil(t, err)
 	assert.NotEqual(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// unbind queue from exchange
-	err = UnbindQueueFromExchange(session, queueTestName, keyTestName, exchangeTestName)
+	err = UnbindQueueFromExchange(session, queueTestName, keyTestName, exchangeTestName, amqp.Table{})
 	assert.Nil(t, err)
 	bindings, err = client.Bindings(context.TODO())
 	assert.Nil(t, err)

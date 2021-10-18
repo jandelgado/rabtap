@@ -138,6 +138,7 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		amqpURL:    args.AMQPURL,
 		exchange:   args.PubExchange,
 		routingKey: args.PubRoutingKey,
+		headers:    args.Headers,
 		fixedDelay: args.Delay,
 		speed:      args.Speed,
 		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
@@ -208,11 +209,19 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 	case QueuePurgeCmd:
 		cmdQueuePurge(args.AMQPURL, args.QueueName, tlsConfig)
 	case QueueBindCmd:
-		cmdQueueBindToExchange(args.AMQPURL, args.QueueName,
-			args.QueueBindingKey, args.ExchangeName, tlsConfig)
+		cmdQueueBindToExchange(CmdQueueBindArg{
+			amqpURL:  args.AMQPURL,
+			exchange: args.ExchangeName,
+			queue:    args.QueueName, key: args.QueueBindingKey,
+			headerMode: args.HeaderMode, headers: args.Headers,
+			tlsConfig: tlsConfig})
 	case QueueUnbindCmd:
-		cmdQueueUnbindFromExchange(args.AMQPURL, args.QueueName,
-			args.QueueBindingKey, args.ExchangeName, tlsConfig)
+		cmdQueueUnbindFromExchange(CmdQueueBindArg{
+			amqpURL:  args.AMQPURL,
+			exchange: args.ExchangeName,
+			queue:    args.QueueName, key: args.QueueBindingKey,
+			headerMode: args.HeaderMode, headers: args.Headers,
+			tlsConfig: tlsConfig})
 	case ConnCloseCmd:
 		cmdConnClose(ctx, args.APIURL, args.ConnName,
 			args.CloseReason, tlsConfig)

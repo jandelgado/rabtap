@@ -474,26 +474,40 @@ Example assumes that `RABTAP_AMQPURI` environment variable is set, as the
 The `pub` command is used to publish messages to an exchange with a routing
 key.  The messages to be published are either read from a file, or from a
 directory which contains previously recorded messages (e.g. using the
-`--saveto` option of the `tap` command). Messages can be published either in
-raw format, in which they are send as-is, or in [JSON-format, as described
-here](#json-message-format), which includes message metadata and the body in a
-single JSON document.
+`--saveto` option of the `tap` command). 
+
+Message routing is either specified with a routing key and the `--routingkey`
+option or, when header based routing should be used, by specifying the headers
+with the `--header` option. Each header is specified in the form `KEY=VALUE`. 
+Multiple headers can be specified by specifying multiple `--header` options.
+
+Messages can be published either in raw format, in which they are send as-is,
+or in [JSON-format, as described here](#json-message-format), which includes
+message metadata and the body in a single JSON document. When multiple messages
+are published with metadata, rabtap will calculate the time elapsed of
+consecutive recorded messages using the metadata, and delay publishing
+accordingly. To set the publishing delay to a fix value, use the `--delay`
+option. To publish without delays, use `--delay=0s`. To modify publishing speed
+use the `--speed` option, which allows to set a factor to apply to the delays.
 
 The general form of the `pub` command is
 ```
-rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] 
-           [--confirms] [--mandatory] [--format=FORMAT] 
-           [--delay=DELAY | --speed=FACTOR] [-jkv]
+rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
+            [--routingkey=KEY | (--header=HEADERKV)...]
+            [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
 ```
 
-* `$ echo hello | rabtap pub amq.fanout` - publish "hello" to exchange amqp.fanout
-* `$ rabtap pub messages.json --format=json`  - messages are read from file `messages.json`
-  in [rabtap JSON format](#json-message-format). Target exchange and routing
-  keys are read from the messages meta data.  The `messages.json` file can
-  contain multiple JSON documents as it is treated as a JSON stream.  Rabtap
-  will honor the `XRabtapReceived` timestamps of the messages and by default
-  delay the messages as they were recorded. This behaviour can be overridden
-  by the `--delay` and `--speed` options.
+* `$ echo hello | rabtap pub --exchange amq.fanout` - publish "hello" to
+  exchange amqp.fanout
+* `echo "hello" | rabtap pub --exchange amq.header --header KEY=VAL --header X=Y` - 
+  publish hello to exchange amq.header use set message headers.
+* `$ rabtap pub messages.json --format=json`  - messages are read from file
+  `messages.json` in [rabtap JSON format](#json-message-format). Target
+  exchange and routing keys are read from the messages meta data.  The
+  `messages.json` file can contain multiple JSON documents as it is treated as
+  a JSON stream.  Rabtap will honor the `XRabtapReceived` timestamps of the
+  messages and by default will delay the messages as they were recorded. This
+  behaviour can be overridden by the `--delay` and `--speed` options.
 * `$ rabtap pub --exchange amq.direct -r myKey --format=json messages.json --delay=0s` - as
   before, but publish messages always to exchange `amq.direct` with routing key
   `myKey` and without any delays.

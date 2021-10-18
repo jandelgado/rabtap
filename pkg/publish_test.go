@@ -41,14 +41,16 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 
 	// AmqpPublish now has started a go-routine which handles
 	// connection to broker and expects messages on the publishChannel
+	key := "queue-1"
 	for i := 0; i < numPublishingMessages; i++ {
-		publishChannel <- &PublishMessage{Exchange: "direct-exchange",
-			RoutingKey: "queue-1",
+		routing := NewRouting("direct-exchange", key, amqp.Table{})
+		publishChannel <- &PublishMessage{
+			Routing:    routing,
 			Publishing: &amqp.Publishing{Body: []byte("Hello")}}
 	}
 
 	doneChan := make(chan int)
-	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer", numPublishingMessages, "queue-1", doneChan)
+	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer", numPublishingMessages, key, doneChan)
 	numReceivedOriginal := <-doneChan
 	assert.Equal(t, numPublishingMessages, numReceivedOriginal)
 }

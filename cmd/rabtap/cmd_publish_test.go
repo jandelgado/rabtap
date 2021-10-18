@@ -74,14 +74,14 @@ func TestPublishMessageStreamPublishesNextMessage(t *testing.T) {
 
 	pubCh := make(rabtap.PublishChannel, 1)
 	exchange := "exchange"
-	routingKey := "key"
-	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader, delayer)
+	key := "key"
+	err := publishMessageStream(pubCh, &exchange, &key, map[string]string{}, mockReader, delayer)
 
 	assert.Nil(t, err)
 	select {
 	case message := <-pubCh:
-		assert.Equal(t, "exchange", message.Exchange)
-		assert.Equal(t, "key", message.RoutingKey)
+		assert.Equal(t, "exchange", message.Routing.Exchange())
+		assert.Equal(t, "key", message.Routing.Key())
 		assert.Equal(t, "hello", string(message.Publishing.Body))
 	case <-time.After(time.Second * 2):
 		assert.Fail(t, "did not receive message within expected time")
@@ -103,8 +103,8 @@ func TestPublishMessageStreamPropagatesMessageReadError(t *testing.T) {
 
 	pubCh := make(rabtap.PublishChannel)
 	exchange := ""
-	routingKey := ""
-	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader, delayer)
+	key := "key"
+	err := publishMessageStream(pubCh, &exchange, &key, map[string]string{}, mockReader, delayer)
 	assert.Equal(t, errors.New("error"), err)
 }
 

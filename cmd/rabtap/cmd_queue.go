@@ -1,8 +1,7 @@
-// Copyright (C) 2017 Jan Delgado
+// rabtap queue related commands
+// Copyright (C) 2017-2021 Jan Delgado
 
 package main
-
-// exchange related cli command handlers
 
 import (
 	"crypto/tls"
@@ -10,6 +9,7 @@ import (
 	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
+	"github.com/streadway/amqp"
 )
 
 // CmdQueueCreateArg contains the arguments for cmdQueueCreate
@@ -19,6 +19,34 @@ type CmdQueueCreateArg struct {
 	durable    bool
 	autodelete bool
 	tlsConfig  *tls.Config
+}
+
+type CmdQueueBindArg struct {
+	amqpURL    *url.URL
+	queue      string
+	exchange   string
+	key        string
+	headers    map[string]string
+	headerMode HeaderMode
+	tlsConfig  *tls.Config
+}
+
+type headerModeMap map[HeaderMode]string
+
+func amqpHeaderRoutingMode(mode HeaderMode) string {
+	modes := map[HeaderMode]string{
+		HeaderMatchAny: "any",
+		HeaderMatchAll: "all",
+		HeaderNone:     ""}
+	return modes[mode]
+}
+
+func toAMQPHeader(headers map[string]string) amqp.Table {
+	amqpHeaders := amqp.Table{}
+	for k, v := range headers {
+		amqpHeaders[k] = v
+	}
+	return amqpHeaders
 }
 
 // cmdQueueCreate creates a new queue on the given broker
@@ -59,27 +87,28 @@ func cmdQueuePurge(amqpURL *url.URL, queueName string, tlsConfig *tls.Config) {
 }
 
 // cmdQueueBindToExchange binds a queue to an exchange
-func cmdQueueBindToExchange(amqpURL *url.URL, queueName, key, exchangeName string,
-	tlsConfig *tls.Config) {
-
-	failOnError(rabtap.SimpleAmqpConnector(amqpURL,
-		tlsConfig,
+func cmdQueueBindToExchange(cmd CmdQueueBindArg) {
+	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL, cmd.tlsConfig,
 		func(session rabtap.Session) error {
-			log.Debugf("binding queue %s to exchange %s w/ key %s",
-				queueName, exchangeName, key)
-			return rabtap.BindQueueToExchange(session, queueName, key, exchangeName)
+			if cmd.headerMode != HeaderNone {
+				cmd.headers["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
+			}
+			log.Debugf("binding queue %s to exchange %s w/ key %s and headers %v",
+				cmd.queue, cmd.exchange, cmd.key, cmd.headers)
+
+			return rabtap.BindQueueToExchange(session, cmd.queue, cmd.key, cmd.exchange, toAMQPHeader(cmd.headers))
 		}), "bind queue failed", os.Exit)
 }
 
 // cmdQueueUnbindFromExchange unbinds a queue from an exchange
-func cmdQueueUnbindFromExchange(amqpURL *url.URL, queueName, key, exchangeName string,
-	tlsConfig *tls.Config) {
-
-	failOnError(rabtap.SimpleAmqpConnector(amqpURL,
-		tlsConfig,
+func cmdQueueUnbindFromExchange(cmd CmdQueueBindArg) {
+	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL, cmd.tlsConfig,
 		func(session rabtap.Session) error {
-			log.Debugf("unbinding queue %s from exchange %s w/ key %s",
-				queueName, exchangeName, key)
-			return rabtap.UnbindQueueFromExchange(session, queueName, key, exchangeName)
+			if cmd.headerMode != HeaderNone {
+				cmd.headers["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
+			}
+			log.Debugf("unbinding queue %s from exchange %s w/ key %s and headers %v",
+				cmd.queue, cmd.exchange, cmd.key, cmd.headers)
+			return rabtap.UnbindQueueFromExchange(session, cmd.queue, cmd.key, cmd.exchange, toAMQPHeader(cmd.headers))
 		}), "unbind queue failed", os.Exit)
 }

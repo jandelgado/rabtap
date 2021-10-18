@@ -1,5 +1,9 @@
 # Changelog for rabtap
 
+## v1.30 (2021-10-13)
+
+* new: support header based routing (pub, queue bind, queue unbind)
+
 ## v1.29 (2021-09-15)
 
 * new: add a docker image (ghcr.io/jandelgado/rabtap)

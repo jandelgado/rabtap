@@ -132,6 +132,7 @@ compile from source.
 ## Usage
 
 ```
+
 rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
@@ -145,7 +146,8 @@ Usage:
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
+  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
+              [--routingkey=KEY | (--header=HEADERKV)...]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
@@ -154,9 +156,11 @@ Usage:
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue create QUEUE [--uri=URI] [-adkv] 
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-kv]
+              (--bindingkey=KEY | (--header=HEADERKV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue unbind QUEUE from EXCHANGE [--uri=URI] [-kv]
+              (--bindingkey=KEY | (--header=HEADERKV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue rm QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue purge QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
@@ -165,7 +169,7 @@ Usage:
   rabtap --version
 
 Arguments and options:
- EXCHANGES            comma-separated list of exchanges and binding keys,
+ EXCHANGES            comma-separated list of exchanges and optional binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
  SOURCE               file or directory to publish in pub mode. If omitted, stdin will be read.
@@ -191,6 +195,8 @@ Arguments and options:
                       * for info command: controls generated output format. Valid 
                         options are: "text", "dot". Default: text
  -h, --help           print this help.
+ --header HEADERKV    A key value pair in the form of "key=value" used as a
+                      routing key or binding key. Can occur multiple times.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.

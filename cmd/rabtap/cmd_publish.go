@@ -22,7 +22,7 @@ type CmdPublishArg struct {
 	tlsConfig  *tls.Config
 	exchange   *string
 	routingKey *string
-	headers    map[string]string
+	headers    rabtap.KeyValueMap
 	readerFunc MessageReaderFunc
 	speed      float64
 	fixedDelay *time.Duration
@@ -73,12 +73,21 @@ func selectOptionalOrDefault(optionalStr *string, defaultStr string) string {
 	return defaultStr
 }
 
+// routingFromMessage creates a Routing from a message and optional defaults
+// that can override fields in the message
+func routingFromMessage(optExchange, optRoutingKey *string, headers rabtap.KeyValueMap, msg RabtapPersistentMessage) rabtap.Routing {
+	routingKey := selectOptionalOrDefault(optRoutingKey, msg.RoutingKey)
+	exchange := selectOptionalOrDefault(optExchange, msg.Exchange)
+	mergedHeaders := rabtap.MergeTables(msg.Headers, rabtap.ToAMQPTable(headers))
+	return rabtap.NewRouting(exchange, routingKey, mergedHeaders)
+}
+
 // publishMessageStream publishes messages from the provided message stream
 // provided by readNextMessageFunc. When done closes the publishChannel
 func publishMessageStream(publishCh rabtap.PublishChannel,
 	optExchange *string,
 	optRoutingKey *string,
-	headers map[string]string,
+	headers rabtap.KeyValueMap,
 	readNextMessageFunc MessageReaderFunc,
 	delayFunc DelayFunc) error {
 
@@ -97,9 +106,7 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 
 			// the per-message routing key (in case it was read from a json
 			// file) can be overriden by the command line, if set.
-			routingKey := selectOptionalOrDefault(optRoutingKey, msg.RoutingKey)
-			exchange := selectOptionalOrDefault(optExchange, msg.Exchange)
-			routing := rabtap.NewRoutingFromStrings(exchange, routingKey, headers)
+			routing := routingFromMessage(optExchange, optRoutingKey, headers, msg)
 
 			// during publishing, header information in msg.Header will be overriden
 			// by header information in the routing object (if present). The

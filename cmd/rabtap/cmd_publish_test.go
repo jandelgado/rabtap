@@ -19,6 +19,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRoutingFromMessageUsesOptExchangeWhenSpecified(t *testing.T) {
+
+	key := "okey"
+	exchange := "oexchange"
+	testMsg := RabtapPersistentMessage{Exchange: "exchange", RoutingKey: "key", Headers: amqp.Table{"A": "B"}}
+
+	tests := []struct {
+		optKey      *string
+		optExchange *string
+		msg         RabtapPersistentMessage
+		headers     rabtap.KeyValueMap
+		expected    rabtap.Routing
+	}{
+		{optKey: nil, optExchange: nil, msg: testMsg, headers: nil, expected: rabtap.NewRouting("exchange", "key", amqp.Table{"A": "B"})},
+		{optKey: nil, optExchange: nil, msg: testMsg, headers: rabtap.KeyValueMap{"A": "X"}, expected: rabtap.NewRouting("exchange", "key", amqp.Table{"A": "X"})},
+		{optKey: &key, optExchange: &exchange, msg: testMsg, headers: nil, expected: rabtap.NewRouting("oexchange", "okey", amqp.Table{"A": "B"})},
+	}
+
+	for _, tc := range tests {
+		routing := routingFromMessage(tc.optExchange, tc.optKey, tc.headers, tc.msg)
+		assert.Equal(t, tc.expected, routing, tc)
+	}
+
+}
+
 func TestMultDurationReturnsCorrectValue(t *testing.T) {
 	assert.Equal(t, time.Duration(50), multDuration(time.Duration(100), 0.5))
 }
@@ -75,7 +100,7 @@ func TestPublishMessageStreamPublishesNextMessage(t *testing.T) {
 	pubCh := make(rabtap.PublishChannel, 1)
 	exchange := "exchange"
 	key := "key"
-	err := publishMessageStream(pubCh, &exchange, &key, map[string]string{}, mockReader, delayer)
+	err := publishMessageStream(pubCh, &exchange, &key, rabtap.KeyValueMap{}, mockReader, delayer)
 
 	assert.Nil(t, err)
 	select {
@@ -104,7 +129,7 @@ func TestPublishMessageStreamPropagatesMessageReadError(t *testing.T) {
 	pubCh := make(rabtap.PublishChannel)
 	exchange := ""
 	key := "key"
-	err := publishMessageStream(pubCh, &exchange, &key, map[string]string{}, mockReader, delayer)
+	err := publishMessageStream(pubCh, &exchange, &key, rabtap.KeyValueMap{}, mockReader, delayer)
 	assert.Equal(t, errors.New("error"), err)
 }
 

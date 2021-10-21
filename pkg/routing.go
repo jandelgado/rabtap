@@ -6,6 +6,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Routing describes where a message should be published
 type Routing struct {
 	key      string
 	headers  amqp.Table
@@ -30,14 +31,6 @@ func NewRouting(exchange, key string, headers amqp.Table) Routing {
 	return Routing{exchange: exchange, key: key, headers: amqpHeaders}
 }
 
-func NewRoutingFromStrings(exchange, key string, headers map[string]string) Routing {
-	amqpHeaders := amqp.Table{}
-	for k, v := range headers {
-		amqpHeaders[k] = v
-	}
-	return Routing{exchange: exchange, key: key, headers: amqpHeaders}
-}
-
 func (s Routing) Exchange() string {
 	return s.exchange
 }
@@ -50,7 +43,9 @@ func (s Routing) Headers() amqp.Table {
 	return s.headers
 }
 
-func mergeTables(first, second amqp.Table) amqp.Table {
+// MergeTable merges the given amqp.Table's, the second one overrideing the
+// values of the first one
+func MergeTables(first, second amqp.Table) amqp.Table {
 	res := make(amqp.Table, len(first)+len(second))
 	for k, v := range first {
 		res[k] = v

@@ -178,7 +178,6 @@ func (s *AmqpPublish) createWorkerFunc(
 					return doNotReconnect, nil
 				}
 
-				message.Publishing.Headers = mergeTables(message.Publishing.Headers, message.Routing.Headers())
 				size := len((*message.Publishing).Body)
 				s.logger.Debugf("publish message with routing '%s' (%d bytes)",
 					message.Routing, size)

@@ -9,7 +9,6 @@ import (
 	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/streadway/amqp"
 )
 
 // CmdQueueCreateArg contains the arguments for cmdQueueCreate
@@ -26,7 +25,7 @@ type CmdQueueBindArg struct {
 	queue      string
 	exchange   string
 	key        string
-	headers    map[string]string
+	headers    rabtap.KeyValueMap
 	headerMode HeaderMode
 	tlsConfig  *tls.Config
 }
@@ -37,14 +36,6 @@ func amqpHeaderRoutingMode(mode HeaderMode) string {
 		HeaderMatchAll: "all",
 		HeaderNone:     ""}
 	return modes[mode]
-}
-
-func toAMQPHeader(headers map[string]string) amqp.Table {
-	amqpHeaders := amqp.Table{}
-	for k, v := range headers {
-		amqpHeaders[k] = v
-	}
-	return amqpHeaders
 }
 
 // cmdQueueCreate creates a new queue on the given broker
@@ -94,7 +85,7 @@ func cmdQueueBindToExchange(cmd CmdQueueBindArg) {
 			log.Debugf("binding queue %s to exchange %s w/ key %s and headers %v",
 				cmd.queue, cmd.exchange, cmd.key, cmd.headers)
 
-			return rabtap.BindQueueToExchange(session, cmd.queue, cmd.key, cmd.exchange, toAMQPHeader(cmd.headers))
+			return rabtap.BindQueueToExchange(session, cmd.queue, cmd.key, cmd.exchange, rabtap.ToAMQPTable(cmd.headers))
 		}), "bind queue failed", os.Exit)
 }
 
@@ -107,6 +98,6 @@ func cmdQueueUnbindFromExchange(cmd CmdQueueBindArg) {
 			}
 			log.Debugf("unbinding queue %s from exchange %s w/ key %s and headers %v",
 				cmd.queue, cmd.exchange, cmd.key, cmd.headers)
-			return rabtap.UnbindQueueFromExchange(session, cmd.queue, cmd.key, cmd.exchange, toAMQPHeader(cmd.headers))
+			return rabtap.UnbindQueueFromExchange(session, cmd.queue, cmd.key, cmd.exchange, rabtap.ToAMQPTable(cmd.headers))
 		}), "unbind queue failed", os.Exit)
 }

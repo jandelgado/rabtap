@@ -14,13 +14,14 @@ type Routing struct {
 }
 
 func (s Routing) String() string {
+	r := fmt.Sprintf("exchange: '%s'", s.exchange)
 	if len(s.headers) > 0 {
-		return fmt.Sprintf("exchange: '%s', headers: %v", s.exchange, s.headers)
+		r += fmt.Sprintf(", headers: %v", s.headers)
 	}
 	if s.key != "" {
-		return fmt.Sprintf("exchange: '%s', routingkey: '%s'", s.exchange, s.key)
+		r += fmt.Sprintf(", routingkey: '%s'", s.key)
 	}
-	return ""
+	return r
 }
 
 func NewRouting(exchange, key string, headers amqp.Table) Routing {

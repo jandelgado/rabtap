@@ -12,6 +12,9 @@ import (
 	"github.com/streadway/amqp"
 )
 
+const timeoutWaitACK = time.Second * 2
+const timeoutWaitServer = time.Second * 1
+
 // PublishMessage is a message to be published by AmqpPublish via
 // a PublishChannel
 type PublishMessage struct {
@@ -58,19 +61,21 @@ type PublishErrorChannel chan *PublishError
 func (s *PublishError) Error() string {
 	switch s.Reason {
 	case PublishErrorAckTimeout:
-		return fmt.Sprintf("timeout waiting for ACK publishing with routing '%s'",
+		return fmt.Sprintf("publish to %s failed: timeout waiting for ACK",
 			s.Message.Routing)
 	case PublishErrorNack:
-		return fmt.Sprintf("NACK from server publishing with routing '%s'",
+		return fmt.Sprintf("publish to %s failed: NACK",
 			s.Message.Routing)
 	case PublishErrorPublishFailed:
-		return fmt.Sprintf("publish  with routing '%s' failed: %s",
+		return fmt.Sprintf("publish to %s failed: %s",
 			s.Message.Routing, s.Cause)
 	case PublishErrorReturned:
+		// note: RabbitMQ seems not to set the headers on a returned message
+		// when e.g. header based routing was used.
 		routing := NewRouting(s.ReturnedMessage.Exchange,
 			s.ReturnedMessage.RoutingKey,
 			s.ReturnedMessage.Headers)
-		return fmt.Sprintf("server returned message for routing '%s': %s",
+		return fmt.Sprintf("server returned message for %s: %s",
 			routing, s.ReturnedMessage.ReplyText)
 	case PublishErrorChannelError:
 		return fmt.Sprintf("channel error: %s", s.Cause)
@@ -132,8 +137,8 @@ func (s *AmqpPublish) createWorkerFunc(
 		//      then the defer needs not to be run (???)
 		defer func() {
 
-			s.logger.Debugf("waiting for confirms & returns... ")
-			timeout := time.After(time.Second * 1) // TODO config/const
+			s.logger.Debugf("waiting for returns... ")
+			timeout := time.After(timeoutWaitServer)
 
 			// wait for pending returned messages from the broker, whem
 			// e.g. a message could not be routed. in this case the
@@ -160,6 +165,9 @@ func (s *AmqpPublish) createWorkerFunc(
 			}
 		}()
 
+		ackTimeout := time.NewTimer(timeoutWaitACK)
+		defer ackTimeout.Stop()
+
 		for {
 			select {
 			case err := <-errors:
@@ -179,7 +187,7 @@ func (s *AmqpPublish) createWorkerFunc(
 				}
 
 				size := len((*message.Publishing).Body)
-				s.logger.Debugf("publish message with routing '%s' (%d bytes)",
+				s.logger.Debugf("publish message to %s (%d bytes)",
 					message.Routing, size)
 
 				err := session.Publish(
@@ -194,19 +202,37 @@ func (s *AmqpPublish) createWorkerFunc(
 				} else {
 
 					// wait for the confirmation before publishing a new message
+					// https://www.rabbitmq.com/confirms.html
+					//
+					// "For unroutable messages, the broker will issue a confirm
+					// once the exchange verifies a message won't route to any
+					// queue (returns an empty list of queues). If the message
+					// is also published as mandatory, the basic.return is sent
+					// to the client before basic.ack. The same is true for
+					// negative acknowledgements (basic.nack)."
 					if s.confirms {
-						select {
-						case <-time.After(2 * time.Second): // TODO MEMORY LEAK when not firing FIXME
-							errorCh <- &PublishError{Reason: PublishErrorAckTimeout, Message: message}
-						case confirmed := <-confirms:
-							if !confirmed.Ack {
-								errorCh <- &PublishError{Reason: PublishErrorNack, Message: message}
-							} else {
-								s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",
-									confirmed.DeliveryTag)
+						ackTimeout.Reset(timeoutWaitACK)
+					Outer:
+						for {
+							select {
+							case <-ackTimeout.C:
+								errorCh <- &PublishError{Reason: PublishErrorAckTimeout, Message: message}
+								break Outer
+							case returned, more := <-returns:
+								if more {
+									errorCh <- &PublishError{Reason: PublishErrorReturned, ReturnedMessage: &returned}
+								}
+							case confirmed := <-confirms:
+								if !confirmed.Ack {
+									errorCh <- &PublishError{Reason: PublishErrorNack, Message: message}
+								} else {
+									s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",
+										confirmed.DeliveryTag)
+								}
+								break Outer
+							case <-ctx.Done():
+								return doNotReconnect, nil
 							}
-						case <-ctx.Done():
-							return doNotReconnect, nil
 						}
 					}
 				}

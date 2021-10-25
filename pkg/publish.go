@@ -189,7 +189,7 @@ func (s *AmqpPublish) createWorkerFunc(
 
 				size := len((*message.Publishing).Body)
 				s.logger.Debugf("publish message to %s (%d bytes)", message.Routing, size)
-
+				message.Publishing.Headers = message.Routing.Headers()
 				err := session.Publish(
 					message.Routing.Exchange(),
 					message.Routing.Key(),

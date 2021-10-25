@@ -12,11 +12,13 @@ import (
 	"github.com/streadway/amqp"
 )
 
+const timeoutWaitACK = time.Second * 2
+const timeoutWaitServer = time.Second * 1
+
 // PublishMessage is a message to be published by AmqpPublish via
 // a PublishChannel
 type PublishMessage struct {
-	Exchange   string
-	RoutingKey string
+	Routing    Routing
 	Publishing *amqp.Publishing
 }
 
@@ -59,17 +61,22 @@ type PublishErrorChannel chan *PublishError
 func (s *PublishError) Error() string {
 	switch s.Reason {
 	case PublishErrorAckTimeout:
-		return fmt.Sprintf("timeout waiting for ACK publishing to exchange '%s' with routingkey '%s'",
-			s.Message.Exchange, s.Message.RoutingKey)
+		return fmt.Sprintf("publish to %s failed: timeout waiting for ACK",
+			s.Message.Routing)
 	case PublishErrorNack:
-		return fmt.Sprintf("NACK from server publishing to exchange '%s' with routingkey '%s'",
-			s.Message.Exchange, s.Message.RoutingKey)
+		return fmt.Sprintf("publish to %s failed: NACK",
+			s.Message.Routing)
 	case PublishErrorPublishFailed:
-		return fmt.Sprintf("publish to exchange '%s' with routingkey '%s' failed: %s",
-			s.Message.Exchange, s.Message.RoutingKey, s.Cause)
+		return fmt.Sprintf("publish to %s failed: %s",
+			s.Message.Routing, s.Cause)
 	case PublishErrorReturned:
-		return fmt.Sprintf("server returned message for exchange '%s' with routingkey '%s': %s",
-			s.ReturnedMessage.Exchange, s.ReturnedMessage.RoutingKey, s.ReturnedMessage.ReplyText)
+		// note: RabbitMQ seems not to set the headers on a returned message
+		// when e.g. header based routing was used.
+		routing := NewRouting(s.ReturnedMessage.Exchange,
+			s.ReturnedMessage.RoutingKey,
+			s.ReturnedMessage.Headers)
+		return fmt.Sprintf("server returned message for %s: %s",
+			routing, s.ReturnedMessage.ReplyText)
 	case PublishErrorChannelError:
 		return fmt.Sprintf("channel error: %s", s.Cause)
 	}
@@ -105,6 +112,8 @@ func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
 // The immedeate flag is not supported since RabbitMQ 3.0, see
 // https://blog.rabbitmq.com/posts/2012/11/breaking-things-with-rabbitmq-3-0
 //
+// TODO detect throttling
+// TODO simplify
 func (s *AmqpPublish) createWorkerFunc(
 	publishCh PublishChannel,
 	errorCh PublishErrorChannel) AmqpWorkerFunc {
@@ -114,7 +123,7 @@ func (s *AmqpPublish) createWorkerFunc(
 		// errors receives channel errors (e.g. publishing to non-existant exchange)
 		errors := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
 		// return receivces unroutable messages back from the server
-		returns := session.NotifyReturn(make(chan amqp.Return))
+		returns := session.NotifyReturn(make(chan amqp.Return, 1))
 		// confirms receives confirmations from the server (if enabled below)
 		confirms := session.NotifyPublish(make(chan amqp.Confirmation, 1))
 
@@ -123,40 +132,42 @@ func (s *AmqpPublish) createWorkerFunc(
 				s.logger.Errorf("Channel could not be put into confirm mode: %s", err)
 			}
 		}
+
 		// wait a while for outstanding errors and returned messages
 		// since these can arrive after we finished publishing.
-
-		// TODO when an error was detected on the errors channel (event loop),
-		//      then the defer needs not to be run (???)
 		defer func() {
 
-			s.logger.Debugf("waiting for confirms & returns... ")
-			timeout := time.After(time.Second * 1) // TODO config/const
+			if !s.mandatory {
+				return
+			}
 
-			// wait for pending returned messages from the broker, whem
-			// e.g. a message could not be routed. in this case the
-			// message WILL be confirmed (ACK=true), but an async
-			// return message will be send, for which we wait here.
+			s.logger.Debugf("waiting for pending server messages ... ")
+			timeout := time.After(timeoutWaitServer)
+
+			// wait for pending returned messages from the broker, when e.g. a
+			// message could not be routed. in this case the message WILL be
+			// confirmed (ACK=true), but an async return message will be send,
+			// for which we wait here.
 			for {
 				select {
 				case <-timeout:
 					return
 
 				case returned, more := <-returns:
-					if !more {
-						continue
+					if more {
+						errorCh <- &PublishError{Reason: PublishErrorReturned, ReturnedMessage: &returned}
 					}
-					errorCh <- &PublishError{Reason: PublishErrorReturned, ReturnedMessage: &returned}
 
-				// these events singal closing of the channel TODO relevant here?
 				case err, more := <-errors:
-					if !more {
-						continue
+					if more {
+						errorCh <- &PublishError{Reason: PublishErrorChannelError, Cause: err}
 					}
-					errorCh <- &PublishError{Reason: PublishErrorChannelError, Cause: err}
 				}
 			}
 		}()
+
+		ackTimeout := time.NewTimer(timeoutWaitACK)
+		defer ackTimeout.Stop()
 
 		for {
 			select {
@@ -176,8 +187,12 @@ func (s *AmqpPublish) createWorkerFunc(
 					return doNotReconnect, nil
 				}
 
-				err := session.Publish(message.Exchange,
-					message.RoutingKey,
+				size := len((*message.Publishing).Body)
+				s.logger.Debugf("publish message to %s (%d bytes)", message.Routing, size)
+				message.Publishing.Headers = message.Routing.Headers()
+				err := session.Publish(
+					message.Routing.Exchange(),
+					message.Routing.Key(),
 					s.mandatory,
 					false, // immeadiate flag was removed with RabbitMQ 3
 					*message.Publishing)
@@ -187,19 +202,38 @@ func (s *AmqpPublish) createWorkerFunc(
 				} else {
 
 					// wait for the confirmation before publishing a new message
+					// https://www.rabbitmq.com/confirms.html
+					// TODO batched confirms
+					//
+					// "For unroutable messages, the broker will issue a confirm
+					// once the exchange verifies a message won't route to any
+					// queue (returns an empty list of queues). If the message
+					// is also published as mandatory, the basic.return is sent
+					// to the client before basic.ack. The same is true for
+					// negative acknowledgements (basic.nack)."
 					if s.confirms {
-						select {
-						case <-time.After(2 * time.Second): // TODO MEMORY LEAK when not firing FIXME
-							errorCh <- &PublishError{Reason: PublishErrorAckTimeout, Message: message}
-						case confirmed := <-confirms:
-							if !confirmed.Ack {
-								errorCh <- &PublishError{Reason: PublishErrorNack, Message: message}
-							} else {
-								s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",
-									confirmed.DeliveryTag)
+						ackTimeout.Reset(timeoutWaitACK)
+					Outer:
+						for {
+							select {
+							case <-ackTimeout.C:
+								errorCh <- &PublishError{Reason: PublishErrorAckTimeout, Message: message}
+								break Outer
+							case returned, more := <-returns:
+								if more {
+									errorCh <- &PublishError{Reason: PublishErrorReturned, ReturnedMessage: &returned}
+								}
+							case confirmed := <-confirms:
+								if !confirmed.Ack {
+									errorCh <- &PublishError{Reason: PublishErrorNack, Message: message}
+								} else {
+									s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",
+										confirmed.DeliveryTag)
+								}
+								break Outer
+							case <-ctx.Done():
+								return doNotReconnect, nil
 							}
-						case <-ctx.Done():
-							return doNotReconnect, nil
 						}
 					}
 				}

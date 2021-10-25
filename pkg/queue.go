@@ -3,6 +3,8 @@
 
 package rabtap
 
+import "github.com/streadway/amqp"
+
 // CreateQueue creates a new queue
 // TODO(JD) get rid of bool types
 func CreateQueue(session Session, queueName string,
@@ -31,14 +33,13 @@ func PurgeQueue(session Session, queueName string) (int, error) {
 }
 
 // BindQueueToExchange binds the given queue to the given exchange.
-// TODO(JD) support for header based routing
 func BindQueueToExchange(session Session,
-	queueName, key, exchangeName string) error {
-	return session.QueueBind(queueName, key, exchangeName, false /* wait */, nil)
+	queueName, key, exchangeName string, headers amqp.Table) error {
+	return session.QueueBind(queueName, key, exchangeName, false /* wait */, headers)
 }
 
 // UnbindQueueFromExchange unbinds a queue from an exchange
 func UnbindQueueFromExchange(session Session,
-	queueName, key, exchangeName string) error {
-	return session.QueueUnbind(queueName, key, exchangeName, nil)
+	queueName, key, exchangeName string, headers amqp.Table) error {
+	return session.QueueUnbind(queueName, key, exchangeName, headers)
 }

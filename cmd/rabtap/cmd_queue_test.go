@@ -18,6 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestAmqpHeaderRoutingModeConverts(t *testing.T) {
+	assert.Equal(t, "all", amqpHeaderRoutingMode(HeaderMatchAll))
+	assert.Equal(t, "any", amqpHeaderRoutingMode(HeaderMatchAny))
+	assert.Equal(t, "", amqpHeaderRoutingMode(HeaderNone))
+}
+
 func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 
 	// integration tests queue creation, bind to exchange, purge,

@@ -19,6 +19,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRoutingFromMessageUsesOptExchangeWhenSpecified(t *testing.T) {
+
+	key := "okey"
+	exchange := "oexchange"
+	testMsg := RabtapPersistentMessage{Exchange: "exchange", RoutingKey: "key", Headers: amqp.Table{"A": "B"}}
+
+	tests := []struct {
+		optKey      *string
+		optExchange *string
+		msg         RabtapPersistentMessage
+		headers     rabtap.KeyValueMap
+		expected    rabtap.Routing
+	}{
+		{optKey: nil, optExchange: nil, msg: testMsg, headers: nil, expected: rabtap.NewRouting("exchange", "key", amqp.Table{"A": "B"})},
+		{optKey: nil, optExchange: nil, msg: testMsg, headers: rabtap.KeyValueMap{"A": "X"}, expected: rabtap.NewRouting("exchange", "key", amqp.Table{"A": "X"})},
+		{optKey: &key, optExchange: &exchange, msg: testMsg, headers: nil, expected: rabtap.NewRouting("oexchange", "okey", amqp.Table{"A": "B"})},
+	}
+
+	for _, tc := range tests {
+		routing := routingFromMessage(tc.optExchange, tc.optKey, tc.headers, tc.msg)
+		assert.Equal(t, tc.expected, routing, tc)
+	}
+
+}
+
 func TestMultDurationReturnsCorrectValue(t *testing.T) {
 	assert.Equal(t, time.Duration(50), multDuration(time.Duration(100), 0.5))
 }
@@ -74,14 +99,14 @@ func TestPublishMessageStreamPublishesNextMessage(t *testing.T) {
 
 	pubCh := make(rabtap.PublishChannel, 1)
 	exchange := "exchange"
-	routingKey := "key"
-	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader, delayer)
+	key := "key"
+	err := publishMessageStream(pubCh, &exchange, &key, rabtap.KeyValueMap{}, mockReader, delayer)
 
 	assert.Nil(t, err)
 	select {
 	case message := <-pubCh:
-		assert.Equal(t, "exchange", message.Exchange)
-		assert.Equal(t, "key", message.RoutingKey)
+		assert.Equal(t, "exchange", message.Routing.Exchange())
+		assert.Equal(t, "key", message.Routing.Key())
 		assert.Equal(t, "hello", string(message.Publishing.Body))
 	case <-time.After(time.Second * 2):
 		assert.Fail(t, "did not receive message within expected time")
@@ -103,8 +128,8 @@ func TestPublishMessageStreamPropagatesMessageReadError(t *testing.T) {
 
 	pubCh := make(rabtap.PublishChannel)
 	exchange := ""
-	routingKey := ""
-	err := publishMessageStream(pubCh, &exchange, &routingKey, mockReader, delayer)
+	key := "key"
+	err := publishMessageStream(pubCh, &exchange, &key, rabtap.KeyValueMap{}, mockReader, delayer)
 	assert.Equal(t, errors.New("error"), err)
 }
 

@@ -27,6 +27,41 @@ func assertEqualURL(t *testing.T, expected string, actual *url.URL) {
 	assert.Equal(t, expectedURI, actual)
 }
 
+func TestParseKeyValueExpressions(t *testing.T) {
+	testcases := []struct {
+		desc                     string
+		probe                    string
+		expectedKey, expectedVal string
+		err                      bool
+	}{
+		{"empty is invalid", "", "", "", true},
+		{"without assignment is invalid", "a b", "", "", true},
+		{"without lhs is invalid", "=rhs", "", "", true},
+		{"without rhs is invalid", "lhs=", "", "", true},
+		{"standard case", "key=value", "key", "value", false},
+		{"standard case with whitespace", "  key = value ", "key", "value", false},
+		{"standard case with whitespace and special chars", "  key_1.2 = value%3 ", "key_1.2", "value%3", false},
+	}
+
+	for _, tc := range testcases {
+		k, v, err := parseKeyValue(tc.probe)
+		assert.Equal(t, tc.expectedKey, k, tc.desc)
+		assert.Equal(t, tc.expectedVal, v, tc.desc)
+		assert.Equal(t, tc.err, err != nil, tc.desc)
+	}
+}
+
+func TestParseKeyValueListParsesValidList(t *testing.T) {
+	kv, err := parseKeyValueList([]string{"a=b"})
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"a": "b"}, kv)
+}
+
+func TestParseKeyValueListParsesFailsOnInvalidInput(t *testing.T) {
+	_, err := parseKeyValueList([]string{"a="})
+	assert.Error(t, err)
+}
+
 func TestParseAMQPURLParsesValidURI(t *testing.T) {
 	// since multple --uri arguments are possible docopt returns an array
 	args := map[string]interface{}{"--uri": []string{"uri"}}
@@ -483,7 +518,7 @@ func TestCliUnbindQueue(t *testing.T) {
 	assertEqualURL(t, "uri", args.AMQPURL)
 }
 
-func TestCliBindQueue(t *testing.T) {
+func TestCliBindQueueWithBindingKey(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"queue", "bind", "queuename", "to", "exchangename",
 			"--bindingkey", "key", "--uri", "uri"})
@@ -493,6 +528,23 @@ func TestCliBindQueue(t *testing.T) {
 	assert.Equal(t, "queuename", args.QueueName)
 	assert.Equal(t, "exchangename", args.ExchangeName)
 	assert.Equal(t, "key", args.QueueBindingKey)
+	assert.Equal(t, map[string]string{}, args.Headers)
+	assert.Equal(t, HeaderNone, args.HeaderMode)
+	assertEqualURL(t, "uri", args.AMQPURL)
+}
+
+func TestCliBindQueueWithHeaders(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"queue", "bind", "queuename", "to", "exchangename",
+			"--header", "a=b", "--header", "c=d", "--any", "--uri", "uri"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, QueueBindCmd, args.Cmd)
+	assert.Equal(t, "queuename", args.QueueName)
+	assert.Equal(t, "exchangename", args.ExchangeName)
+	assert.Equal(t, "", args.QueueBindingKey)
+	assert.Equal(t, map[string]string{"a": "b", "c": "d"}, args.Headers)
+	assert.Equal(t, HeaderMatchAny, args.HeaderMode)
 	assertEqualURL(t, "uri", args.AMQPURL)
 }
 

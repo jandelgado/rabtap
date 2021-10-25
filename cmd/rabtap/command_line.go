@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -36,7 +37,8 @@ Usage:
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
+  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
+              [--routingkey=KEY | (--header=KV)...]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
@@ -45,9 +47,11 @@ Usage:
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue create QUEUE [--uri=URI] [-adkv] 
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-kv]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue unbind QUEUE from EXCHANGE [--uri=URI] [-kv]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue rm QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue purge QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
@@ -56,7 +60,7 @@ Usage:
   rabtap --version
 
 Arguments and options:
- EXCHANGES            comma-separated list of exchanges and binding keys,
+ EXCHANGES            comma-separated list of exchanges and optional binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
  SOURCE               file or directory to publish in pub mode. If omitted, stdin will be read.
@@ -64,6 +68,8 @@ Arguments and options:
  CONNECTION           name of a connection.
  DIR                  directory to read messages from.
  -a, --autodelete     create auto delete exchange/queue.
+ --all                set x-match=all option in header based routing.
+ --any                set x-match=any option in header based routing.
  --api=APIURI         connect to given API server. If APIURL is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
@@ -82,6 +88,8 @@ Arguments and options:
                       * for info command: controls generated output format. Valid 
                         options are: "text", "dot". Default: text
  -h, --help           print this help.
+ --header=KV          A key value pair in the form of "key=value" used as a
+                      routing- or binding-key. Can occur multiple times.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
@@ -166,6 +174,42 @@ const (
 	ConnCloseCmd
 )
 
+type HeaderMode int
+
+const (
+	// match any headers (--any)
+	HeaderMatchAny HeaderMode = iota
+	// match all headers (-all)
+	HeaderMatchAll
+	// header based routing is not used
+	HeaderNone
+)
+
+// parseKeyValue parses an expression of the form "key=value"
+func parseKeyValue(expr string) (string, string, error) {
+	re := regexp.MustCompile(`\s*([^= ]+)\s*=\s*([^= ]+)\s*`)
+	all := re.FindStringSubmatch(expr)
+	if all == nil {
+		return "", "", fmt.Errorf("could not parse key-value expression")
+	}
+	return all[1], all[2], nil
+}
+
+func parseKeyValueList(exprs []string) (map[string]string, error) {
+	if exprs == nil {
+		return nil, nil
+	}
+	res := make(map[string]string, len(exprs))
+	for _, expr := range exprs {
+		k, v, err := parseKeyValue(expr)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", expr, err)
+		}
+		res[k] = v
+	}
+	return res, nil
+}
+
 type commonArgs struct {
 	TLSCertFile string
 	TLSKeyFile  string
@@ -185,32 +229,33 @@ type CommandLineArgs struct {
 	TapConfig []rabtap.TapConfiguration // configuration in tap mode
 	APIURL    *url.URL
 
-	PubExchange         *string        // pub: exchange to publish to
-	PubRoutingKey       *string        // pub: routing key, defaults to ""
-	Source              *string        // pub: file to send
-	Speed               float64        // pub: speed factor
-	Delay               *time.Duration // pub: fixed delay in ms
-	Confirms            bool           // pub: wait for confirmations
-	Mandatory           bool           // pub: set mandatory flag
-	AutoAck             bool           // sub: auto ack enabled
-	QueueName           string         // queue create, remove, bind, sub
-	QueueBindingKey     string         // queue bind
-	ExchangeName        string         // exchange name  create, remove or queue bind
-	ExchangeType        string         // exchange type create, remove or queue bind
-	ShowConsumers       bool           // info: also show consumer
-	InfoMode            string         // info: byExchange, byConnection
-	ShowStats           bool           // info: also show statistics
-	QueueFilter         string         // info: optional filter predicate
-	OmitEmptyExchanges  bool           // info: do not show exchanges wo/ bindings
-	ShowDefaultExchange bool           // info: show default exchange
-	Format              string         // output format, depends on command
-	Durable             bool           // queue create, exchange create
-	Autodelete          bool           // queue create, exchange create
-	SaveDir             *string        // save: optional directory to stores files to
-	Silent              bool           // suppress message printing
-	ConnName            string         // conn: name of connection
-	CloseReason         string         // conn: reason of close
-
+	PubExchange         *string           // pub: exchange to publish to
+	PubRoutingKey       *string           // pub: routing key, defaults to ""
+	Source              *string           // pub: file to send
+	Speed               float64           // pub: speed factor
+	Delay               *time.Duration    // pub: fixed delay in ms
+	Confirms            bool              // pub: wait for confirmations
+	Mandatory           bool              // pub: set mandatory flag
+	AutoAck             bool              // sub: auto ack enabled
+	QueueName           string            // queue create, remove, bind, sub
+	QueueBindingKey     string            // queue bind
+	ExchangeName        string            // exchange name  create, remove or queue bind
+	ExchangeType        string            // exchange type create, remove or queue bind
+	ShowConsumers       bool              // info: also show consumer
+	InfoMode            string            // info: byExchange, byConnection
+	ShowStats           bool              // info: also show statistics
+	QueueFilter         string            // info: optional filter predicate
+	OmitEmptyExchanges  bool              // info: do not show exchanges wo/ bindings
+	ShowDefaultExchange bool              // info: show default exchange
+	Format              string            // output format, depends on command
+	Durable             bool              // queue create, exchange create
+	Autodelete          bool              // queue create, exchange create
+	SaveDir             *string           // save: optional directory to stores files to
+	Silent              bool              // suppress message printing
+	ConnName            string            // conn: name of connection
+	CloseReason         string            // conn: reason of close
+	Headers             map[string]string // pub, tap: headers for header based routing
+	HeaderMode          HeaderMode        // queue ceate, header based routing
 }
 
 // getAMQPURL returns the ith entry of amqpURLs array or the value
@@ -367,6 +412,20 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
+func parseBindingKey(args map[string]interface{}) string {
+	if key, ok := args["--bindingkey"].(string); ok {
+		return key
+	}
+	return ""
+}
+
+func parseBindingHeaders(args map[string]interface{}) (map[string]string, error) {
+	if headers, ok := args["--header"].([]string); ok {
+		return parseKeyValueList(headers)
+	}
+	return map[string]string{}, nil
+}
+
 func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		commonArgs: parseCommonArgs(args),
@@ -384,14 +443,40 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	case args["rm"].(bool):
 		result.Cmd = QueueRemoveCmd
 	case args["bind"].(bool):
-		// bind QUEUE to EXCHANGE [--bindingkey key]
+		// bind QUEUE to EXCHANGE ([--bindingkey key] | (--header KEYVAL)* )
+		var err error
 		result.Cmd = QueueBindCmd
-		result.QueueBindingKey = args["--bindingkey"].(string)
+		result.QueueBindingKey = parseBindingKey(args)
+
+		result.Headers, err = parseBindingHeaders(args)
+		if err != nil {
+			return result, err
+		}
+		if args["--any"].(bool) {
+			result.HeaderMode = HeaderMatchAny
+		} else if args["--all"].(bool) {
+			result.HeaderMode = HeaderMatchAll
+		} else {
+			result.HeaderMode = HeaderNone
+		}
+
 		result.ExchangeName = args["EXCHANGE"].(string)
+
 	case args["unbind"].(bool):
 		// unbind QUEUE from EXCHANGE [--bindingkey key]
 		result.Cmd = QueueUnbindCmd
-		result.QueueBindingKey = args["--bindingkey"].(string)
+		result.QueueBindingKey = parseBindingKey(args)
+		result.Headers, err = parseBindingHeaders(args)
+		if err != nil {
+			return result, err
+		}
+		if args["--any"].(bool) {
+			result.HeaderMode = HeaderMatchAny
+		} else if args["--all"].(bool) {
+			result.HeaderMode = HeaderMatchAll
+		} else {
+			result.HeaderMode = HeaderNone
+		}
 		result.ExchangeName = args["EXCHANGE"].(string)
 	case args["purge"].(bool):
 		result.Cmd = QueuePurgeCmd
@@ -439,6 +524,10 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if args["--exchange"] != nil {
 		exchange := args["--exchange"].(string)
 		result.PubExchange = &exchange
+	}
+	result.Headers, err = parseBindingHeaders(args)
+	if err != nil {
+		return result, err
 	}
 	if args["--routingkey"] != nil {
 		routingKey := args["--routingkey"].(string)

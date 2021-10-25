@@ -165,5 +165,5 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 
 func (s *AmqpTap) bindQueueToExchange(session Session,
 	exchangeName, bindingKey, queueName string) error {
-	return BindQueueToExchange(session, queueName, bindingKey, exchangeName)
+	return BindQueueToExchange(session, queueName, bindingKey, exchangeName, amqp.Table{})
 }

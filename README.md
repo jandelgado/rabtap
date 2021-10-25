@@ -145,7 +145,8 @@ Usage:
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] [--format=FORMAT] 
+  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
+              [--routingkey=KEY | (--header=KV)...]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
@@ -154,9 +155,11 @@ Usage:
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue create QUEUE [--uri=URI] [-adkv] 
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue bind QUEUE to EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-kv]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue unbind QUEUE from EXCHANGE --bindingkey=KEY [--uri=URI] [-kv]
+  rabtap queue unbind QUEUE from EXCHANGE [--uri=URI] [-kv]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue rm QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue purge QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
@@ -165,7 +168,7 @@ Usage:
   rabtap --version
 
 Arguments and options:
- EXCHANGES            comma-separated list of exchanges and binding keys,
+ EXCHANGES            comma-separated list of exchanges and optional binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
  SOURCE               file or directory to publish in pub mode. If omitted, stdin will be read.
@@ -173,6 +176,8 @@ Arguments and options:
  CONNECTION           name of a connection.
  DIR                  directory to read messages from.
  -a, --autodelete     create auto delete exchange/queue.
+ --all                set x-match=all option in header based routing.
+ --any                set x-match=any option in header based routing.
  --api=APIURI         connect to given API server. If APIURL is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
@@ -191,6 +196,8 @@ Arguments and options:
                       * for info command: controls generated output format. Valid 
                         options are: "text", "dot". Default: text
  -h, --help           print this help.
+ --header=KV          A key value pair in the form of "key=value" used as a
+                      routing- or binding-key. Can occur multiple times.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
@@ -474,26 +481,40 @@ Example assumes that `RABTAP_AMQPURI` environment variable is set, as the
 The `pub` command is used to publish messages to an exchange with a routing
 key.  The messages to be published are either read from a file, or from a
 directory which contains previously recorded messages (e.g. using the
-`--saveto` option of the `tap` command). Messages can be published either in
-raw format, in which they are send as-is, or in [JSON-format, as described
-here](#json-message-format), which includes message metadata and the body in a
-single JSON document.
+`--saveto` option of the `tap` command). 
+
+Message routing is either specified with a routing key and the `--routingkey`
+option or, when header based routing should be used, by specifying the headers
+with the `--header` option. Each header is specified in the form `KEY=VALUE`. 
+Multiple headers can be specified by specifying multiple `--header` options.
+
+Messages can be published either in raw format, in which they are send as-is,
+or in [JSON-format, as described here](#json-message-format), which includes
+message metadata and the body in a single JSON document. When multiple messages
+are published with metadata, rabtap will calculate the time elapsed of
+consecutive recorded messages using the metadata, and delay publishing
+accordingly. To set the publishing delay to a fix value, use the `--delay`
+option. To publish without delays, use `--delay=0s`. To modify publishing speed
+use the `--speed` option, which allows to set a factor to apply to the delays.
 
 The general form of the `pub` command is
 ```
-rabtap pub [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--routingkey=KEY] 
-           [--confirms] [--mandatory] [--format=FORMAT] 
-           [--delay=DELAY | --speed=FACTOR] [-jkv]
+rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
+            [--routingkey=KEY | (--header=HEADERKV)...]
+            [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
 ```
 
-* `$ echo hello | rabtap pub amq.fanout` - publish "hello" to exchange amqp.fanout
-* `$ rabtap pub messages.json --format=json`  - messages are read from file `messages.json`
-  in [rabtap JSON format](#json-message-format). Target exchange and routing
-  keys are read from the messages meta data.  The `messages.json` file can
-  contain multiple JSON documents as it is treated as a JSON stream.  Rabtap
-  will honor the `XRabtapReceived` timestamps of the messages and by default
-  delay the messages as they were recorded. This behaviour can be overridden
-  by the `--delay` and `--speed` options.
+* `$ echo hello | rabtap pub --exchange amq.fanout` - publish "hello" to
+  exchange amqp.fanout
+* `echo "hello" | rabtap pub --exchange amq.header --header KEY=VAL --header X=Y` - 
+  publish hello to exchange amq.header use set message headers.
+* `$ rabtap pub messages.json --format=json`  - messages are read from file
+  `messages.json` in [rabtap JSON format](#json-message-format). Target
+  exchange and routing keys are read from the messages meta data.  The
+  `messages.json` file can contain multiple JSON documents as it is treated as
+  a JSON stream.  Rabtap will honor the `XRabtapReceived` timestamps of the
+  messages and by default will delay the messages as they were recorded. This
+  behaviour can be overridden by the `--delay` and `--speed` options.
 * `$ rabtap pub --exchange amq.direct -r myKey --format=json messages.json --delay=0s` - as
   before, but publish messages always to exchange `amq.direct` with routing key
   `myKey` and without any delays.

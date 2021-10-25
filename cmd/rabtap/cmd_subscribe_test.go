@@ -92,6 +92,7 @@ func TestCmdSub(t *testing.T) {
 			amqpURL:    amqpURL,
 			exchange:   &testExchange,
 			routingKey: &testKey,
+			headers:    rabtap.KeyValueMap{},
 			tlsConfig:  tlsConfig,
 			readerFunc: func() (RabtapPersistentMessage, bool, error) {
 				// provide exactly one message

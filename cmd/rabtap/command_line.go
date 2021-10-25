@@ -38,7 +38,7 @@ Usage:
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
-              [--routingkey=KEY | (--header=HEADERKV)...]
+              [--routingkey=KEY | (--header=KV)...]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
@@ -48,10 +48,10 @@ Usage:
   rabtap queue create QUEUE [--uri=URI] [-adkv] 
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-kv]
-              (--bindingkey=KEY | (--header=HEADERKV)... (--all|--any))
+              (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue unbind QUEUE from EXCHANGE [--uri=URI] [-kv]
-              (--bindingkey=KEY | (--header=HEADERKV)... (--all|--any))
+              (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue rm QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue purge QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
@@ -68,6 +68,8 @@ Arguments and options:
  CONNECTION           name of a connection.
  DIR                  directory to read messages from.
  -a, --autodelete     create auto delete exchange/queue.
+ --all                set x-match=all option in header based routing.
+ --any                set x-match=any option in header based routing.
  --api=APIURI         connect to given API server. If APIURL is omitted,
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
@@ -86,8 +88,8 @@ Arguments and options:
                       * for info command: controls generated output format. Valid 
                         options are: "text", "dot". Default: text
  -h, --help           print this help.
- --header HEADERKV    A key value pair in the form of "key=value" used as a
-                      routing key or binding key. Can occur multiple times.
+ --header=KV          A key value pair in the form of "key=value" used as a
+                      routing- or binding-key. Can occur multiple times.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.

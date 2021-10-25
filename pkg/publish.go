@@ -112,6 +112,8 @@ func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
 // The immedeate flag is not supported since RabbitMQ 3.0, see
 // https://blog.rabbitmq.com/posts/2012/11/breaking-things-with-rabbitmq-3-0
 //
+// TODO detect throttling
+// TODO simplify
 func (s *AmqpPublish) createWorkerFunc(
 	publishCh PublishChannel,
 	errorCh PublishErrorChannel) AmqpWorkerFunc {
@@ -121,7 +123,7 @@ func (s *AmqpPublish) createWorkerFunc(
 		// errors receives channel errors (e.g. publishing to non-existant exchange)
 		errors := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
 		// return receivces unroutable messages back from the server
-		returns := session.NotifyReturn(make(chan amqp.Return))
+		returns := session.NotifyReturn(make(chan amqp.Return, 1))
 		// confirms receives confirmations from the server (if enabled below)
 		confirms := session.NotifyPublish(make(chan amqp.Confirmation, 1))
 
@@ -130,37 +132,36 @@ func (s *AmqpPublish) createWorkerFunc(
 				s.logger.Errorf("Channel could not be put into confirm mode: %s", err)
 			}
 		}
+
 		// wait a while for outstanding errors and returned messages
 		// since these can arrive after we finished publishing.
-
-		// TODO when an error was detected on the errors channel (event loop),
-		//      then the defer needs not to be run (???)
 		defer func() {
 
-			s.logger.Debugf("waiting for returns... ")
+			if !s.mandatory {
+				return
+			}
+
+			s.logger.Debugf("waiting for pending server messages ... ")
 			timeout := time.After(timeoutWaitServer)
 
-			// wait for pending returned messages from the broker, whem
-			// e.g. a message could not be routed. in this case the
-			// message WILL be confirmed (ACK=true), but an async
-			// return message will be send, for which we wait here.
+			// wait for pending returned messages from the broker, when e.g. a
+			// message could not be routed. in this case the message WILL be
+			// confirmed (ACK=true), but an async return message will be send,
+			// for which we wait here.
 			for {
 				select {
 				case <-timeout:
 					return
 
 				case returned, more := <-returns:
-					if !more {
-						continue
+					if more {
+						errorCh <- &PublishError{Reason: PublishErrorReturned, ReturnedMessage: &returned}
 					}
-					errorCh <- &PublishError{Reason: PublishErrorReturned, ReturnedMessage: &returned}
 
-				// these events singal closing of the channel TODO relevant here?
 				case err, more := <-errors:
-					if !more {
-						continue
+					if more {
+						errorCh <- &PublishError{Reason: PublishErrorChannelError, Cause: err}
 					}
-					errorCh <- &PublishError{Reason: PublishErrorChannelError, Cause: err}
 				}
 			}
 		}()
@@ -187,8 +188,7 @@ func (s *AmqpPublish) createWorkerFunc(
 				}
 
 				size := len((*message.Publishing).Body)
-				s.logger.Debugf("publish message to %s (%d bytes)",
-					message.Routing, size)
+				s.logger.Debugf("publish message to %s (%d bytes)", message.Routing, size)
 
 				err := session.Publish(
 					message.Routing.Exchange(),
@@ -203,6 +203,7 @@ func (s *AmqpPublish) createWorkerFunc(
 
 					// wait for the confirmation before publishing a new message
 					// https://www.rabbitmq.com/confirms.html
+					// TODO batched confirms
 					//
 					// "For unroutable messages, the broker will issue a confirm
 					// once the exchange verifies a message won't route to any

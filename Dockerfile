@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine as builder
+FROM golang:1.17-alpine as builder
 ARG version
 
 WORKDIR /go/src/app
@@ -6,7 +6,7 @@ ADD . /go/src/app
 
 RUN    cd cmd/rabtap \
     && CGO_ENABLED=0 \
-       go build -ldflags "-s -w -X main.RabtapAppVersion=$version" -o /go/bin/rabtap
+       go build -ldflags "-s -w -X main.version=$version" -o /go/bin/rabtap
 
 
 FROM gcr.io/distroless/base-debian10

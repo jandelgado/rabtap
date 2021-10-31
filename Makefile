@@ -1,36 +1,14 @@
 # rabtap makefile
 
-BINARY_WIN64=bin/rabtap-win-amd64.exe
-BINARY_DARWIN64=bin/rabtap-darwin-amd64
-BINARY_LINUX64=bin/rabtap-linux-amd64
 SOURCE=$(shell find . -name "*go" -a -not -path "./vendor/*" -not -path "./cmd/testgen/*" )
 VERSION=$(shell git describe --tags)
 TOXICMD:=docker-compose exec toxiproxy /go/bin/toxiproxy-cli
 
-.PHONY: test-app test-lib build build-all tags short-test test run-broker clean  toxiproxy-setup toxiproxy-cmd
+.PHONY: test-app test-lib build build tags short-test test run-broker clean dist-clean toxiproxy-setup toxiproxy-cmd
 
-build: build-linux
-
-build-all:	build-linux build-mac build-win
-
-build-mac:
-	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags \
-				"-s -w -X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_DARWIN64) 
-
-build-linux:
+build:
 	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
-				"-s -w -X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_LINUX64) 
-
-build-win:
-	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags \
-				"-s -w -X main.RabtapAppVersion=$(VERSION)" -o ../../$(BINARY_WIN64) 
-
-assets: build-all
-	mkdir -p assets
-	zip assets/rabtap-${VERSION}-windows-amd64.zip $(BINARY_WIN64) README.md
-	tar czf assets/rabtap-${VERSION}-darwin-amd64.tgz $(BINARY_DARWIN64) README.md
-	tar czf assets/rabtap-${VERSION}-linux-amd64.tgz $(BINARY_LINUX64) README.md
-	sha256sum assets/*zip > assets/SHASUMS256.txt
+				"-s -w -X main.version=$(VERSION)" -o ../../bin/rabtap
 
 tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)
@@ -68,10 +46,9 @@ run-broker:
 	cd inttest/rabbitmq && docker-compose up
 
 dist-clean: clean
-	rm -f *.out $(BINARY_WIN64) $(BINARY_LINUX64) $(BINARY_DARWIN64)
+	rm -rf *.out bin/ dist/
 
 clean:
 	cd cmd/rabtap && go clean -r
 	cd cmd/testgen && go clean -r
-	rm -rf assets bin
 

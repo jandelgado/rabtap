@@ -18,9 +18,10 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
-// RabtapAppVersion holds the application version and is set during link
-// using "go -ldflags "-X main.RabtapAppVersion=a.b.c"
-var RabtapAppVersion = "(version not specified)"
+// version and commit holds the application version and is set during link
+// using "go -ldflags "-X main.version=a.b.c" (defaults used by goreleaser)
+var version = "(version)"
+var commit = "(commit)"
 
 const (
 	// note: usage is DSL interpreted by docopt - this is code. Change carefully.
@@ -589,7 +590,8 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 }
 
 func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArgs, error) {
-	args, err := docopt.ParseArgs(spec, cliArgs, RabtapAppVersion)
+	info := fmt.Sprintf("%s (%s)", version, commit)
+	args, err := docopt.ParseArgs(spec, cliArgs, info /*RabtapAppVersion*/)
 	if err != nil {
 		return CommandLineArgs{}, err
 	}

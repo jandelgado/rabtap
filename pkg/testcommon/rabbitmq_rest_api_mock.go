@@ -450,6 +450,7 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "direct-q1",
+		"type": "classic",
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -524,6 +525,7 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "direct-q2",
+		"Type": "classic",
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -598,6 +600,7 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "fanout-q1",
+		"type": "classic",
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -673,6 +676,7 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "fanout-q2",
+		"type": "classic",
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -748,6 +752,7 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "header-q1",
+		"type": "classic",
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -823,6 +828,7 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "header-q2",
+		"type": "classic",
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -898,6 +904,7 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "topic-q1",
+		"type": "classic",
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {
@@ -973,6 +980,7 @@ const (
         "durable": true,
         "vhost": "/",
         "name": "topic-q2",
+		"type": "classic",
         "message_bytes_paged_out": 0,
         "messages_paged_out": 0,
         "backing_queue_status": {

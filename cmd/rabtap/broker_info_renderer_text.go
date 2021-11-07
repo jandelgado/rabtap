@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"text/template"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -22,16 +23,19 @@ var (
 // brokerInfoRendererText renders a tree representation represented by a rootNode
 // into a string representation
 type brokerInfoRendererText struct {
-	config    BrokerInfoRendererConfig
-	colorizer ColorPrinter
+	config        BrokerInfoRendererConfig
+	templateFuncs template.FuncMap
 }
 
 // NewBrokerInfoRendererText returns a BrokerInfoRenderer that renders for
 // text console.
 func NewBrokerInfoRendererText(config BrokerInfoRendererConfig) BrokerInfoRenderer {
+	colorizer := NewColorPrinter(config.NoColor)
+	// TODO inject
+	templateFuncs := MergeTemplateFuncs(colorizer.GetFuncMap(), RabtapTemplateFuncs)
 	return &brokerInfoRendererText{
-		config:    config,
-		colorizer: NewColorPrinter(config.NoColor),
+		config:        config,
+		templateFuncs: templateFuncs,
 	}
 }
 
@@ -62,22 +66,24 @@ const (
 		{{- .Exchange.MessageStats.PublishOut }}, {{printf "%.1f" .Exchange.MessageStats.PublishOutDetails.Rate}}/s) msg
 		{{- end }}, [{{ .ExchangeFlags  }}])`
 	tplQueue = `
-	    {{- QueueColor .Queue.Name }} (queue,
+	    {{- QueueColor .Queue.Name }} (queue({{ .Queue.Type}}),
 		{{- if .Config.ShowStats }}
 		{{- .Queue.Consumers  }} cons, (
 		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
 		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
+		{{- " " }}{{ ToPercent .Queue.ConsumerUtilisation }}% utl,
 		{{- end }}
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
 		{{- ""}}, [{{ .QueueFlags}}])`
 	tplBoundQueue = `
-	    {{- QueueColor .Binding.Destination }} (queue,
+	    {{- QueueColor .Binding.Destination }} (queue({{ .Queue.Type}}),
 		{{- with .Binding.RoutingKey }} key='{{ KeyColor .}}',{{end}}
 		{{- with .Binding.Arguments}} args='{{ KeyColor .}}',{{end}}
 		{{- if .Config.ShowStats }}
 		{{- .Queue.Consumers  }} cons, (
 		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
 		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
+		{{- " " }}{{ ToPercent .Queue.ConsumerUtilisation }}% utl,
 		{{- end }}
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
 		{{- ""}}, [{{ .QueueFlags}}])`
@@ -99,7 +105,7 @@ func (s brokerInfoRendererText) renderVhostAsString(vhost string) string {
 	var args = struct {
 		Vhost string
 	}{vhost}
-	return resolveTemplate("vhost-tpl", tplVhost, args, s.colorizer.GetFuncMap())
+	return resolveTemplate("vhost-tpl", tplVhost, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderConsumerElementAsString(consumer rabtap.RabbitConsumer) string {
@@ -107,7 +113,7 @@ func (s brokerInfoRendererText) renderConsumerElementAsString(consumer rabtap.Ra
 		Config   BrokerInfoRendererConfig
 		Consumer rabtap.RabbitConsumer
 	}{s.config, consumer}
-	return resolveTemplate("consumer-tpl", tplConsumer, args, s.colorizer.GetFuncMap())
+	return resolveTemplate("consumer-tpl", tplConsumer, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderConnectionElementAsString(conn rabtap.RabbitConnection) string {
@@ -115,7 +121,7 @@ func (s brokerInfoRendererText) renderConnectionElementAsString(conn rabtap.Rabb
 		Config     BrokerInfoRendererConfig
 		Connection rabtap.RabbitConnection
 	}{s.config, conn}
-	return resolveTemplate("connnection-tpl", tplConnection, args, s.colorizer.GetFuncMap())
+	return resolveTemplate("connnection-tpl", tplConnection, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderQueueElementAsString(queue rabtap.RabbitQueue) string {
@@ -125,7 +131,7 @@ func (s brokerInfoRendererText) renderQueueElementAsString(queue rabtap.RabbitQu
 		Queue      rabtap.RabbitQueue
 		QueueFlags string
 	}{s.config, queue, queueFlags}
-	return resolveTemplate("queue-tpl", tplQueue, args, s.colorizer.GetFuncMap())
+	return resolveTemplate("queue-tpl", tplQueue, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderBoundQueueElementAsString(queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
@@ -136,7 +142,7 @@ func (s brokerInfoRendererText) renderBoundQueueElementAsString(queue rabtap.Rab
 		Queue      rabtap.RabbitQueue
 		QueueFlags string
 	}{s.config, binding, queue, queueFlags}
-	return resolveTemplate("bound-queue-tpl", tplBoundQueue, args, s.colorizer.GetFuncMap())
+	return resolveTemplate("bound-queue-tpl", tplBoundQueue, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderRootNodeAsString(rabbitURL *url.URL, overview rabtap.RabbitOverview) string {
@@ -145,7 +151,7 @@ func (s brokerInfoRendererText) renderRootNodeAsString(rabbitURL *url.URL, overv
 		URL      *url.URL
 		Overview rabtap.RabbitOverview
 	}{s.config, rabbitURL, overview}
-	return resolveTemplate("rootnode", tplRootNode, args, s.colorizer.GetFuncMap())
+	return resolveTemplate("rootnode", tplRootNode, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderExchangeElementAsString(exchange rabtap.RabbitExchange) string {
@@ -155,7 +161,7 @@ func (s brokerInfoRendererText) renderExchangeElementAsString(exchange rabtap.Ra
 		Exchange      rabtap.RabbitExchange
 		ExchangeFlags string
 	}{s.config, exchange, exchangeFlags}
-	return resolveTemplate("exchange-tpl", tplExchange, args, s.colorizer.GetFuncMap())
+	return resolveTemplate("exchange-tpl", tplExchange, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderNode(n interface{}) *TreeNode {

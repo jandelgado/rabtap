@@ -438,6 +438,7 @@ type RabbitQueue struct {
 	Durable              bool   `json:"durable"`
 	Vhost                string `json:"vhost"`
 	Name                 string `json:"name"`
+	Type                 string `json:"type"`
 	MessageBytesPagedOut int    `json:"message_bytes_paged_out"`
 	MessagesPagedOut     int    `json:"messages_paged_out"`
 	BackingQueueStatus   struct {
@@ -477,8 +478,8 @@ type RabbitQueue struct {
 	Consumers int `json:"consumers"`
 	//	ExclusiveConsumerTag interface{} `json:"exclusive_consumer_tag"`
 	//	Policy               interface{} `json:"policy"`
-	//	ConsumerUtilisation  interface{} `json:"consumer_utilisation"`
-	// TODO use cusom marshaller and parese into time.Time
+	ConsumerUtilisation float64 `json:"consumer_utilisation"`
+	// TODO use custom marshaller and parse into time.Time
 	IdleSince string `json:"idle_since"`
 	Memory    int    `json:"memory"`
 }

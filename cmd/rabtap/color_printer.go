@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"text/template"
 
 	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
@@ -41,8 +42,8 @@ type ColorPrinter struct {
 }
 
 // GetFuncMap returns a function map that can be used in a template.
-func (s ColorPrinter) GetFuncMap() map[string]interface{} {
-	return map[string]interface{}{
+func (s ColorPrinter) GetFuncMap() template.FuncMap {
+	return template.FuncMap{
 		"QueueColor":      s.Queue,
 		"ConnectionColor": s.Connection,
 		"ChannelColor":    s.Channel,

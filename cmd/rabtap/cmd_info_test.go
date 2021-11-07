@@ -65,20 +65,20 @@ func Example_cmdInfoByExchangeInTextFormat() {
 	//     ├── amq.rabbitmq.trace (exchange, type 'topic', [D|I])
 	//     ├── amq.topic (exchange, type 'topic', [D])
 	//     ├── test-direct (exchange, type 'direct', [D|AD|I])
-	//     │   ├── direct-q1 (queue, key='direct-q1', running, [D])
+	//     │   ├── direct-q1 (queue(classic), key='direct-q1', running, [D])
 	//     │   │   ├── some_consumer (consumer user='guest', prefetch=0, chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
 	//     │   │   │   └── '172.17.0.1:40874 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:40874')
 	//     │   │   └── another_consumer w/ faulty channel (consumer user='', prefetch=0, chan='')
-	//     │   └── direct-q2 (queue, key='direct-q2', running, [D])
+	//     │   └── direct-q2 (queue(classic), key='direct-q2', running, [D])
 	//     ├── test-fanout (exchange, type 'fanout', [D])
-	//     │   ├── fanout-q1 (queue, idle since 2017-05-25 19:14:32, [D])
-	//     │   └── fanout-q2 (queue, idle since 2017-05-25 19:14:32, [D])
+	//     │   ├── fanout-q1 (queue(classic), idle since 2017-05-25 19:14:32, [D])
+	//     │   └── fanout-q2 (queue(classic), idle since 2017-05-25 19:14:32, [D])
 	//     ├── test-headers (exchange, type 'headers', [D|AD])
-	//     │   ├── header-q1 (queue, key='headers-q1', idle since 2017-05-25 19:14:53, [D])
-	//     │   └── header-q2 (queue, key='headers-q2', idle since 2017-05-25 19:14:47, [D])
+	//     │   ├── header-q1 (queue(classic), key='headers-q1', idle since 2017-05-25 19:14:53, [D])
+	//     │   └── header-q2 (queue(classic), key='headers-q2', idle since 2017-05-25 19:14:47, [D])
 	//     └── test-topic (exchange, type 'topic', [D])
-	//         ├── topic-q1 (queue, key='topic-q1', idle since 2017-05-25 19:14:17, [D|AD|EX])
-	//         ├── topic-q2 (queue, key='topic-q2', idle since 2017-05-25 19:14:21, [D])
+	//         ├── topic-q1 (queue(classic), key='topic-q1', idle since 2017-05-25 19:14:17, [D|AD|EX])
+	//         ├── topic-q2 (queue(classic), key='topic-q2', idle since 2017-05-25 19:14:21, [D])
 	//         └── test-topic (exchange, type 'topic', [D])
 
 }
@@ -112,7 +112,7 @@ func Example_cmdInfoByConnectionInTextFormat() {
 	// └── Vhost /
 	//     └── '172.17.0.1:40874 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:40874')
 	//         └── some_consumer (consumer user='guest', prefetch=0, chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
-	//             └── direct-q1 (queue, running, [D])
+	//             └── direct-q1 (queue(classic), running, [D])
 }
 
 const expectedResultDotByExchange = `graph broker {

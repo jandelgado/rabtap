@@ -1,10 +1,22 @@
-// Copyright (C) 2017-2019 Jan Delgado
+// rabtap templating
+// Copyright (C) 2017-2021 Jan Delgado
 package main
 
 import (
 	"bytes"
 	"text/template"
 )
+
+// MergeTemplateFuncs merges the given list of template funcs into a single one
+func MergeTemplateFuncs(maps ...template.FuncMap) template.FuncMap {
+	res := template.FuncMap{}
+	for _, m := range maps {
+		for k, v := range m {
+			res[k] = v
+		}
+	}
+	return res
+}
 
 // resolveTemplate resolves a template for use in the broker info printer,
 // with support for colored output. name is just an informational name

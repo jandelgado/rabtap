@@ -1,5 +1,11 @@
 # Changelog for rabtap
 
+## v1.31 (2021-11-07)
+
+* new: show queue utilisation and type (e.g. classic, quorum, stream) to info
+  command
+* new: build rabtap for more targets using goreleaser
+  
 ## v1.30 (2021-10-13)
 
 * new: support header based routing (pub, queue bind, queue unbind)

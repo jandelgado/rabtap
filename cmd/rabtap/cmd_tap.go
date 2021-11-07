@@ -30,7 +30,8 @@ func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig 
 		})
 	}
 	g.Go(func() error {
-		err := messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc, pred)
+		acknowledger := createAcknowledgeFunc(false, false) // ACK
+		err := messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc, pred, acknowledger)
 		cancel()
 		return err
 	})

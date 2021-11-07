@@ -12,6 +12,9 @@ import (
 	"github.com/streadway/amqp"
 )
 
+const PrefetchCount = 1
+const PrefetchSize = 0
+
 // AmqpSubscriberConfig stores configuration of the subscriber
 type AmqpSubscriberConfig struct {
 	Exclusive bool
@@ -72,6 +75,11 @@ func (s *AmqpSubscriber) createWorkerFunc(
 
 func (s *AmqpSubscriber) consumeMessages(session Session,
 	queueName string) (<-chan amqp.Delivery, error) {
+
+	err := session.Qos(PrefetchCount, PrefetchSize, false)
+	if err != nil {
+		return nil, err
+	}
 
 	msgs, err := session.Consume(
 		queueName,

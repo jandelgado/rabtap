@@ -477,7 +477,8 @@ func TestCliSubCmdSaveToDir(t *testing.T) {
 	assertEqualURL(t, "uri", args.AMQPURL)
 	assert.Equal(t, "dir", *args.SaveDir)
 	assert.Equal(t, int64(99), args.Limit)
-	assert.True(t, args.AutoAck)
+	assert.False(t, args.Reject)
+	assert.False(t, args.Requeue)
 }
 
 func TestCliCreateQueue(t *testing.T) {

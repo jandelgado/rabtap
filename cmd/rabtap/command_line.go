@@ -36,7 +36,8 @@ Usage:
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] [--no-auto-ack] [-jksvn]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] 
+              [(--reject [--requeue])] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
               [--routingkey=KEY | (--header=KV)...]
@@ -75,6 +76,7 @@ Arguments and options:
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
+ --confirms           enable publisher confirms and wait for confirmations.
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
                       If not set then messages will be delayed as recorded. 
@@ -93,20 +95,16 @@ Arguments and options:
                       routing- or binding-key. Can occur multiple times.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
- --tls-cert-file=CERTFILE A Cert file to use for client authentication.
- --tls-key-file=KEYFILE   A Key file to use for client authentication.
- --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
+ --limit=NUM          Stop afer NUM messages were received. When set to 0, will
+                      run until terminated [default: 0].
  --mandatory          enable mandatory publishing (messages must be delivered to queue).
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
- -n, --no-color       don't colorize output (also environment variable NO_COLOR).
- --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
-                      unacked messages on the broker which will be requeued
-                      when the channel is closed.
- --limit=NUM          Stop afer NUM messages are received.
+ -n, --no-color       don't colorize output (see also environment variable NO_COLOR).
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
- --confirms           enable publisher confirms and wait for confirmations.
+ --reject             Reject messages. Default behaviour is to acknowledge messages.
+ --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON 
 					  message format).
@@ -116,6 +114,9 @@ Arguments and options:
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE      exchange type [default: fanout].
+ --tls-cert-file=CERTFILE A Cert file to use for client authentication.
+ --tls-key-file=KEYFILE   A Key file to use for client authentication.
+ --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
  --uri=URI            connect to given AQMP broker. If omitted, the
                       environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
@@ -240,8 +241,9 @@ type CommandLineArgs struct {
 	Delay               *time.Duration    // pub: fixed delay in ms
 	Confirms            bool              // pub: wait for confirmations
 	Mandatory           bool              // pub: set mandatory flag
-	AutoAck             bool              // sub: auto ack enabled
 	Limit               int64             // sub: optional limit
+	Reject              bool              // sub: reject messages
+	Requeue             bool              // sub: requeue rejectied messages
 	QueueName           string            // queue create, remove, bind, sub
 	QueueBindingKey     string            // queue bind
 	ExchangeName        string            // exchange name  create, remove or queue bind
@@ -396,7 +398,8 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:        SubCmd,
 		commonArgs: parseCommonArgs(args),
-		AutoAck:    !args["--no-auto-ack"].(bool),
+		Reject:     args["--reject"].(bool),
+		Requeue:    args["--requeue"].(bool),
 		QueueName:  args["QUEUE"].(string),
 		Silent:     args["--silent"].(bool),
 	}

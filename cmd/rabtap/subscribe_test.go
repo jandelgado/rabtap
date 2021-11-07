@@ -22,16 +22,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateCountingMessageReceivePredReturnsFalseAfterCalledNumTimes(t *testing.T) {
+func TestCreateCountingMessageReceivePredReturnsTrueIfNumIsZero(t *testing.T) {
+	pred := createCountingMessageReceivePred(0)
+
+	assert.True(t, pred(rabtap.TapMessage{}))
+}
+
+func TestCreateCountingMessageReceivePredReturnsFalseOnNthCall(t *testing.T) {
 	pred := createCountingMessageReceivePred(2)
 
 	assert.True(t, pred(rabtap.TapMessage{}))
-	assert.True(t, pred(rabtap.TapMessage{}))
 	assert.False(t, pred(rabtap.TapMessage{}))
-}
-
-func TestContinueMessageReceivePredReturnsTrue(t *testing.T) {
-	assert.True(t, continueMessageReceivePred(rabtap.TapMessage{}))
 }
 
 func TestChainMessageReceiveFuncCallsBothFunctions(t *testing.T) {
@@ -190,7 +191,8 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 		return nil
 	}
 	continuePred := func(rabtap.TapMessage) bool { return true }
-	go func() { _ = messageReceiveLoop(ctx, messageChan, receiveFunc, continuePred) }()
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+	go func() { _ = messageReceiveLoop(ctx, messageChan, receiveFunc, continuePred, acknowledger) }()
 
 	messageChan <- rabtap.TapMessage{}
 	<-done // TODO add timeout
@@ -204,7 +206,8 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 	continuePred := func(rabtap.TapMessage) bool { return true }
 
 	close(messageChan)
-	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, continuePred)
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, continuePred, acknowledger)
 
 	assert.Nil(t, err)
 }
@@ -215,7 +218,8 @@ func TestMessageReceiveLoopExitsWhenLoopPredReturnsFalse(t *testing.T) {
 	stopPred := func(rabtap.TapMessage) bool { return false }
 
 	messageChan <- rabtap.TapMessage{}
-	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, stopPred)
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, stopPred, acknowledger)
 
 	assert.Nil(t, err)
 }

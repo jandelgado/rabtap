@@ -159,11 +159,12 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 
-	pred := continueMessageReceivePred
+	pred := createCountingMessageReceivePred(args.Limit)
 	err = cmdSubscribe(ctx, CmdSubscribeArg{
 		amqpURL:                args.AMQPURL,
 		queue:                  args.QueueName,
-		AutoAck:                args.AutoAck,
+		requeue:                args.Requeue,
+		reject:                 args.Reject,
 		tlsConfig:              getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		messageReceiveFunc:     messageReceiveFunc,
 		messageReceiveLoopPred: pred,
@@ -172,8 +173,6 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 }
 
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
-	pred := continueMessageReceivePred
-
 	opts := MessageReceiveFuncOptions{
 		out:              NewColorableWriter(os.Stdout),
 		noColor:          args.NoColor,
@@ -184,6 +183,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	}
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
+	pred := createCountingMessageReceivePred(args.Limit)
 	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		messageReceiveFunc, pred)
 }

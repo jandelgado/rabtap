@@ -20,7 +20,8 @@ type CmdSubscribeArg struct {
 	tlsConfig              *tls.Config
 	messageReceiveFunc     MessageReceiveFunc
 	messageReceiveLoopPred MessageReceiveLoopPred
-	AutoAck                bool
+	reject                 bool
+	requeue                bool
 }
 
 // cmdSub subscribes to messages from the given queue
@@ -31,12 +32,13 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	messageChannel := make(rabtap.TapChannel)
-	config := rabtap.AmqpSubscriberConfig{Exclusive: false, AutoAck: cmd.AutoAck}
+	config := rabtap.AmqpSubscriberConfig{Exclusive: false, AutoAck: false}
 	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURL, cmd.tlsConfig, log)
 
 	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel) })
 	g.Go(func() error {
-		err := messageReceiveLoop(ctx, messageChannel, cmd.messageReceiveFunc, cmd.messageReceiveLoopPred)
+		acknowledger := createAcknowledgeFunc(cmd.reject, cmd.requeue)
+		err := messageReceiveLoop(ctx, messageChannel, cmd.messageReceiveFunc, cmd.messageReceiveLoopPred, acknowledger)
 		cancel()
 		return err
 	})

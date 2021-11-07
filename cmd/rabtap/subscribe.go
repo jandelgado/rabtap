@@ -15,6 +15,8 @@ import (
 // FilenameProvider returns a filename to save a subscribed message to.
 type FilenameProvider func() string
 
+type AcknowledgeFunc func(rabtap.TapMessage) error
+
 type MessageReceiveFuncOptions struct {
 	out              io.Writer
 	format           string // currently: raw, json, json-nopp
@@ -35,35 +37,51 @@ type MessageReceiveFunc func(rabtap.TapMessage) error
 type MessageReceiveLoopPred func(rabtap.TapMessage) bool
 
 // createCountingMessageReceivePred returns a (stateful) predicate that will
-// return false after num messages where successfully received, thus limiting
-// the number of messages received
-func createCountingMessageReceivePred(num int) MessageReceiveLoopPred {
-	counter := 0
+// return false after it is called num times, thus limiting the number of
+// messages received. If num is 0, a predicate always returning true is
+// returned.
+func createCountingMessageReceivePred(num int64) MessageReceiveLoopPred {
+
+	if num == 0 {
+		return func(_ rabtap.TapMessage) bool {
+			return true
+		}
+	}
+
+	counter := int64(1)
 	return func(_ rabtap.TapMessage) bool {
 		counter++
 		return counter <= num
 	}
 }
 
-// continueMessageReceivePred will never return false, resulting in an unlimited
-// receival of messages.
-func continueMessageReceivePred(msg rabtap.TapMessage) bool {
-	return true
+// createAcknowledgeFunc returns the function used to acknowledge received
+// functions, wich will either be ACKed or REJECTED with optional REQUEUE
+// flag set.
+func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
+	return func(message rabtap.TapMessage) error {
+		if reject {
+			if err := message.AmqpMessage.Reject(requeue); err != nil {
+				return fmt.Errorf("REJECT failed: %w", err)
+			}
+		} else {
+			if err := message.AmqpMessage.Ack(false); err != nil {
+				return fmt.Errorf("ACK failed: %w", err)
+			}
+		}
+		return nil
+	}
 }
 
 func messageReceiveLoop(ctx context.Context,
 	messageChan rabtap.TapChannel,
 	messageReceiveFunc MessageReceiveFunc,
-	pred MessageReceiveLoopPred) error {
+	pred MessageReceiveLoopPred,
+	acknowledger AcknowledgeFunc) error {
 
 	//wg := new(sync.WaitGroup)
 
 	for {
-		// if pred(count) {
-		//     //return ErrMessageLoopEnded
-		//     return nil
-		// }
-
 		select {
 		case <-ctx.Done():
 			log.Debugf("subscribe: cancel")
@@ -76,9 +94,15 @@ func messageReceiveLoop(ctx context.Context,
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
 
+			// acknowledge or reject the message
+			if err := acknowledger(message); err != nil {
+				log.Error(err)
+			}
+
 			if err := messageReceiveFunc(message); err != nil {
 				log.Error(err)
 			}
+
 			if !pred(message) {
 				return nil
 			}

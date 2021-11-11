@@ -21,6 +21,7 @@ import (
 
 func TestCmdTap(t *testing.T) {
 
+	// given
 	conn, ch := testcommon.IntegrationTestConnection(t, "int-test-exchange", "topic", 1, false)
 	defer conn.Close()
 
@@ -42,7 +43,11 @@ func TestCmdTap(t *testing.T) {
 			Exchanges: exchangeConfig}}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go cmdTap(ctx, tapConfig, &tls.Config{}, receiveFunc)
+
+	pred := func(rabtap.TapMessage) bool { return true }
+
+	// when
+	go cmdTap(ctx, tapConfig, &tls.Config{}, receiveFunc, pred)
 
 	time.Sleep(time.Second * 1)
 	err := ch.Publish(
@@ -55,9 +60,9 @@ func TestCmdTap(t *testing.T) {
 			ContentType:  "text/plain",
 			DeliveryMode: amqp.Transient,
 		})
-	require.Nil(t, err)
 
-	// test if our tap received the message
+	// then: our tap received the message
+	require.Nil(t, err)
 	select {
 	case <-done:
 	case <-time.After(time.Second * 2):

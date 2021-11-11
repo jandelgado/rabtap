@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2021 Jan Delgado
 
 package main
 
@@ -153,75 +153,6 @@ func TestCliTapParsesSingleURL(t *testing.T) {
 	assert.False(t, args.NoColor)
 }
 
-func TestCliTapUsesURLFromEnvWhenNotSpecified(t *testing.T) {
-	const key = "RABTAP_AMQPURI"
-	os.Setenv(key, "uri")
-	defer os.Unsetenv(key)
-
-	args, err := ParseCommandLineArgs(
-		[]string{"tap", "exchange1:binding1"})
-
-	assert.Nil(t, err)
-	assert.Equal(t, TapCmd, args.Cmd)
-	assert.Equal(t, 1, len(args.TapConfig))
-	assertEqualURL(t, "uri", args.TapConfig[0].AMQPURL)
-	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
-	assert.Equal(t, "exchange1", args.TapConfig[0].Exchanges[0].Exchange)
-	assert.Equal(t, "binding1", args.TapConfig[0].Exchanges[0].BindingKey)
-	assert.False(t, args.NoColor)
-}
-
-func TestCliTapFailsWhenNoURIisSpecified(t *testing.T) {
-	const key = "RABTAP_AMQPURI"
-	defer os.Unsetenv(key)
-
-	_, err := ParseCommandLineArgs(
-		[]string{"tap", "exchange1:binding1"})
-
-	assert.NotNil(t, err)
-}
-
-func TestCliTapParsesMultipleURLs(t *testing.T) {
-	args, err := ParseCommandLineArgs(
-		[]string{"tap", "--uri=broker1", "exchange1:binding1,exchange2:binding2",
-			"tap", "--uri=broker2", "exchange3:binding3,exchange4:binding4"})
-
-	assert.Nil(t, err)
-	assert.Equal(t, TapCmd, args.Cmd)
-	assert.Equal(t, 2, len(args.TapConfig))
-	assertEqualURL(t, "broker1", args.TapConfig[0].AMQPURL)
-	assertEqualURL(t, "broker2", args.TapConfig[1].AMQPURL)
-	assert.Equal(t, 2, len(args.TapConfig[0].Exchanges))
-	assert.Equal(t, "exchange1", args.TapConfig[0].Exchanges[0].Exchange)
-	assert.Equal(t, "binding1", args.TapConfig[0].Exchanges[0].BindingKey)
-	assert.Equal(t, "exchange2", args.TapConfig[0].Exchanges[1].Exchange)
-	assert.Equal(t, "binding2", args.TapConfig[0].Exchanges[1].BindingKey)
-	assert.Equal(t, 2, len(args.TapConfig[1].Exchanges))
-	assert.Equal(t, "exchange3", args.TapConfig[1].Exchanges[0].Exchange)
-	assert.Equal(t, "binding3", args.TapConfig[1].Exchanges[0].BindingKey)
-	assert.Equal(t, "exchange4", args.TapConfig[1].Exchanges[1].Exchange)
-	assert.Equal(t, "binding4", args.TapConfig[1].Exchanges[1].BindingKey)
-}
-
-func TestCliAllOptsInTapCommandiAreRecognized(t *testing.T) {
-	args, err := ParseCommandLineArgs(
-		[]string{"tap", "--uri=uri", "exchange:binding", "--silent", "--verbose",
-			"--format=json-nopp", "--insecure", "--saveto", "savedir"})
-
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(args.TapConfig))
-	assert.Equal(t, TapCmd, args.Cmd)
-	assertEqualURL(t, "uri", args.TapConfig[0].AMQPURL)
-	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
-	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
-	assert.Equal(t, "binding", args.TapConfig[0].Exchanges[0].BindingKey)
-	assert.Equal(t, "savedir", *args.SaveDir)
-	assert.Equal(t, "json-nopp", args.Format)
-	assert.True(t, args.Verbose)
-	assert.True(t, args.Silent)
-	assert.True(t, args.InsecureTLS)
-}
-
 func TestParsePubSubFormatArgDefaultsToRaw(t *testing.T) {
 	fmt, err := parsePubSubFormatArg(map[string]interface{}{})
 	assert.Nil(t, err)
@@ -243,6 +174,87 @@ func TestParsePubSubFormatArgDetectsDeprecatedOptions(t *testing.T) {
 func TestParsePubSubFormatArgRaisesErrorForInvalidOption(t *testing.T) {
 	_, err := parsePubSubFormatArg(map[string]interface{}{"--format": "invalid"})
 	assert.NotNil(t, err)
+}
+
+func TestCliTapCmdSingleUriFromEnv(t *testing.T) {
+	const key = "RABTAP_AMQPURI"
+	os.Setenv(key, "uri")
+	defer os.Unsetenv(key)
+
+	args, err := ParseCommandLineArgs(
+		[]string{"tap", "exchange1:binding1", "--silent", "--limit=99"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, TapCmd, args.Cmd)
+	assert.Equal(t, 1, len(args.TapConfig))
+	assertEqualURL(t, "uri", args.TapConfig[0].AMQPURL)
+	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
+	assert.Equal(t, "exchange1", args.TapConfig[0].Exchanges[0].Exchange)
+	assert.Equal(t, "binding1", args.TapConfig[0].Exchanges[0].BindingKey)
+	assert.False(t, args.NoColor)
+	assert.Equal(t, int64(99), args.Limit)
+}
+
+func TestCliTapFailsWhenNoURIisSpecified(t *testing.T) {
+	const key = "RABTAP_AMQPURI"
+	defer os.Unsetenv(key)
+
+	_, err := ParseCommandLineArgs(
+		[]string{"tap", "exchange1:binding1"})
+
+	assert.NotNil(t, err)
+}
+
+func TestCliTapCmdInvalidNumReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"tap", "exchange:binding", "--uri=uri", "--limit=invalid"})
+	assert.NotNil(t, err)
+}
+
+func TestCliTapCmdWithMultipleUris(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"tap", "--uri=broker1", "exchange1:binding1,exchange2:binding2",
+			"tap", "--uri=broker2", "exchange3:binding3,exchange4:binding4"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, TapCmd, args.Cmd)
+	assert.Equal(t, 2, len(args.TapConfig))
+	assertEqualURL(t, "broker1", args.TapConfig[0].AMQPURL)
+	assertEqualURL(t, "broker2", args.TapConfig[1].AMQPURL)
+	assert.Equal(t, 2, len(args.TapConfig[0].Exchanges))
+	assert.Equal(t, "exchange1", args.TapConfig[0].Exchanges[0].Exchange)
+	assert.Equal(t, "binding1", args.TapConfig[0].Exchanges[0].BindingKey)
+	assert.Equal(t, "exchange2", args.TapConfig[0].Exchanges[1].Exchange)
+	assert.Equal(t, "binding2", args.TapConfig[0].Exchanges[1].BindingKey)
+	assert.Equal(t, 2, len(args.TapConfig[1].Exchanges))
+	assert.Equal(t, "exchange3", args.TapConfig[1].Exchanges[0].Exchange)
+	assert.Equal(t, "binding3", args.TapConfig[1].Exchanges[0].BindingKey)
+	assert.Equal(t, "exchange4", args.TapConfig[1].Exchanges[1].Exchange)
+	assert.Equal(t, "binding4", args.TapConfig[1].Exchanges[1].BindingKey)
+	assert.Nil(t, args.SaveDir)
+	assert.Equal(t, InfiniteMessages, args.Limit)
+	assert.False(t, args.NoColor)
+	assert.False(t, args.Verbose)
+	assert.False(t, args.InsecureTLS)
+}
+
+func TestCliAllOptsInTapCommandiAreRecognized(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"tap", "--uri=uri", "exchange:binding", "--silent", "--verbose",
+			"--format=json-nopp", "--insecure", "--saveto", "savedir", "--limit", "123"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(args.TapConfig))
+	assert.Equal(t, TapCmd, args.Cmd)
+	assertEqualURL(t, "uri", args.TapConfig[0].AMQPURL)
+	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
+	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
+	assert.Equal(t, "binding", args.TapConfig[0].Exchanges[0].BindingKey)
+	assert.Equal(t, int64(123), args.Limit)
+	assert.Equal(t, "savedir", *args.SaveDir)
+	assert.Equal(t, "json-nopp", args.Format)
+	assert.True(t, args.Verbose)
+	assert.True(t, args.Silent)
+	assert.True(t, args.InsecureTLS)
 }
 
 func TestCliInfoCmdIsParsed(t *testing.T) {
@@ -447,19 +459,26 @@ func TestCliPubCmdFromStdinWithJsonFormatDeprecatedIsRecognized(t *testing.T) {
 
 func TestCliSubCmdInvalidFormatReturnsError(t *testing.T) {
 	_, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--format=invalid"})
-	assert.NotNil(t, err)
+	assert.Error(t, err)
+}
+
+func TestCliSubCmdInvalidNumReturnsError(t *testing.T) {
+	_, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--limit=invalid"})
+	assert.Error(t, err)
 }
 
 func TestCliSubCmdSaveToDir(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"sub", "queuename", "--uri=uri", "--saveto", "dir"})
+		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir", "--limit=99"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, SubCmd, args.Cmd)
 	assert.Equal(t, "queuename", args.QueueName)
 	assertEqualURL(t, "uri", args.AMQPURL)
 	assert.Equal(t, "dir", *args.SaveDir)
-	assert.True(t, args.AutoAck)
+	assert.Equal(t, int64(99), args.Limit)
+	assert.False(t, args.Reject)
+	assert.False(t, args.Requeue)
 }
 
 func TestCliCreateQueue(t *testing.T) {

@@ -1,21 +1,21 @@
-// Copyright (C) 2017-2019 Jan Delgado
+// subscribe to message producers
+// Copyright (C) 2017-2021 Jan Delgado
 
 package main
-
-// common functionality to subscribe to queues.
 
 import (
 	"context"
 	"fmt"
 	"io"
 	"path"
-	"sync"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // FilenameProvider returns a filename to save a subscribed message to.
 type FilenameProvider func() string
+
+type AcknowledgeFunc func(rabtap.TapMessage) error
 
 type MessageReceiveFuncOptions struct {
 	out              io.Writer
@@ -29,10 +29,55 @@ type MessageReceiveFuncOptions struct {
 // MessageReceiveFunc processes receiced messages from a tap.
 type MessageReceiveFunc func(rabtap.TapMessage) error
 
-func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
-	messageReceiveFunc MessageReceiveFunc) error {
+//var ErrMessageLoopEnded = errors.New("message loop ended")
 
-	wg := new(sync.WaitGroup)
+// messageReceiveLoopPred is called once for each a message that was received.
+// If it returns true, the subscriber loop continues, otherwise the loop
+// terminates.
+type MessageReceiveLoopPred func(rabtap.TapMessage) bool
+
+// createCountingMessageReceivePred returns a (stateful) predicate that will
+// return false after it is called num times, thus limiting the number of
+// messages received. If num is 0, a predicate always returning true is
+// returned.
+func createCountingMessageReceivePred(num int64) MessageReceiveLoopPred {
+
+	if num == 0 {
+		return func(_ rabtap.TapMessage) bool {
+			return true
+		}
+	}
+
+	counter := int64(1)
+	return func(_ rabtap.TapMessage) bool {
+		counter++
+		return counter <= num
+	}
+}
+
+// createAcknowledgeFunc returns the function used to acknowledge received
+// functions, wich will either be ACKed or REJECTED with optional REQUEUE
+// flag set.
+func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
+	return func(message rabtap.TapMessage) error {
+		if reject {
+			if err := message.AmqpMessage.Reject(requeue); err != nil {
+				return fmt.Errorf("REJECT failed: %w", err)
+			}
+		} else {
+			if err := message.AmqpMessage.Ack(false); err != nil {
+				return fmt.Errorf("ACK failed: %w", err)
+			}
+		}
+		return nil
+	}
+}
+
+func messageReceiveLoop(ctx context.Context,
+	messageChan rabtap.TapChannel,
+	messageReceiveFunc MessageReceiveFunc,
+	pred MessageReceiveLoopPred,
+	acknowledger AcknowledgeFunc) error {
 
 	for {
 		select {
@@ -43,40 +88,33 @@ func messageReceiveLoop(ctx context.Context, messageChan rabtap.TapChannel,
 		case message, more := <-messageChan:
 			if !more {
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
-				return nil
+				return nil //ErrMessageLoopEnded
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
 
-			// do actual output in a go-routine so we can terminate using
-			// ctx.Done() even if the terminal output is stopped with ctrl+s
-			tmpCh := make(rabtap.TapChannel)
-			go func() {
-				wg.Wait()
-				wg.Add(1)
-				m := <-tmpCh
-				// let the receiveFunc do the actual message processing
-				if err := messageReceiveFunc(m); err != nil {
-					log.Error(err)
-				}
-				wg.Done()
-			}()
-			select {
-			case tmpCh <- message:
-			case <-ctx.Done():
-				log.Debugf("subscribe: cancel (messageReceiveFunc)")
+			// acknowledge or reject the message
+			if err := acknowledger(message); err != nil {
+				log.Error(err)
+			}
+
+			if err := messageReceiveFunc(message); err != nil {
+				log.Error(err)
+			}
+
+			if !pred(message) {
 				return nil
 			}
 		}
 	}
 }
 
-// NullMessageReceiveFunc is used a sentinel to terminal a chain of
+// NullMessageReceiveFunc is used a sentinel to terminate a chain of
 // MessageReceiveFuncs
 func NullMessageReceiveFunc(rabtap.TapMessage) error {
 	return nil
 }
 
-func chainedMessageReceiveFunc(first MessageReceiveFunc, second MessageReceiveFunc) MessageReceiveFunc {
+func chainedMessageReceiveFunc(first, second MessageReceiveFunc) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
 		if err := first(message); err != nil {
 			return err

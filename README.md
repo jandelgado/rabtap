@@ -132,6 +132,7 @@ compile from source.
 ## Usage
 
 ```
+
 rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
@@ -139,11 +140,12 @@ Usage:
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT] [-jknsv]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--no-auto-ack] [-jksvn]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] 
+              [(--reject [--requeue])] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
               [--routingkey=KEY | (--header=KV)...]
@@ -182,6 +184,7 @@ Arguments and options:
                       the environment variable RABTAP_APIURI will be used.
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
+ --confirms           enable publisher confirms and wait for confirmations.
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
                       If not set then messages will be delayed as recorded. 
@@ -200,19 +203,16 @@ Arguments and options:
                       routing- or binding-key. Can occur multiple times.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
- --tls-cert-file=CERTFILE A Cert file to use for client authentication.
- --tls-key-file=KEYFILE   A Key file to use for client authentication.
- --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
+ --limit=NUM          Stop afer NUM messages were received. When set to 0, will
+                      run until terminated [default: 0].
  --mandatory          enable mandatory publishing (messages must be delivered to queue).
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
- -n, --no-color       don't colorize output (also environment variable NO_COLOR).
- --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
-                      unacked messages on the broker which will be requeued
-                      when the channel is closed.
+ -n, --no-color       don't colorize output (see also environment variable NO_COLOR).
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
- --confirms           enable publisher confirms and wait for confirmations.
+ --reject             Reject messages. Default behaviour is to acknowledge messages.
+ --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON 
 					  message format).
@@ -222,6 +222,9 @@ Arguments and options:
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE      exchange type [default: fanout].
+ --tls-cert-file=CERTFILE A Cert file to use for client authentication.
+ --tls-key-file=KEYFILE   A Key file to use for client authentication.
+ --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
  --uri=URI            connect to given AQMP broker. If omitted, the
                       environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
@@ -255,23 +258,16 @@ Examples:
 
 Rabtap understands the following commands:
 
-* `tap` - taps to an exchange and transparently receives messages sent to the
-   exchange, without affecting actual message delivery (using exchange-to-exchange
-   binding). Simulatanous
+* `tap` - taps to an exchange and receives messages sent to the exchange,
+   without affecting actual message delivery (using an exchange-to-exchange
+   binding).
 * `sub` - subscribes to a queue and consumes messages sent to the queue (acts
    like a RabbitMQ consumer)
 * `pub` - publish messages to an exchange, optionally with the timing as recorded.
-* `info` - show broker related info (exchanges, queues, bindings, stats). The
-   features of an exchange are displayed in square brackets with `D` (durable),
-   `AD` (auto delete) and `I` (internal). The features of a queue are displayed
-   in square brackets with `D` (durable), `AD` (auto delete) and `EX`
-   (exclusive). If `--statistics` option is enabled, basic statistics are
-   included in the output. The `--filter` option allows to filter output. See
-   [filtering](#filtering-output-of-info-command) section for details. Use
-   the `--by-connection` to sort output by connection (implies `--consumers`)
+* `info` - show broker related info (exchanges, queues, bindings, stats). 
 * `queue` - create/bind/unbind/remove/purge queue
 * `exchange` - create/remove exchange
-* `connection` - close connections
+* `conn` - close connections
 
 See the examples section for further information.
 
@@ -337,7 +333,8 @@ $ rabtap info
 
 #### Default RabbitMQ TLS config
 
-The default TLS config certificates path can be set using the `RABTAP_TLS_CERTFILE` and `RABTAP_TLS_KEYFILE` and `RABTAP_TLS_CAFILE`
+The default TLS config certificates path can be set using the
+`RABTAP_TLS_CERTFILE` and `RABTAP_TLS_KEYFILE` and `RABTAP_TLS_CAFILE`
 environments variables. Example:
 
 ```console
@@ -370,6 +367,18 @@ for `MODE` are `byExchange` (default) or `byConnection`.
 The `--format=FORMAT` option controls the format of generated output. Valid
 options are `text` for console text format (default) or `dot` to output the
 tree structure in dot format for visualization with graphviz.
+
+The features of an exchange are displayed in square brackets with `D`
+(durable), `AD` (auto delete) and `I` (internal). The features of a queue are
+displayed in square brackets with `D` (durable), `AD` (auto delete) and `EX`
+(exclusive). 
+
+If the `--statistics` option is enabled, basic statistics are included
+in the output. 
+
+The `--filter` option allows to filter output. See
+[filtering](#filtering-output-of-info-command) section for details. Use the
+`--by-connection` to sort output by connection (implies `--consumers`)
 
 Examples (assume that `RABTAP_APIURI` environment variable is set):
 
@@ -467,28 +476,37 @@ Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` +
 
 The `sub` command reads messages from a queue.  Note that unlike `tap`, `sub`
 will consume messages that are in effect removed from the specified queue.
+
+Use the `--limit=NUM` option to limit the number of received messages. If 
+specified, rabtap will terminate, after `NUM` messages were successfully
+received.
+
+Use the `--reject` option to 'nack' messages, which in turn will be discarded
+by th broker or routed to a configured dead letter exchange (DLX). if
+`--requeue` is also set, the message will be returned to the queue.
+
 Example:
 
-* `$ rabtap sub somequeue --format json`
-
-Will consume messages from queue `somequeue` and print out messages in JSON
-format (this is equivalent to using the now deprecated `--json` option). The
-Example assumes that `RABTAP_AMQPURI` environment variable is set, as the 
-`--uri AMQPURI` parameter is omitted.
+* `$ rabtap sub somequeue --format json` - will consume messages from queue
+  `somequeue` and print out messages in JSON format. The Example assumes that
+  `RABTAP_AMQPURI` environment variable is set, as the `--uri AMQPURI`
+  parameter is omitted.
+* `rabtap sub somequeue --limit 1 --reject --requeue` - consume one message
+  from the queue `somequeue` and let the broker requeue the message.
 
 #### Publish messages
 
-The `pub` command is used to publish messages to an exchange with a routing
-key.  The messages to be published are either read from a file, or from a
-directory which contains previously recorded messages (e.g. using the
-`--saveto` option of the `tap` command). 
+The `pub` command is used to publish messages to an exchange.  The messages to
+be published are either read from a file, or from a directory which contains
+previously recorded messages (e.g. using the `--saveto` option of the `tap`
+command). 
 
 Message routing is either specified with a routing key and the `--routingkey`
 option or, when header based routing should be used, by specifying the headers
 with the `--header` option. Each header is specified in the form `KEY=VALUE`. 
 Multiple headers can be specified by specifying multiple `--header` options.
 
-Messages can be published either in raw format, in which they are send as-is,
+Messages can be published either in raw format, in which they are sent as-is,
 or in [JSON-format, as described here](#json-message-format), which includes
 message metadata and the body in a single JSON document. When multiple messages
 are published with metadata, rabtap will calculate the time elapsed of
@@ -496,6 +514,14 @@ consecutive recorded messages using the metadata, and delay publishing
 accordingly. To set the publishing delay to a fix value, use the `--delay`
 option. To publish without delays, use `--delay=0s`. To modify publishing speed
 use the `--speed` option, which allows to set a factor to apply to the delays.
+
+When the `--confirms` option is set, rabtap waits for publisher confirmations
+from the server and logs an error if a confirmation is negative or not received
+(slows down throughput),
+  
+When the `--mandatory` option is set, rabtap publishes message in mandatory
+mode. If set and a message can not be delivered to a queue, the server returns
+the message and rabtap will log an error.
 
 The general form of the `pub` command is
 ```
@@ -522,11 +548,6 @@ rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
   before, but assuming that `somedir` is a directory, the messages are read
   from message files previously recorded to this directory and replayed in the
   order they were recorded.
-* `--confirms` waits for publisher confirmations from the server and logs an
-  error if a confirmation is negative or not received. Slows down throughput.
-* `--mandatory` publishes message with the mandatory flag set. If set and a
-  message can not be delivered to a queue, the server returns the message and
-  rabtap will log an error.
 
 #### Poor mans shovel
 

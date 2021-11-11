@@ -22,6 +22,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCreateCountingMessageReceivePredReturnsTrueIfNumIsZero(t *testing.T) {
+	pred := createCountingMessageReceivePred(0)
+
+	assert.True(t, pred(rabtap.TapMessage{}))
+}
+
+func TestCreateCountingMessageReceivePredReturnsFalseOnNthCall(t *testing.T) {
+	pred := createCountingMessageReceivePred(2)
+
+	assert.True(t, pred(rabtap.TapMessage{}))
+	assert.False(t, pred(rabtap.TapMessage{}))
+}
+
 func TestChainMessageReceiveFuncCallsBothFunctions(t *testing.T) {
 	firstCalled := false
 	secondCalled := false
@@ -177,7 +190,9 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 		done <- true
 		return nil
 	}
-	go func() { _ = messageReceiveLoop(ctx, messageChan, receiveFunc) }()
+	continuePred := func(rabtap.TapMessage) bool { return true }
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+	go func() { _ = messageReceiveLoop(ctx, messageChan, receiveFunc, continuePred, acknowledger) }()
 
 	messageChan <- rabtap.TapMessage{}
 	<-done // TODO add timeout
@@ -188,8 +203,23 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
+	continuePred := func(rabtap.TapMessage) bool { return true }
 
 	close(messageChan)
-	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc)
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, continuePred, acknowledger)
+
+	assert.Nil(t, err)
+}
+
+func TestMessageReceiveLoopExitsWhenLoopPredReturnsFalse(t *testing.T) {
+	ctx := context.Background()
+	messageChan := make(rabtap.TapChannel, 1)
+	stopPred := func(rabtap.TapMessage) bool { return false }
+
+	messageChan <- rabtap.TapMessage{}
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, stopPred, acknowledger)
+
 	assert.Nil(t, err)
 }

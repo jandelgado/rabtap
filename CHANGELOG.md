@@ -1,5 +1,13 @@
 # Changelog for rabtap
 
+## v1.32 (2021-11-xx)
+
+* new: `--limit=NUM` option in sub and tap command to limit the number
+      of messages to receive.
+* change: `--no-auto-ack` option in `sub` command was replaced by options
+      `--reject` and `--requeue`. Prefetch count is now 1 and by default 
+      every message will be acknowledged by rabtap.
+      
 ## v1.31 (2021-11-07)
 
 * new: show queue utilisation and type (e.g. classic, quorum, stream) to info

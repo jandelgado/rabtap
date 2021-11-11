@@ -43,6 +43,7 @@ toxiproxy-cmd:
 
 # run rabbitmq server for integration test using docker container.
 run-broker:
+	cd inttest/pki && ./mkcerts.sh
 	cd inttest/rabbitmq && docker-compose up
 
 dist-clean: clean

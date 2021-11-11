@@ -242,7 +242,7 @@ func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 					continue
 				}
 				visited[boundExchange.Name] = true
-				exchangeNode.Add(create(exchange, brokerInfo))
+				exchangeNode.Add(create(boundExchange, brokerInfo))
 			} else {
 				// do not add (redundant) queues if in recursive exchange call
 				if len(visited) > 0 {

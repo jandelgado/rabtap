@@ -132,6 +132,7 @@ compile from source.
 ## Usage
 
 ```
+
 rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
@@ -143,7 +144,8 @@ Usage:
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] [--no-auto-ack] [-jksvn]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] 
+              [(--reject [--requeue])] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
               [--routingkey=KEY | (--header=KV)...]
@@ -207,11 +209,10 @@ Arguments and options:
  --mode=MODE          mode for info command. One of "byConnection", "byExchange".
                       [default: byExchange].
  -n, --no-color       don't colorize output (see also environment variable NO_COLOR).
- --no-auto-ack        disable auto-ack in subscribe mode. This will lead to
-                      unacked messages on the broker which will be requeued
-                      when the channel is closed.
  --omit-empty         don't show echanges without bindings in info command.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
+ --reject             Reject messages. Default behaviour is to acknowledge messages.
+ --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON 
 					  message format).
@@ -480,13 +481,18 @@ Use the `--limit=NUM` option to limit the number of received messages. If
 specified, rabtap will terminate, after `NUM` messages were successfully
 received.
 
+Use the `--reject` option to 'nack' messages, which in turn will be discarded
+by th broker or routed to a configured dead letter exchange (DLX). if
+`--requeue` is also set, the message will be returned to the queue.
+
 Example:
 
 * `$ rabtap sub somequeue --format json` - will consume messages from queue
   `somequeue` and print out messages in JSON format. The Example assumes that
   `RABTAP_AMQPURI` environment variable is set, as the `--uri AMQPURI`
   parameter is omitted.
-
+* `rabtap sub somequeue --limit 1 --reject --requeue` - consume one message
+  from the queue `somequeue` and let the broker requeue the message.
 
 #### Publish messages
 

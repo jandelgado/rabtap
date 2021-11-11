@@ -79,8 +79,6 @@ func messageReceiveLoop(ctx context.Context,
 	pred MessageReceiveLoopPred,
 	acknowledger AcknowledgeFunc) error {
 
-	//wg := new(sync.WaitGroup)
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -106,28 +104,6 @@ func messageReceiveLoop(ctx context.Context,
 			if !pred(message) {
 				return nil
 			}
-
-			/*
-				// do actual output in a go-routine so we can terminate using
-				// ctrl+c/ctx.Done() even if the terminal output is stopped with ctrl+s
-				tmpCh := make(rabtap.TapChannel)
-				go func() {
-					wg.Wait()
-					wg.Add(1)
-					m := <-tmpCh
-					// let the receiveFunc do the actual message processing
-					var err error
-					if err = messageReceiveFunc(m); err != nil {
-						log.Error(err)
-					}
-					wg.Done()
-				}()
-				select {
-				case tmpCh <- message:
-				case <-ctx.Done():
-					log.Debugf("subscribe: cancel (messageReceiveFunc)")
-					return nil
-				}*/
 		}
 	}
 }

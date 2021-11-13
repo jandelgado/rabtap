@@ -1,5 +1,5 @@
-// Copyright (C) 2017 Jan Delgado
-// RabbitMQ wire-tap.
+// rabtap - queue management
+// Copyright (C) 2017-2021 Jan Delgado
 
 package rabtap
 
@@ -8,7 +8,7 @@ import "github.com/streadway/amqp"
 // CreateQueue creates a new queue
 // TODO(JD) get rid of bool types
 func CreateQueue(session Session, queueName string,
-	durable, autoDelete, exclusive bool) error {
+	durable, autoDelete, exclusive bool, args amqp.Table) error {
 
 	_, err := session.QueueDeclare(
 		queueName,
@@ -16,7 +16,7 @@ func CreateQueue(session Session, queueName string,
 		autoDelete, // auto delete
 		exclusive,  // exclusive
 		false,      // wait for response
-		nil)
+		args)
 	return err
 }
 
@@ -34,12 +34,12 @@ func PurgeQueue(session Session, queueName string) (int, error) {
 
 // BindQueueToExchange binds the given queue to the given exchange.
 func BindQueueToExchange(session Session,
-	queueName, key, exchangeName string, headers amqp.Table) error {
-	return session.QueueBind(queueName, key, exchangeName, false /* wait */, headers)
+	queueName, key, exchangeName string, args amqp.Table) error {
+	return session.QueueBind(queueName, key, exchangeName, false /* wait */, args)
 }
 
 // UnbindQueueFromExchange unbinds a queue from an exchange
 func UnbindQueueFromExchange(session Session,
-	queueName, key, exchangeName string, headers amqp.Table) error {
-	return session.QueueUnbind(queueName, key, exchangeName, headers)
+	queueName, key, exchangeName string, args amqp.Table) error {
+	return session.QueueUnbind(queueName, key, exchangeName, args)
 }

@@ -18,6 +18,7 @@ type CmdQueueCreateArg struct {
 	durable    bool
 	autodelete bool
 	tlsConfig  *tls.Config
+	args       rabtap.KeyValueMap
 }
 
 type CmdQueueBindArg struct {
@@ -25,7 +26,7 @@ type CmdQueueBindArg struct {
 	queue      string
 	exchange   string
 	key        string
-	headers    rabtap.KeyValueMap
+	args       rabtap.KeyValueMap
 	headerMode HeaderMode
 	tlsConfig  *tls.Config
 }
@@ -43,10 +44,10 @@ func cmdQueueCreate(cmd CmdQueueCreateArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL,
 		cmd.tlsConfig,
 		func(session rabtap.Session) error {
-			log.Debugf("creating queue %s (ad=%t, durable=%t)",
-				cmd.queue, cmd.autodelete, cmd.durable)
+			log.Debugf("creating queue %s (autodelete=%t, durable=%t, args=%v)",
+				cmd.queue, cmd.autodelete, cmd.durable, cmd.args)
 			return rabtap.CreateQueue(session, cmd.queue,
-				cmd.durable, cmd.autodelete, false)
+				cmd.durable, cmd.autodelete, false, rabtap.ToAMQPTable(cmd.args))
 		}), "create queue failed", os.Exit)
 }
 
@@ -80,12 +81,12 @@ func cmdQueueBindToExchange(cmd CmdQueueBindArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL, cmd.tlsConfig,
 		func(session rabtap.Session) error {
 			if cmd.headerMode != HeaderNone {
-				cmd.headers["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
+				cmd.args["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
 			}
 			log.Debugf("binding queue %s to exchange %s w/ key %s and headers %v",
-				cmd.queue, cmd.exchange, cmd.key, cmd.headers)
+				cmd.queue, cmd.exchange, cmd.key, cmd.args)
 
-			return rabtap.BindQueueToExchange(session, cmd.queue, cmd.key, cmd.exchange, rabtap.ToAMQPTable(cmd.headers))
+			return rabtap.BindQueueToExchange(session, cmd.queue, cmd.key, cmd.exchange, rabtap.ToAMQPTable(cmd.args))
 		}), "bind queue failed", os.Exit)
 }
 
@@ -94,10 +95,10 @@ func cmdQueueUnbindFromExchange(cmd CmdQueueBindArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL, cmd.tlsConfig,
 		func(session rabtap.Session) error {
 			if cmd.headerMode != HeaderNone {
-				cmd.headers["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
+				cmd.args["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
 			}
 			log.Debugf("unbinding queue %s from exchange %s w/ key %s and headers %v",
-				cmd.queue, cmd.exchange, cmd.key, cmd.headers)
-			return rabtap.UnbindQueueFromExchange(session, cmd.queue, cmd.key, cmd.exchange, rabtap.ToAMQPTable(cmd.headers))
+				cmd.queue, cmd.exchange, cmd.key, cmd.args)
+			return rabtap.UnbindQueueFromExchange(session, cmd.queue, cmd.key, cmd.exchange, rabtap.ToAMQPTable(cmd.args))
 		}), "unbind queue failed", os.Exit)
 }

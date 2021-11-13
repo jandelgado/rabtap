@@ -1,6 +1,11 @@
 # Changelog for rabtap
 
-## v1.32 (2021-11-xx)
+## v1.33 (2021-11-14)
+
+* new: specify multiple `--args=key=value` options to pass additional argzuments
+       to the queue and exchange create functions.
+       
+## v1.32 (2021-11-13)
 
 * new: `--limit=NUM` option in sub and tap command to limit the number
       of messages to receive.

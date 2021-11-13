@@ -43,11 +43,11 @@ Usage:
               [--routingkey=KEY | (--header=KV)...]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [-adkv]
+  rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-adkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv] 
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue create QUEUE [--uri=URI] [-adkv] 
+  rabtap queue create QUEUE [--uri=URI] [--args=KV]... [-adkv] 
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-kv]
               (--bindingkey=KEY | (--header=KV)... (--all|--any))
@@ -74,6 +74,8 @@ Arguments and options:
  --any                set x-match=any option in header based routing.
  --api=APIURI         connect to given API server. If APIURL is omitted,
                       the environment variable RABTAP_APIURI will be used.
+ --args=KV            A key value pair in the form of "key=value" passed as
+                      additional arguments. e.g. '--args=x-queue-type=quorum'
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
  --confirms           enable publisher confirms and wait for confirmations.
@@ -257,11 +259,11 @@ type CommandLineArgs struct {
 	Format              string            // output format, depends on command
 	Durable             bool              // queue create, exchange create
 	Autodelete          bool              // queue create, exchange create
+	Args                map[string]string // optional additional arguments for pub, tap, queue
 	SaveDir             *string           // save: optional directory to stores files to
 	Silent              bool              // suppress message printing
 	ConnName            string            // conn: name of connection
 	CloseReason         string            // conn: reason of close
-	Headers             map[string]string // pub, tap: headers for header based routing
 	HeaderMode          HeaderMode        // queue ceate, header based routing
 }
 
@@ -435,8 +437,8 @@ func parseBindingKey(args map[string]interface{}) string {
 	return ""
 }
 
-func parseBindingHeaders(args map[string]interface{}) (map[string]string, error) {
-	if headers, ok := args["--header"].([]string); ok {
+func parseKVListOption(name string, args map[string]interface{}) (map[string]string, error) {
+	if headers, ok := args[name].([]string); ok {
 		return parseKeyValueList(headers)
 	}
 	return map[string]string{}, nil
@@ -456,6 +458,10 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.Cmd = QueueCreateCmd
 		result.Durable = args["--durable"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)
+		result.Args, err = parseKVListOption("--args", args)
+		if err != nil {
+			return result, nil
+		}
 	case args["rm"].(bool):
 		result.Cmd = QueueRemoveCmd
 	case args["bind"].(bool):
@@ -464,7 +470,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.Cmd = QueueBindCmd
 		result.QueueBindingKey = parseBindingKey(args)
 
-		result.Headers, err = parseBindingHeaders(args)
+		result.Args, err = parseKVListOption("--header", args)
 		if err != nil {
 			return result, err
 		}
@@ -482,7 +488,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		// unbind QUEUE from EXCHANGE [--bindingkey key]
 		result.Cmd = QueueUnbindCmd
 		result.QueueBindingKey = parseBindingKey(args)
-		result.Headers, err = parseBindingHeaders(args)
+		result.Args, err = parseKVListOption("--header", args)
 		if err != nil {
 			return result, err
 		}
@@ -515,6 +521,10 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 		result.Cmd = ExchangeCreateCmd
 		result.Durable = args["--durable"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)
+		result.Args, err = parseKVListOption("--args", args)
+		if err != nil {
+			return result, err
+		}
 	case args["rm"].(bool):
 		result.Cmd = ExchangeRemoveCmd
 	}
@@ -541,7 +551,7 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		exchange := args["--exchange"].(string)
 		result.PubExchange = &exchange
 	}
-	result.Headers, err = parseBindingHeaders(args)
+	result.Args, err = parseKVListOption("--header", args)
 	if err != nil {
 		return result, err
 	}

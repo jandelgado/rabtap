@@ -19,6 +19,7 @@ type CmdExchangeCreateArg struct {
 	exchangeType string
 	durable      bool
 	autodelete   bool
+	args         rabtap.KeyValueMap
 	tlsConfig    *tls.Config
 }
 
@@ -27,10 +28,10 @@ func cmdExchangeCreate(cmd CmdExchangeCreateArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL,
 		cmd.tlsConfig,
 		func(session rabtap.Session) error {
-			log.Debugf("creating exchange %s with type %s",
-				cmd.exchange, cmd.exchangeType)
+			log.Debugf("creating exchange %s with type %s, args=%v",
+				cmd.exchange, cmd.exchangeType, cmd.args)
 			return rabtap.CreateExchange(session, cmd.exchange, cmd.exchangeType,
-				cmd.durable, cmd.autodelete)
+				cmd.durable, cmd.autodelete, rabtap.ToAMQPTable(cmd.args))
 		}), "create exchange failed", os.Exit)
 }
 

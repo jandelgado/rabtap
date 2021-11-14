@@ -51,7 +51,7 @@ func TestIntegrationAmqpPurgeQueue(t *testing.T) {
 	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
 	session := Session{conn, ch}
 	defer conn.Close()
-	err := CreateQueue(session, queueTestName, false, false, false)
+	err := CreateQueue(session, queueTestName, false, false, false, nil)
 	assert.Nil(t, err)
 
 	// publish & purge 10 messages
@@ -86,7 +86,7 @@ func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
 	session := Session{conn, ch}
 	defer conn.Close()
-	err = CreateQueue(session, queueTestName, false, false, false)
+	err = CreateQueue(session, queueTestName, false, false, false, nil)
 	assert.Nil(t, err)
 
 	// check if queue was created

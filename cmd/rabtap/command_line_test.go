@@ -483,12 +483,13 @@ func TestCliSubCmdSaveToDir(t *testing.T) {
 
 func TestCliCreateQueue(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"queue", "create", "name", "--uri=uri"})
+		[]string{"queue", "create", "name", "--uri=uri", "--args=x=y"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, QueueCreateCmd, args.Cmd)
 	assert.Equal(t, "name", args.QueueName)
 	assertEqualURL(t, "uri", args.AMQPURL)
+	assert.Equal(t, map[string]string{"x": "y"}, args.Args)
 	assert.False(t, args.Durable)
 	assert.False(t, args.Autodelete)
 }
@@ -547,7 +548,7 @@ func TestCliBindQueueWithBindingKey(t *testing.T) {
 	assert.Equal(t, "queuename", args.QueueName)
 	assert.Equal(t, "exchangename", args.ExchangeName)
 	assert.Equal(t, "key", args.QueueBindingKey)
-	assert.Equal(t, map[string]string{}, args.Headers)
+	assert.Equal(t, map[string]string{}, args.Args)
 	assert.Equal(t, HeaderNone, args.HeaderMode)
 	assertEqualURL(t, "uri", args.AMQPURL)
 }
@@ -562,14 +563,14 @@ func TestCliBindQueueWithHeaders(t *testing.T) {
 	assert.Equal(t, "queuename", args.QueueName)
 	assert.Equal(t, "exchangename", args.ExchangeName)
 	assert.Equal(t, "", args.QueueBindingKey)
-	assert.Equal(t, map[string]string{"a": "b", "c": "d"}, args.Headers)
+	assert.Equal(t, map[string]string{"a": "b", "c": "d"}, args.Args)
 	assert.Equal(t, HeaderMatchAny, args.HeaderMode)
 	assertEqualURL(t, "uri", args.AMQPURL)
 }
 
 func TestCliCreateExchange(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"exchange", "create", "name", "--type", "topic",
+		[]string{"exchange", "create", "name", "--type", "topic", "--args=x=y",
 			"--uri", "uri"})
 
 	assert.Nil(t, err)
@@ -578,6 +579,7 @@ func TestCliCreateExchange(t *testing.T) {
 	assert.Equal(t, "topic", args.ExchangeType)
 	assert.False(t, args.Durable)
 	assert.False(t, args.Autodelete)
+	assert.Equal(t, map[string]string{"x": "y"}, args.Args)
 	assertEqualURL(t, "uri", args.AMQPURL)
 }
 

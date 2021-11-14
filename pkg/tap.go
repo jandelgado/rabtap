@@ -107,7 +107,8 @@ func (s *AmqpTap) setupTap(session Session,
 	err = CreateQueue(session, tapQueue,
 		false, // non durable
 		true,  // auto delete
-		true)  // exclusive
+		true,  // exclusive
+		nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -137,7 +138,7 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 	var err error
 
 	if err := CreateExchange(session, tapExchangeName, amqp.ExchangeFanout,
-		false /* nondurable*/, true); err != nil {
+		false /* nondurable*/, true, nil); err != nil {
 		return err
 	}
 

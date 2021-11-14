@@ -47,7 +47,7 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
 	session := Session{conn, ch}
 	defer conn.Close()
-	err = CreateExchange(session, testName, "topic", false, false)
+	err = CreateExchange(session, testName, "topic", false, false, nil)
 	assert.Nil(t, err)
 
 	// check if exchange was created

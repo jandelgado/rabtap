@@ -40,6 +40,7 @@ and exchanges, inspect broker.
         * [Publish messages](#publish-messages)
         * [Poor mans shovel](#poor-mans-shovel)
         * [Close connection](#close-connection)
+        * [Exchange commands](#exchange-commands)
         * [Queue commands](#queue-commands)
 * [JSON message format](#json-message-format)
 * [Filtering output of info command](#filtering-output-of-info-command)
@@ -585,9 +586,25 @@ http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbi
 $ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672'
 ```
 
+#### Exchange commands
+
+The `exchange` command is used to create and remove exchanges:
+
+```console
+$ rabtap exchange create myexchange --type topic
+$ rabtap exchange rm myexchange
+```
+
+The `create` commands allows to specify additional arguments to be passed to
+RabbitMQ using the `--args=key=value` syntax:
+
+```console
+$ rabtap exchange create myexchange --type topic --args=alternate-exchange=myae
+```
+
 #### Queue commands
 
-The `queue` command can be used to easily create, remove, bind or unbind queues:
+The `queue` command is used to create, remove, bind or unbind queues:
 
 ```console
 $ rabtap queue create myqueue
@@ -615,6 +632,7 @@ http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbi
     │   └── myqueue (queue, key='myqueue', idle since 2018-12-07 20:46:15, [])
     :
     └── amq.topic (exchange, type 'topic', [D])
+$ rabtap queue purge myqueue
 $ rabtap queue rm myqueue
 $ rabtap info
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
@@ -623,12 +641,15 @@ http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbi
     └── amq.topic (exchange, type 'topic', [D])
 ```
 
-Additionally use the `purge` command to remove all elements from a queue, e.g.
+The `create` commands allows to specify additional arguments to be passed to
+RabbitMQ using the `--args=key=value` syntax. This allows for example to specify
+the queue type or mode:
 
-```
-$ rabtap queue purge myqueue
-```
-
+* `rabtap queue create quorum_queue --args=x-queue-type=quorum --durable` - 
+  create a quorum queue named `quorum_queue`
+* `rabtap queue create lazy_queue --args=x-queue-mode=lazy` - create a lazy
+  queue named `lazy_queue`
+  
 ## JSON message format
 
 When using the `--format json` option, messages are print/read as a stream of JSON

@@ -26,7 +26,7 @@ func TestSubscribe(t *testing.T) {
 	// we need to create the queue non-exclusive, since exclusive queues are
 	// bound to the connection which created them (other connections get
 	// error RESOURCE_LOCKED (405)).
-	CreateQueue(session, queueName, false /*durable*/, true /*ad*/, false /*excl*/)
+	CreateQueue(session, queueName, false /*durable*/, true /*ad*/, false /*excl*/, nil)
 	BindQueueToExchange(session, queueName, keyName, "subtest-direct-exchange", amqp.Table{})
 
 	finishChan := make(chan int)

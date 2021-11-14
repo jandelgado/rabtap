@@ -1,11 +1,13 @@
-// Copyright (C) 2017 Jan Delgado
-// RabbitMQ wire-tap.
+// rabtap - exchange management
+// Copyright (C) 2017-2021 Jan Delgado
 
 package rabtap
 
+import "github.com/streadway/amqp"
+
 // CreateExchange creates a new echange on the given channel
 func CreateExchange(session Session, exchangeName, exchangeType string,
-	durable, autoDelete bool) error {
+	durable, autoDelete bool, args amqp.Table) error {
 
 	return session.ExchangeDeclare(
 		exchangeName,
@@ -14,7 +16,7 @@ func CreateExchange(session Session, exchangeName, exchangeType string,
 		autoDelete,
 		false, // not internal
 		false, // wait for response
-		nil)
+		args)
 }
 
 // RemoveExchange removes a echange on the given channel

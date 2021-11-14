@@ -615,6 +615,7 @@ http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbi
     │   └── myqueue (queue, key='myqueue', idle since 2018-12-07 20:46:15, [])
     :
     └── amq.topic (exchange, type 'topic', [D])
+$ rabtap queue purge myqueue
 $ rabtap queue rm myqueue
 $ rabtap info
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
@@ -623,12 +624,15 @@ http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbi
     └── amq.topic (exchange, type 'topic', [D])
 ```
 
-Additionally use the `purge` command to remove all elements from a queue, e.g.
+The `create` commands allows to specify additional arguments to be passed to
+RabbitMQ using the `--args=key=value` syntax. This allows for example to specify
+the queue type or mode:
 
-```
-$ rabtap queue purge myqueue
-```
-
+* `rabtap queue create quorum_queue --args=x-queue-type=quorum --durable` - 
+  create a quorum queue named `quorum_queue`
+* `rabtap queue create lazy_queue --args=x-queue-mode=lazy` - create a lazy
+  queue named `lazy_queue`
+  
 ## JSON message format
 
 When using the `--format json` option, messages are print/read as a stream of JSON

@@ -40,6 +40,7 @@ and exchanges, inspect broker.
         * [Publish messages](#publish-messages)
         * [Poor mans shovel](#poor-mans-shovel)
         * [Close connection](#close-connection)
+        * [Exchange commands](#exchange-commands)
         * [Queue commands](#queue-commands)
 * [JSON message format](#json-message-format)
 * [Filtering output of info command](#filtering-output-of-info-command)
@@ -585,9 +586,25 @@ http://localhost:15672/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbi
 $ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672'
 ```
 
+#### Exchange commands
+
+The `exchange` command is used to create and remove exchanges:
+
+```console
+$ rabtap exchange create myexchange --type topic
+$ rabtap exchange rm myexchange
+```
+
+The `create` commands allows to specify additional arguments to be passed to
+RabbitMQ using the `--args=key=value` syntax:
+
+```console
+$ rabtap exchange create myexchange --type topic --args=alternate-exchange=myae
+```
+
 #### Queue commands
 
-The `queue` command can be used to easily create, remove, bind or unbind queues:
+The `queue` command is used to create, remove, bind or unbind queues:
 
 ```console
 $ rabtap queue create myqueue

@@ -37,7 +37,7 @@ Usage:
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] 
-              [(--reject [--requeue])] [-jksvn]
+              [--args=KV]... [(--reject [--requeue])] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
               [--routingkey=KEY | (--header=KV)...]
@@ -418,6 +418,10 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 			return result, err
 		}
 		result.Limit = limit
+	}
+	result.Args, err = parseKVListOption("--args", args)
+	if err != nil {
+		return result, err
 	}
 
 	if args["--saveto"] != nil {

@@ -478,11 +478,12 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		if err != nil {
 			return result, err
 		}
-		if args["--any"].(bool) {
+		switch {
+		case args["--any"].(bool):
 			result.HeaderMode = HeaderMatchAny
-		} else if args["--all"].(bool) {
+		case args["--all"].(bool):
 			result.HeaderMode = HeaderMatchAll
-		} else {
+		default:
 			result.HeaderMode = HeaderNone
 		}
 
@@ -496,11 +497,12 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		if err != nil {
 			return result, err
 		}
-		if args["--any"].(bool) {
+		switch { // TODO dry
+		case args["--any"].(bool):
 			result.HeaderMode = HeaderMatchAny
-		} else if args["--all"].(bool) {
+		case args["--all"].(bool):
 			result.HeaderMode = HeaderMatchAll
-		} else {
+		default:
 			result.HeaderMode = HeaderNone
 		}
 		result.ExchangeName = args["EXCHANGE"].(string)

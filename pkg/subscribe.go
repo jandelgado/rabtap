@@ -34,7 +34,6 @@ type SubscribeErrorReason int
 
 const (
 	SubscribeErrorChannelError SubscribeErrorReason = iota
-	//SubscribeErrorSubscribeFailed
 )
 
 // SubscribeError is sent back trough the error channel when there are problems
@@ -51,8 +50,9 @@ func (s *SubscribeError) Error() string {
 	switch s.Reason {
 	case SubscribeErrorChannelError:
 		return fmt.Sprintf("channel error: %s", s.Cause)
+	default:
+		return "unexpected error"
 	}
-	return "unexpected error"
 }
 
 // NewAmqpSubscriber returns a new AmqpSubscriber object associated with the
@@ -106,7 +106,6 @@ func (s *AmqpSubscriber) createWorkerFunc(
 
 		// also subscribe to channel close notifications
 		amqpErrorCh := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
-
 		fanin := NewFanin([]interface{}{ch, amqpErrorCh})
 
 		return amqpMessageLoop(ctx, outCh, errOutCh, fanin.Ch)

@@ -29,7 +29,7 @@ type MessageReceiveFuncOptions struct {
 // MessageReceiveFunc processes receiced messages from a tap.
 type MessageReceiveFunc func(rabtap.TapMessage) error
 
-//var ErrMessageLoopEnded = errors.New("message loop ended")
+// var ErrMessageLoopEnded = errors.New("message loop ended")
 
 // messageReceiveLoopPred is called once for each a message that was received.
 // If it returns true, the subscriber loop continues, otherwise the loop
@@ -94,7 +94,7 @@ func messageReceiveLoop(ctx context.Context,
 		case message, more := <-messageChan:
 			if !more {
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
-				return nil //ErrMessageLoopEnded
+				return nil // ErrMessageLoopEnded
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
 

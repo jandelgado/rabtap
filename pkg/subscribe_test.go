@@ -18,6 +18,7 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 	// given
 
 	// establish sending exchange.
+	messagesPerTest := 5
 	conn, ch := testcommon.IntegrationTestConnection(t, "subtest-direct-exchange", "direct", 0, false)
 	session := Session{conn, ch}
 	defer conn.Close()
@@ -53,6 +54,7 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 				finishChan <- numReceived
 				return
 			case message := <-resultChannel:
+				message.AmqpMessage.Ack(false)
 				if message.AmqpMessage != nil {
 					if string(message.AmqpMessage.Body) == "Hello" {
 						numReceived++
@@ -65,8 +67,8 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 	time.Sleep(TapReadyDelay)
 
 	// when: inject messages into exchange.
-	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "subtest-direct-exchange", queueName, nil)
+	testcommon.PublishTestMessages(t, ch, messagesPerTest, "subtest-direct-exchange", queueName, nil)
 
 	// then
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 }

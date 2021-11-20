@@ -21,11 +21,6 @@ func amqpMessageLoop(
 
 	for {
 		select {
-		// case err, more := <-errInCh:
-		//     if !more {
-		//         return doReconnect, fmt.Errorf("channel closed")
-		//     }
-		//     errOutCh <- &SubscribeError{Reason: SubscribeErrorChannelError, Cause: err}
 
 		case message, more := <-inCh:
 			if !more {

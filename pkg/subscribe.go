@@ -20,7 +20,6 @@ const PrefetchSize = 0
 // AmqpSubscriberConfig stores configuration of the subscriber
 type AmqpSubscriberConfig struct {
 	Exclusive bool
-	AutoAck   bool
 	Args      amqp.Table
 }
 
@@ -125,7 +124,7 @@ func (s *AmqpSubscriber) consumeMessages(session Session,
 	return session.Consume(
 		queueName,
 		"__rabtap-consumer-"+uuid.Must(uuid.NewRandom()).String()[:8], // TODO param
-		s.config.AutoAck,
+		false, // no auto-ack
 		s.config.Exclusive,
 		false, // no-local - unsupported
 		false, // wait

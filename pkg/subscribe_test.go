@@ -33,7 +33,7 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 
 	finishChan := make(chan int)
 
-	config := AmqpSubscriberConfig{Exclusive: false, AutoAck: true}
+	config := AmqpSubscriberConfig{Exclusive: false}
 	log := testcommon.NewTestLogger()
 	subscriber := NewAmqpSubscriber(config, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	resultChannel := make(TapChannel)

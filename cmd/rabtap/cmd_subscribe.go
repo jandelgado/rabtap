@@ -34,7 +34,6 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 
 	config := rabtap.AmqpSubscriberConfig{
 		Exclusive: false,
-		AutoAck:   false,
 		Args:      rabtap.ToAMQPTable(cmd.args)}
 	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURL, cmd.tlsConfig, log)
 

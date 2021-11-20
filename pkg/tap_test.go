@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2021 Jan Delgado
 // +build integration
 
 package rabtap
@@ -36,6 +36,7 @@ func TestGetTapEchangeNameForExchange(t *testing.T) {
 	assert.Equal(t, "__tap-exchange-for-exchange-1234",
 		getTapExchangeNameForExchange("exchange", "1234"))
 }
+
 func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 	tapExchangeName, tapQueueName string,
 	success chan<- int) *AmqpTap {
@@ -43,13 +44,16 @@ func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 	log := testcommon.NewTestLogger()
 	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	resultChannel := make(TapChannel)
+	resultErrChannel := make(SubscribeErrorChannel)
+
 	// TODO cancel and return cancel func
 	ctx, cancel := context.WithCancel(context.Background())
 	go tap.EstablishTap(
 		ctx,
 		[]ExchangeConfiguration{
 			{tapExchangeName, tapQueueName}},
-		resultChannel)
+		resultChannel,
+		resultErrChannel)
 
 	func() {
 		numReceived := 0
@@ -208,6 +212,7 @@ func TestIntegrationTopicExchangeTapWildcard(t *testing.T) {
 func TestIntegrationInvalidExchange(t *testing.T) {
 
 	tapMessages := make(TapChannel)
+	errChannel := make(SubscribeErrorChannel)
 	log := testcommon.NewTestLogger()
 	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	ctx := context.Background()
@@ -215,7 +220,8 @@ func TestIntegrationInvalidExchange(t *testing.T) {
 		ctx,
 		[]ExchangeConfiguration{
 			{"nonexisting-exchange", "test"}},
-		tapMessages)
+		tapMessages,
+		errChannel)
 
 	assert.NotNil(t, err)
 }

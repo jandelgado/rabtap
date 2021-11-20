@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2021 Jan Delgado
 // +build integration
 
 package rabtap
@@ -13,7 +13,9 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func TestSubscribe(t *testing.T) {
+func TestSubscribeReceivesMessages(t *testing.T) {
+
+	// given
 
 	// establish sending exchange.
 	conn, ch := testcommon.IntegrationTestConnection(t, "subtest-direct-exchange", "direct", 0, false)
@@ -35,9 +37,10 @@ func TestSubscribe(t *testing.T) {
 	log := testcommon.NewTestLogger()
 	subscriber := NewAmqpSubscriber(config, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	resultChannel := make(TapChannel)
+	resultErrChannel := make(SubscribeErrorChannel)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go subscriber.EstablishSubscription(ctx, queueName, resultChannel)
+	go subscriber.EstablishSubscription(ctx, queueName, resultChannel, resultErrChannel)
 
 	go func() {
 		numReceived := 0
@@ -61,7 +64,9 @@ func TestSubscribe(t *testing.T) {
 
 	time.Sleep(TapReadyDelay)
 
-	// inject messages into exchange.
+	// when: inject messages into exchange.
 	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "subtest-direct-exchange", queueName, nil)
+
+	// then
 	requireIntFromChan(t, finishChan, MessagesPerTest)
 }

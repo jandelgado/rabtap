@@ -75,6 +75,7 @@ func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
 
 func messageReceiveLoop(ctx context.Context,
 	messageChan rabtap.TapChannel,
+	errorChan rabtap.SubscribeErrorChannel,
 	messageReceiveFunc MessageReceiveFunc,
 	pred MessageReceiveLoopPred,
 	acknowledger AcknowledgeFunc) error {
@@ -84,6 +85,11 @@ func messageReceiveLoop(ctx context.Context,
 		case <-ctx.Done():
 			log.Debugf("subscribe: cancel")
 			return nil
+
+		case err, more := <-errorChan:
+			if more {
+				log.Errorf("subscribe: %v", err)
+			}
 
 		case message, more := <-messageChan:
 			if !more {

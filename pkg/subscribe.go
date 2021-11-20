@@ -1,10 +1,12 @@
-// Copyright (C) 2017 Jan Delgado
+// subscribe to message queues
+// Copyright (C) 2017-2021 Jan Delgado
 
 package rabtap
 
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -19,6 +21,7 @@ const PrefetchSize = 0
 type AmqpSubscriberConfig struct {
 	Exclusive bool
 	AutoAck   bool
+	Args      amqp.Table
 }
 
 // AmqpSubscriber allows to tap to subscribe to queues
@@ -26,6 +29,31 @@ type AmqpSubscriber struct {
 	config     AmqpSubscriberConfig
 	connection *AmqpConnector
 	logger     Logger
+}
+
+type SubscribeErrorReason int
+
+const (
+	SubscribeErrorChannelError SubscribeErrorReason = iota
+	//SubscribeErrorSubscribeFailed
+)
+
+// SubscribeError is sent back trough the error channel when there are problems
+// during the subsription of messages
+type SubscribeError struct {
+	Reason SubscribeErrorReason
+	// Cause holds the error when a ChannelError happened
+	Cause error
+}
+
+type SubscribeErrorChannel chan *SubscribeError
+
+func (s *SubscribeError) Error() string {
+	switch s.Reason {
+	case SubscribeErrorChannelError:
+		return fmt.Sprintf("channel error: %s", s.Cause)
+	}
+	return "unexpected error"
 }
 
 // NewAmqpSubscriber returns a new AmqpSubscriber object associated with the
@@ -54,22 +82,35 @@ type TapChannel chan TapMessage
 // EstablishSubscription sets up the connection to the broker and sets up
 // the tap, which is bound to the provided consumer function. Typically
 // this function is run as a go-routine.
-func (s *AmqpSubscriber) EstablishSubscription(ctx context.Context, queueName string, tapCh TapChannel) error {
-	return s.connection.Connect(ctx, s.createWorkerFunc(queueName, tapCh))
+//
+// queueName is the queue to subscribe to. tapCh is where the consumed messages
+// are sent to. errCh is the channel where errors are sent to.
+//
+func (s *AmqpSubscriber) EstablishSubscription(
+	ctx context.Context,
+	queueName string,
+	tapCh TapChannel,
+	errCh SubscribeErrorChannel) error {
+	return s.connection.Connect(ctx, s.createWorkerFunc(queueName, tapCh, errCh))
 }
 
 func (s *AmqpSubscriber) createWorkerFunc(
-	queueName string, tapCh TapChannel) AmqpWorkerFunc {
+	queueName string,
+	outCh TapChannel,
+	errOutCh SubscribeErrorChannel) AmqpWorkerFunc {
 
 	return func(ctx context.Context, session Session) (ReconnectAction, error) {
 		ch, err := s.consumeMessages(session, queueName)
 		if err != nil {
 			return doNotReconnect, err
 		}
-		// messageLoop expects Fanin object, which expects array of channels.
-		var channels []interface{}
-		fanin := NewFanin(append(channels, ch))
-		return amqpMessageLoop(ctx, tapCh, fanin.Ch), nil
+
+		// also subscribe to channel close notifications
+		amqpErrorCh := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
+
+		fanin := NewFanin([]interface{}{ch, amqpErrorCh})
+
+		return amqpMessageLoop(ctx, outCh, errOutCh, fanin.Ch)
 	}
 }
 
@@ -81,17 +122,13 @@ func (s *AmqpSubscriber) consumeMessages(session Session,
 		return nil, err
 	}
 
-	msgs, err := session.Consume(
+	return session.Consume(
 		queueName,
 		"__rabtap-consumer-"+uuid.Must(uuid.NewRandom()).String()[:8], // TODO param
 		s.config.AutoAck,
 		s.config.Exclusive,
 		false, // no-local - unsupported
 		false, // wait
-		nil,   // args
+		s.config.Args,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return msgs, nil
 }

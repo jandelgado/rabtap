@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2019 Jan Delgado
+// Copyright (C) 2017-2021 Jan Delgado
 // RabbitMQ wire-tap. Functions to hook to exchanges and to keep the
 // connection to the broker alive in case of connection errors.
 
@@ -39,32 +39,38 @@ func getTapQueueNameForExchange(exchange, postfix string) string {
 // EstablishTap sets up the connection to the broker and sets up
 // the tap, which is bound to the provided consumer function. Typically
 // this function is run as a go-routine.
-func (s *AmqpTap) EstablishTap(ctx context.Context, exchangeConfigList []ExchangeConfiguration,
-	tapCh TapChannel) error {
-	return s.connection.Connect(ctx, s.createWorkerFunc(exchangeConfigList, tapCh))
+func (s *AmqpTap) EstablishTap(
+	ctx context.Context,
+	exchangeConfigList []ExchangeConfiguration,
+	tapCh TapChannel,
+	errorCh SubscribeErrorChannel) error {
+	return s.connection.Connect(ctx, s.createWorkerFunc(exchangeConfigList, tapCh, errorCh))
 }
 
 func (s *AmqpTap) createWorkerFunc(
 	exchangeConfigList []ExchangeConfiguration,
-	tapCh TapChannel) AmqpWorkerFunc {
+	outCh TapChannel,
+	errOutCh SubscribeErrorChannel) AmqpWorkerFunc {
 
 	return func(ctx context.Context, session Session) (ReconnectAction, error) {
 
-		amqpChs, err := s.setupTapsForExchanges(session, exchangeConfigList, tapCh)
+		tappedChs, err := s.setupTapsForExchanges(session, exchangeConfigList)
 		if err != nil {
 			return doNotReconnect, err
 		}
-		fanin := NewFanin(amqpChs)
+
+		// also subscribe to channel close notifications
+		amqpErrorCh := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
+
+		fanin := NewFanin(append(tappedChs, amqpErrorCh))
 		defer func() { _ = fanin.Stop() }()
-		action := amqpMessageLoop(ctx, tapCh, fanin.Ch)
-		return action, nil
+		return amqpMessageLoop(ctx, outCh, errOutCh, fanin.Ch)
 	}
 }
 
 func (s *AmqpTap) setupTapsForExchanges(
 	session Session,
-	exchangeConfigList []ExchangeConfiguration,
-	tapCh TapChannel) ([]interface{}, error) {
+	exchangeConfigList []ExchangeConfiguration) ([]interface{}, error) {
 
 	var channels []interface{}
 

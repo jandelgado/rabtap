@@ -22,16 +22,17 @@ func cmdTap(ctx context.Context, tapConfig []rabtap.TapConfiguration, tlsConfig 
 	g, ctx := errgroup.WithContext(ctx)
 
 	tapMessageChannel := make(rabtap.TapChannel)
+	errorChannel := make(rabtap.SubscribeErrorChannel)
 
 	for _, config := range tapConfig {
 		tap := rabtap.NewAmqpTap(config.AMQPURL, tlsConfig, log)
 		g.Go(func() error {
-			return tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel)
+			return tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel, errorChannel)
 		})
 	}
 	g.Go(func() error {
 		acknowledger := createAcknowledgeFunc(false, false) // ACK
-		err := messageReceiveLoop(ctx, tapMessageChannel, messageReceiveFunc, pred, acknowledger)
+		err := messageReceiveLoop(ctx, tapMessageChannel, errorChannel, messageReceiveFunc, pred, acknowledger)
 		cancel()
 		return err
 	})

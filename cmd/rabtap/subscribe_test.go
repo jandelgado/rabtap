@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -21,6 +22,67 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// a mocked amqp.Acknowldger to test our AcknowledgeFunc
+type MockAcknowledger struct {
+	// store values in a map so being able to manipulate in a value receiver
+	values map[string]bool
+}
+
+func NewMockAcknowledger() MockAcknowledger {
+	return MockAcknowledger{values: map[string]bool{}}
+}
+
+func (s MockAcknowledger) isAcked() bool    { return s.values["acked"] }
+func (s MockAcknowledger) isNacked() bool   { return s.values["nacked"] }
+func (s MockAcknowledger) isRequeued() bool { return s.values["requeued"] }
+
+func (s MockAcknowledger) Ack(tag uint64, multiple bool) error {
+	s.values["acked"] = true
+	return nil
+}
+
+func (s MockAcknowledger) Nack(tag uint64, multiple, requeue bool) error {
+	s.values["nacked"] = true
+	s.values["requeued"] = requeue
+	return nil
+}
+
+func (s MockAcknowledger) Reject(tag uint64, requeue bool) error {
+	s.values["nacked"] = true
+	s.values["requeued"] = requeue
+	return nil
+}
+
+func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *testing.T) {
+
+	testcases := []struct {
+		reject, requeue               bool // given
+		isacked, isnacked, isrequeued bool // expected
+	}{
+		{false, false, true, false, false},
+		{false, true, true, false, false},
+		{true, false, false, true, false},
+		{true, true, false, true, true},
+	}
+
+	for i, tc := range testcases {
+
+		// given
+		info := fmt.Sprintf("testcase %d, %+v", i, tc)
+		mock := NewMockAcknowledger()
+		ackFunc := createAcknowledgeFunc(tc.reject, tc.requeue)
+		msg := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{Acknowledger: mock}}
+
+		// when
+		ackFunc(msg)
+
+		// then
+		assert.Equal(t, tc.isacked, mock.isAcked(), info)
+		assert.Equal(t, tc.isnacked, mock.isNacked(), info)
+		assert.Equal(t, tc.isrequeued, mock.isRequeued(), info)
+	}
+}
 
 func TestCreateCountingMessageReceivePredReturnsTrueIfNumIsZero(t *testing.T) {
 	pred := createCountingMessageReceivePred(0)
@@ -182,6 +244,7 @@ func TestCreateMessageReceiveFuncJSONNoPPToFile(t *testing.T) {
 func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	messageChan := make(rabtap.TapChannel)
+	errorChan := make(rabtap.SubscribeErrorChannel)
 	done := make(chan bool)
 	received := 0
 
@@ -192,7 +255,7 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 	}
 	continuePred := func(rabtap.TapMessage) bool { return true }
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	go func() { _ = messageReceiveLoop(ctx, messageChan, receiveFunc, continuePred, acknowledger) }()
+	go func() { _ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, continuePred, acknowledger) }()
 
 	messageChan <- rabtap.TapMessage{}
 	<-done // TODO add timeout
@@ -203,11 +266,12 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
+	errorChan := make(rabtap.SubscribeErrorChannel)
 	continuePred := func(rabtap.TapMessage) bool { return true }
 
 	close(messageChan)
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, continuePred, acknowledger)
+	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, continuePred, acknowledger)
 
 	assert.Nil(t, err)
 }
@@ -215,11 +279,12 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 func TestMessageReceiveLoopExitsWhenLoopPredReturnsFalse(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel, 1)
+	errorChan := make(rabtap.SubscribeErrorChannel)
 	stopPred := func(rabtap.TapMessage) bool { return false }
 
 	messageChan <- rabtap.TapMessage{}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := messageReceiveLoop(ctx, messageChan, NullMessageReceiveFunc, stopPred, acknowledger)
+	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, stopPred, acknowledger)
 
 	assert.Nil(t, err)
 }

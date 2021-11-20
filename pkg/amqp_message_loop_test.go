@@ -18,7 +18,7 @@ func TestAmqpMessageLoopPanicsWithInvalidMessage(t *testing.T) {
 	errOut := make(SubscribeErrorChannel)
 
 	go func() {
-		assert.Panics(t, func() { amqpMessageLoop(ctx, out, errOut, in) }, "did not panic")
+		assert.Panics(t, func() { _, _ = amqpMessageLoop(ctx, out, errOut, in) }, "did not panic")
 		done <- true
 	}()
 

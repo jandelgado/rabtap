@@ -75,9 +75,10 @@ func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *test
 		msg := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{Acknowledger: mock}}
 
 		// when
-		ackFunc(msg)
+		err := ackFunc(msg)
 
 		// then
+		assert.NoError(t, err)
 		assert.Equal(t, tc.isacked, mock.isAcked(), info)
 		assert.Equal(t, tc.isnacked, mock.isNacked(), info)
 		assert.Equal(t, tc.isrequeued, mock.isRequeued(), info)

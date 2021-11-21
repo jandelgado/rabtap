@@ -457,6 +457,12 @@ func TestCliPubCmdFromStdinWithJsonFormatDeprecatedIsRecognized(t *testing.T) {
 	assert.False(t, args.InsecureTLS)
 }
 
+func TestCliSubCmdOffsetSetsStreamOffsetArg(t *testing.T) {
+	args, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--offset=123"})
+	assert.NoError(t, err)
+	assert.Equal(t, args.Args["x-stream-offset"], "123")
+}
+
 func TestCliSubCmdInvalidFormatReturnsError(t *testing.T) {
 	_, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--format=invalid"})
 	assert.Error(t, err)

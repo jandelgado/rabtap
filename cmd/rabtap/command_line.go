@@ -37,7 +37,7 @@ Usage:
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] 
-              [--args=KV]... [(--reject [--requeue])] [-jksvn]
+              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jksvn]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
               [--routingkey=KEY | (--header=KV)...]
@@ -104,6 +104,10 @@ Arguments and options:
                       [default: byExchange].
  -n, --no-color       don't colorize output (see also environment variable NO_COLOR).
  --omit-empty         don't show echanges without bindings in info command.
+ --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last',
+                      'next', a duration like '10m', a RFC3339-Timestamp or 
+					  an integer index value. Basically it is an alias for 
+					  '--args=x-stream-offset=OFFSET'.
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  --reject             Reject messages. Default behaviour is to acknowledge messages.
  --requeue            Instruct broker to requeue rejected message
@@ -431,6 +435,9 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
 		return result, err
 	}
+	if offset := args["--offset"]; offset != nil {
+		result.Args["x-stream-offset"] = offset.(string)
+	}
 	return result, nil
 }
 
@@ -446,6 +453,17 @@ func parseKVListOption(name string, args map[string]interface{}) (map[string]str
 		return parseKeyValueList(headers)
 	}
 	return map[string]string{}, nil
+}
+
+func parseHeaderMode(args map[string]interface{}) HeaderMode {
+	switch {
+	case args["--any"].(bool):
+		return HeaderMatchAny
+	case args["--all"].(bool):
+		return HeaderMatchAll
+	default:
+		return HeaderNone
+	}
 }
 
 func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
@@ -478,15 +496,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		if err != nil {
 			return result, err
 		}
-		switch {
-		case args["--any"].(bool):
-			result.HeaderMode = HeaderMatchAny
-		case args["--all"].(bool):
-			result.HeaderMode = HeaderMatchAll
-		default:
-			result.HeaderMode = HeaderNone
-		}
-
+		result.HeaderMode = parseHeaderMode(args)
 		result.ExchangeName = args["EXCHANGE"].(string)
 
 	case args["unbind"].(bool):
@@ -497,14 +507,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		if err != nil {
 			return result, err
 		}
-		switch { // TODO dry
-		case args["--any"].(bool):
-			result.HeaderMode = HeaderMatchAny
-		case args["--all"].(bool):
-			result.HeaderMode = HeaderMatchAll
-		default:
-			result.HeaderMode = HeaderNone
-		}
+		result.HeaderMode = parseHeaderMode(args)
 		result.ExchangeName = args["EXCHANGE"].(string)
 	case args["purge"].(bool):
 		result.Cmd = QueuePurgeCmd

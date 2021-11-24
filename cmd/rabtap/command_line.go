@@ -43,11 +43,13 @@ Usage:
               [--routingkey=KEY | (--header=KV)...]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-adkv]
+  rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-kv]
+              [--autodelete] [--durable]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv] 
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue create QUEUE [--uri=URI] [--args=KV]... [-adkv] 
+  rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]... [-kv] 
+              [--autodelete] [--durable] [--lazy]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-kv]
               (--bindingkey=KEY | (--header=KV)... (--all|--any))
@@ -97,6 +99,7 @@ Arguments and options:
                       routing- or binding-key. Can occur multiple times.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
+ --lazy               create a lazy queue.
  --limit=NUM          Stop afer NUM messages were received. When set to 0, will
                       run until terminated [default: 0].
  --mandatory          enable mandatory publishing (messages must be delivered to queue).
@@ -108,6 +111,7 @@ Arguments and options:
                       'next', a duration like '10m', a RFC3339-Timestamp or 
 					  an integer index value. Basically it is an alias for 
 					  '--args=x-stream-offset=OFFSET'.
+ --queue-type=TYPE    type of queue [default: classic].
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  --reject             Reject messages. Default behaviour is to acknowledge messages.
  --requeue            Instruct broker to requeue rejected message
@@ -119,7 +123,7 @@ Arguments and options:
  -s, --silent         suppress message output to stdout.
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
- -t, --type=TYPE      exchange type [default: fanout].
+ --type=TYPE		  type of exchange [default: fanout].
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
@@ -206,7 +210,7 @@ func parseKeyValue(expr string) (string, string, error) {
 
 func parseKeyValueList(exprs []string) (map[string]string, error) {
 	if exprs == nil {
-		return nil, nil
+		return map[string]string{}, nil
 	}
 	res := make(map[string]string, len(exprs))
 	for _, expr := range exprs {
@@ -253,7 +257,7 @@ type CommandLineArgs struct {
 	QueueName           string            // queue create, remove, bind, sub
 	QueueBindingKey     string            // queue bind
 	ExchangeName        string            // exchange name  create, remove or queue bind
-	ExchangeType        string            // exchange type create, remove or queue bind
+	ExchangeType        string            // exchange type create
 	ShowConsumers       bool              // info: also show consumer
 	InfoMode            string            // info: byExchange, byConnection
 	ShowStats           bool              // info: also show statistics
@@ -484,6 +488,10 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		if err != nil {
 			return result, nil
 		}
+		result.Args["x-queue-type"] = args["--queue-type"].(string)
+		if args["--lazy"].(bool) {
+			result.Args["x-queue-mode"] = "lazy"
+		}
 	case args["rm"].(bool):
 		result.Cmd = QueueRemoveCmd
 	case args["bind"].(bool):
@@ -518,8 +526,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		commonArgs:   parseCommonArgs(args),
-		ExchangeName: args["EXCHANGE"].(string),
-		ExchangeType: args["--type"].(string)}
+		ExchangeName: args["EXCHANGE"].(string)}
 
 	var err error
 	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
@@ -527,6 +534,7 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 	}
 	switch {
 	case args["create"].(bool):
+		result.ExchangeType = args["--type"].(string)
 		result.Cmd = ExchangeCreateCmd
 		result.Durable = args["--durable"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)

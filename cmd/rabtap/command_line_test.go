@@ -491,22 +491,25 @@ func TestCliCreateQueue(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"queue", "create", "name", "--uri=uri", "--args=x=y"})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, QueueCreateCmd, args.Cmd)
 	assert.Equal(t, "name", args.QueueName)
 	assertEqualURL(t, "uri", args.AMQPURL)
-	assert.Equal(t, map[string]string{"x": "y"}, args.Args)
+	assert.Equal(t, map[string]string{"x": "y", "x-queue-type": "classic"}, args.Args)
 	assert.False(t, args.Durable)
 	assert.False(t, args.Autodelete)
 }
 
-func TestCliCreateDurableAutodeleteQueue(t *testing.T) {
+func TestCliCreateQueueAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"queue", "create", "name", "--uri=uri",
-			"--durable", "--autodelete"})
+			"--durable", "--autodelete", "--lazy", "--queue-type=quorum"})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, QueueCreateCmd, args.Cmd)
+	assert.Equal(t, "name", args.QueueName)
+	assertEqualURL(t, "uri", args.AMQPURL)
+	assert.Equal(t, map[string]string{"x-queue-type": "quorum", "x-queue-mode": "lazy"}, args.Args)
 	assert.True(t, args.Durable)
 	assert.True(t, args.Autodelete)
 }
@@ -515,7 +518,7 @@ func TestCliRemoveQueue(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"queue", "rm", "name", "--uri", "uri"})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, QueueRemoveCmd, args.Cmd)
 	assert.Equal(t, "name", args.QueueName)
 	assertEqualURL(t, "uri", args.AMQPURL)
@@ -525,7 +528,7 @@ func TestCliPurgeQueue(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"queue", "purge", "name", "--uri", "uri"})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, QueuePurgeCmd, args.Cmd)
 	assert.Equal(t, "name", args.QueueName)
 	assertEqualURL(t, "uri", args.AMQPURL)
@@ -536,7 +539,7 @@ func TestCliUnbindQueue(t *testing.T) {
 		[]string{"queue", "unbind", "queuename", "from", "exchangename",
 			"--bindingkey", "key", "--uri", "uri"})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, QueueUnbindCmd, args.Cmd)
 	assert.Equal(t, "queuename", args.QueueName)
 	assert.Equal(t, "exchangename", args.ExchangeName)
@@ -549,7 +552,7 @@ func TestCliBindQueueWithBindingKey(t *testing.T) {
 		[]string{"queue", "bind", "queuename", "to", "exchangename",
 			"--bindingkey", "key", "--uri", "uri"})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, QueueBindCmd, args.Cmd)
 	assert.Equal(t, "queuename", args.QueueName)
 	assert.Equal(t, "exchangename", args.ExchangeName)

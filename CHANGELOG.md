@@ -1,9 +1,17 @@
 # Changelog for rabtap
 
+## v1.34 (2021-11-24)
+
+* new: specify multiple `--args=KEY=VALUE` options to pass additional arguments
+       to the `sub` command.
+* new: create lazy queue with `queue create ... --lazy`
+* new: specify queue type to create with `queue create ... --queue-type=TYPE`
+* new: specify offset with `--offset=OFFSET` when reading from streams
+       
 ## v1.33 (2021-11-14)
 
-* new: specify multiple `--args=key=value` options to pass additional argzuments
-       to the queue and exchange create functions.
+* new: specify multiple `--args=KEY=VALUE` options to pass additional arguments
+       to the `queue` and `exchange` commands.
        
 ## v1.32 (2021-11-13)
 

@@ -55,7 +55,7 @@ func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) erro
 		sub, more := <-session
 		if !more {
 			// closed. TODO propagate errors from redial()
-			return errors.New("initial connection failed")
+			return errors.New("session factory closed")
 		}
 		s.logger.Debugf("got new amqp session ...")
 		action, err := worker(ctx, sub)
@@ -63,9 +63,9 @@ func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) erro
 			s.logger.Errorf("worker failed with: %v", err)
 		}
 		if !action.shouldReconnect() {
-			if errClose := sub.Connection.Close(); errClose != nil {
-				s.logger.Errorf("connection close failed: %v", errClose)
-			}
+			// if errClose := sub.Connection.Close(); errClose != nil {
+			//     s.logger.Errorf("connection close failed: %v", errClose)
+			// }
 			return err
 		}
 	}

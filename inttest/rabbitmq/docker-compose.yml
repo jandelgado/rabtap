@@ -1,7 +1,7 @@
 version: '3'
 services:
   rabbitmq:
-     image: rabbitmq:3.8-management-alpine
+     image: rabbitmq:3.9-management-alpine
      volumes:
        - ./definitions.json:/etc/rabbitmq/definitions.json:z
        - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:z

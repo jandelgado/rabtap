@@ -168,6 +168,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 		tlsConfig:              getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		messageReceiveFunc:     messageReceiveFunc,
 		messageReceiveLoopPred: pred,
+		args:                   args.Args,
 	})
 	failOnError(err, "error subscribing messages", os.Exit)
 }

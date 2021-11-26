@@ -1,12 +1,12 @@
-// Copyright (C) 2017 Jan Delgado
+// subscribe cli command handler
+// Copyright (C) 2017-2021 Jan Delgado
 
 package main
-
-// subscribe cli command handler
 
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/url"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -22,6 +22,7 @@ type CmdSubscribeArg struct {
 	messageReceiveLoopPred MessageReceiveLoopPred
 	reject                 bool
 	requeue                bool
+	args                   rabtap.KeyValueMap
 }
 
 // cmdSub subscribes to messages from the given queue
@@ -31,21 +32,23 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 	ctx, cancel := context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
 
-	messageChannel := make(rabtap.TapChannel)
-	config := rabtap.AmqpSubscriberConfig{Exclusive: false, AutoAck: false}
+	config := rabtap.AmqpSubscriberConfig{
+		Exclusive: false,
+		Args:      rabtap.ToAMQPTable(cmd.args)}
 	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURL, cmd.tlsConfig, log)
 
-	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel) })
+	messageChannel := make(rabtap.TapChannel)
+	errorChannel := make(rabtap.SubscribeErrorChannel)
+	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel, errorChannel) })
 	g.Go(func() error {
 		acknowledger := createAcknowledgeFunc(cmd.reject, cmd.requeue)
-		err := messageReceiveLoop(ctx, messageChannel, cmd.messageReceiveFunc, cmd.messageReceiveLoopPred, acknowledger)
+		err := messageReceiveLoop(ctx, messageChannel, errorChannel, cmd.messageReceiveFunc, cmd.messageReceiveLoopPred, acknowledger)
 		cancel()
 		return err
 	})
 
 	if err := g.Wait(); err != nil {
-		log.Errorf("subscribe failed with %v", err)
-		return err
+		return fmt.Errorf("subscribe failed: %w", err)
 	}
 	return nil
 }

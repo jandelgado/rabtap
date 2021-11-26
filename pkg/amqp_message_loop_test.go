@@ -1,3 +1,4 @@
+// (c) copyright jan delgado 2017-2021
 package rabtap
 
 import (
@@ -14,9 +15,10 @@ func TestAmqpMessageLoopPanicsWithInvalidMessage(t *testing.T) {
 	out := make(TapChannel)
 	in := make(chan interface{})
 	done := make(chan bool)
+	errOut := make(SubscribeErrorChannel)
 
 	go func() {
-		assert.Panics(t, func() { amqpMessageLoop(ctx, out, in) }, "did not panic")
+		assert.Panics(t, func() { _, _ = amqpMessageLoop(ctx, out, errOut, in) }, "did not panic")
 		done <- true
 	}()
 
@@ -38,9 +40,11 @@ func TestAmqpMessageLoopTerminatesWhenInputChannelIsClosed(t *testing.T) {
 	out := make(TapChannel)
 	in := make(chan interface{})
 	done := make(chan ReconnectAction)
+	errOut := make(SubscribeErrorChannel)
 
 	go func() {
-		done <- amqpMessageLoop(ctx, out, in)
+		result, _ := amqpMessageLoop(ctx, out, errOut, in)
+		done <- result
 	}()
 
 	close(in)
@@ -58,9 +62,11 @@ func TestAmqpMessageLoopCancelBlockingWrite(t *testing.T) {
 	out := make(TapChannel)
 	in := make(chan interface{}, 5)
 	done := make(chan ReconnectAction)
+	errOut := make(SubscribeErrorChannel)
 
 	go func() {
-		done <- amqpMessageLoop(ctx, out, in)
+		result, _ := amqpMessageLoop(ctx, out, errOut, in)
+		done <- result
 	}()
 
 	in <- amqp.Delivery{}
@@ -79,14 +85,64 @@ func TestAmqpMessageLoopCancelBlockingWrite(t *testing.T) {
 
 }
 
+func TestAmqpMessageLoopForwardsAMessage(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	out := make(TapChannel)
+	in := make(chan interface{})
+	done := make(chan ReconnectAction)
+	errOut := make(SubscribeErrorChannel)
+
+	go func() {
+		result, _ := amqpMessageLoop(ctx, out, errOut, in)
+		done <- result
+	}()
+
+	expected := amqp.Delivery{}
+	in <- expected
+
+	select {
+	case msg := <-out:
+		assert.Equal(t, expected, *msg.AmqpMessage)
+	case <-time.After(2 * time.Second):
+		assert.Fail(t, "amqpMessageLoop() did not terminate")
+	}
+	cancel()
+}
+
+func TestAmqpMessageLoopForwardsAnError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	out := make(TapChannel)
+	in := make(chan interface{})
+	done := make(chan ReconnectAction)
+	errOut := make(SubscribeErrorChannel)
+
+	go func() {
+		result, _ := amqpMessageLoop(ctx, out, errOut, in)
+		done <- result
+	}()
+
+	expected := &amqp.Error{}
+	in <- expected
+
+	select {
+	case err := <-errOut:
+		assert.Equal(t, SubscribeError{Reason: SubscribeErrorChannelError, Cause: expected}, *err)
+	case <-time.After(2 * time.Second):
+		assert.Fail(t, "amqpMessageLoop() did not terminate")
+	}
+	cancel()
+}
+
 func TestAmqpMessageLoopCancelBlockingRead(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	out := make(TapChannel)
 	in := make(chan interface{})
 	done := make(chan ReconnectAction)
+	errOut := make(SubscribeErrorChannel)
 
 	go func() {
-		done <- amqpMessageLoop(ctx, out, in)
+		result, _ := amqpMessageLoop(ctx, out, errOut, in)
+		done <- result
 	}()
 
 	cancel()
@@ -97,5 +153,4 @@ func TestAmqpMessageLoopCancelBlockingRead(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		assert.Fail(t, "amqpMessageLoop() did not terminate")
 	}
-
 }

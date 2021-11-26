@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2021 Jan Delgado
 // +build integration
 
 package rabtap
@@ -13,9 +13,12 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func TestSubscribe(t *testing.T) {
+func TestSubscribeReceivesMessages(t *testing.T) {
+
+	// given
 
 	// establish sending exchange.
+	messagesPerTest := 5
 	conn, ch := testcommon.IntegrationTestConnection(t, "subtest-direct-exchange", "direct", 0, false)
 	session := Session{conn, ch}
 	defer conn.Close()
@@ -31,13 +34,14 @@ func TestSubscribe(t *testing.T) {
 
 	finishChan := make(chan int)
 
-	config := AmqpSubscriberConfig{Exclusive: false, AutoAck: true}
+	config := AmqpSubscriberConfig{Exclusive: false}
 	log := testcommon.NewTestLogger()
 	subscriber := NewAmqpSubscriber(config, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	resultChannel := make(TapChannel)
+	resultErrChannel := make(SubscribeErrorChannel)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go subscriber.EstablishSubscription(ctx, queueName, resultChannel)
+	go subscriber.EstablishSubscription(ctx, queueName, resultChannel, resultErrChannel)
 
 	go func() {
 		numReceived := 0
@@ -50,6 +54,7 @@ func TestSubscribe(t *testing.T) {
 				finishChan <- numReceived
 				return
 			case message := <-resultChannel:
+				message.AmqpMessage.Ack(false)
 				if message.AmqpMessage != nil {
 					if string(message.AmqpMessage.Body) == "Hello" {
 						numReceived++
@@ -61,7 +66,9 @@ func TestSubscribe(t *testing.T) {
 
 	time.Sleep(TapReadyDelay)
 
-	// inject messages into exchange.
-	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "subtest-direct-exchange", queueName, nil)
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	// when: inject messages into exchange.
+	testcommon.PublishTestMessages(t, ch, messagesPerTest, "subtest-direct-exchange", queueName, nil)
+
+	// then
+	requireIntFromChan(t, finishChan, messagesPerTest)
 }

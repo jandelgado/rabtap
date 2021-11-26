@@ -1,5 +1,6 @@
-// Copyright (C) 2017 Jan Delgado
+// Copyright (C) 2017-2021 Jan Delgado
 // +build integration
+// TODO rewrite
 
 package rabtap
 
@@ -20,9 +21,8 @@ import (
 )
 
 const (
-	MessagesPerTest = 5
-	ResultTimeout   = time.Second * 5
-	TapReadyDelay   = time.Millisecond * 500
+	ResultTimeout = time.Second * 5
+	TapReadyDelay = time.Millisecond * 500
 )
 
 func TestGetTapQueueNameForExchange(t *testing.T) {
@@ -36,6 +36,7 @@ func TestGetTapEchangeNameForExchange(t *testing.T) {
 	assert.Equal(t, "__tap-exchange-for-exchange-1234",
 		getTapExchangeNameForExchange("exchange", "1234"))
 }
+
 func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 	tapExchangeName, tapQueueName string,
 	success chan<- int) *AmqpTap {
@@ -43,13 +44,16 @@ func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 	log := testcommon.NewTestLogger()
 	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	resultChannel := make(TapChannel)
+	resultErrChannel := make(SubscribeErrorChannel)
+
 	// TODO cancel and return cancel func
 	ctx, cancel := context.WithCancel(context.Background())
 	go tap.EstablishTap(
 		ctx,
 		[]ExchangeConfiguration{
 			{tapExchangeName, tapQueueName}},
-		resultChannel)
+		resultChannel,
+		resultErrChannel)
 
 	func() {
 		numReceived := 0
@@ -62,6 +66,7 @@ func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 				success <- numReceived
 				return
 			case message := <-resultChannel:
+				message.AmqpMessage.Ack(false)
 				if message.AmqpMessage != nil {
 					if string(message.AmqpMessage.Body) == "Hello" {
 						numReceived++
@@ -86,6 +91,8 @@ func requireIntFromChan(t *testing.T, c <-chan int, expected int) {
 
 func TestIntegrationHeadersExchange(t *testing.T) {
 
+	messagesPerTest := 5
+
 	// establish sending exchange
 	conn, ch := testcommon.IntegrationTestConnection(t, "headers-exchange", "headers", 2, true)
 	defer conn.Close()
@@ -93,7 +100,7 @@ func TestIntegrationHeadersExchange(t *testing.T) {
 	finishChan := make(chan int)
 
 	// no binding key is needed for the headers exchange
-	go verifyMessagesOnTap(t, "tap-consumer1", MessagesPerTest, "headers-exchange", "", finishChan)
+	go verifyMessagesOnTap(t, "tap-consumer1", messagesPerTest, "headers-exchange", "", finishChan)
 	time.Sleep(TapReadyDelay)
 
 	// inject messages into exchange. Each message should become visible
@@ -101,13 +108,13 @@ func TestIntegrationHeadersExchange(t *testing.T) {
 	// must provide a amqp.Table struct with the messages headers, on which
 	// routing is based. See integrationTestConnection() on how the routing
 	// header is constructed.
-	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "headers-exchange", "", amqp.Table{"header1": "test0"})
+	testcommon.PublishTestMessages(t, ch, messagesPerTest, "headers-exchange", "", amqp.Table{"header1": "test0"})
 
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 
 	// the original messages should also be delivered.
-	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", MessagesPerTest, "queue-0", finishChan)
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", messagesPerTest, "queue-0", finishChan)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 }
 
 func TestIntegrationDirectExchange(t *testing.T) {
@@ -119,21 +126,21 @@ func TestIntegrationDirectExchange(t *testing.T) {
 	finishChan := make(chan int)
 
 	// connect a test-tap and check if we received the test message
-	MessagesPerTest := MessagesPerTest
+	messagesPerTest := 5
 
-	go verifyMessagesOnTap(t, "tap-consumer1", MessagesPerTest, "direct-exchange", "queue-0", finishChan)
+	go verifyMessagesOnTap(t, "tap-consumer1", messagesPerTest, "direct-exchange", "queue-0", finishChan)
 
 	time.Sleep(TapReadyDelay)
 
 	// inject messages into exchange. Each message should become visible
 	// in the tap-exchange defined above.
-	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "direct-exchange", "queue-0", nil)
+	testcommon.PublishTestMessages(t, ch, messagesPerTest, "direct-exchange", "queue-0", nil)
 
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 
 	// the original messages should also be delivered.
-	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", MessagesPerTest, "queue-0", finishChan)
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", messagesPerTest, "queue-0", finishChan)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 }
 
 // TestIntegrationTopicExchangeTapSingleQueue tests tapping to a topic
@@ -148,26 +155,26 @@ func TestIntegrationTopicExchangeTapSingleQueue(t *testing.T) {
 	finishChan := make(chan int)
 
 	// connect a test-tap and check if we received the test message
-	MessagesPerTest := MessagesPerTest
+	messagesPerTest := 5
 
 	// tap only messages routed to queue-0
-	go verifyMessagesOnTap(t, "tap-consumer1", MessagesPerTest, "topic-exchange", "queue-0", finishChan)
+	go verifyMessagesOnTap(t, "tap-consumer1", messagesPerTest, "topic-exchange", "queue-0", finishChan)
 
 	time.Sleep(TapReadyDelay)
 
 	// inject messages into exchange. Each message should become visible
 	// in the tap-exchange defined above.
-	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "topic-exchange", "queue-0", nil)
-	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "topic-exchange", "queue-1", nil)
+	testcommon.PublishTestMessages(t, ch, messagesPerTest, "topic-exchange", "queue-0", nil)
+	testcommon.PublishTestMessages(t, ch, messagesPerTest, "topic-exchange", "queue-1", nil)
 
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 
 	// the original messages should also be delivered.
-	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", MessagesPerTest, "queue-0", finishChan)
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", messagesPerTest, "queue-0", finishChan)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 
-	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer3", MessagesPerTest, "queue-1", finishChan)
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer3", messagesPerTest, "queue-1", finishChan)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 }
 
 // TestIntegrationTopicExchangeTapWildcard tests tapping to an exechange
@@ -181,26 +188,26 @@ func TestIntegrationTopicExchangeTapWildcard(t *testing.T) {
 	finishChan := make(chan int)
 
 	// connect a test-tap and check if we received the test message
-	MessagesPerTest := MessagesPerTest
+	messagesPerTest := 5
 
 	// tap all messages on the exchange
-	go verifyMessagesOnTap(t, "tap-consumer1", MessagesPerTest*2, "topic-exchange", "#", finishChan)
+	go verifyMessagesOnTap(t, "tap-consumer1", messagesPerTest*2, "topic-exchange", "#", finishChan)
 
 	time.Sleep(TapReadyDelay)
 
 	// inject messages into exchange. Each message should become visible
 	// in the tap-exchange defined above.
-	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "topic-exchange", "queue-0", nil)
-	testcommon.PublishTestMessages(t, ch, MessagesPerTest, "topic-exchange", "queue-1", nil)
+	testcommon.PublishTestMessages(t, ch, messagesPerTest, "topic-exchange", "queue-0", nil)
+	testcommon.PublishTestMessages(t, ch, messagesPerTest, "topic-exchange", "queue-1", nil)
 
-	requireIntFromChan(t, finishChan, MessagesPerTest*2)
+	requireIntFromChan(t, finishChan, messagesPerTest*2)
 
 	// the original messages should also be delivered.
-	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", MessagesPerTest, "queue-0", finishChan)
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer2", messagesPerTest, "queue-0", finishChan)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 
-	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer3", MessagesPerTest, "queue-1", finishChan)
-	requireIntFromChan(t, finishChan, MessagesPerTest)
+	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer3", messagesPerTest, "queue-1", finishChan)
+	requireIntFromChan(t, finishChan, messagesPerTest)
 }
 
 // TestIntegrationInvalidExchange tries to tap to a non existing exhange, we
@@ -208,6 +215,7 @@ func TestIntegrationTopicExchangeTapWildcard(t *testing.T) {
 func TestIntegrationInvalidExchange(t *testing.T) {
 
 	tapMessages := make(TapChannel)
+	errChannel := make(SubscribeErrorChannel)
 	log := testcommon.NewTestLogger()
 	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
 	ctx := context.Background()
@@ -215,7 +223,8 @@ func TestIntegrationInvalidExchange(t *testing.T) {
 		ctx,
 		[]ExchangeConfiguration{
 			{"nonexisting-exchange", "test"}},
-		tapMessages)
+		tapMessages,
+		errChannel)
 
 	assert.NotNil(t, err)
 }

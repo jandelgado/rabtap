@@ -29,7 +29,7 @@ type MessageReceiveFuncOptions struct {
 // MessageReceiveFunc processes receiced messages from a tap.
 type MessageReceiveFunc func(rabtap.TapMessage) error
 
-//var ErrMessageLoopEnded = errors.New("message loop ended")
+// var ErrMessageLoopEnded = errors.New("message loop ended")
 
 // messageReceiveLoopPred is called once for each a message that was received.
 // If it returns true, the subscriber loop continues, otherwise the loop
@@ -75,6 +75,7 @@ func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
 
 func messageReceiveLoop(ctx context.Context,
 	messageChan rabtap.TapChannel,
+	errorChan rabtap.SubscribeErrorChannel,
 	messageReceiveFunc MessageReceiveFunc,
 	pred MessageReceiveLoopPred,
 	acknowledger AcknowledgeFunc) error {
@@ -85,10 +86,15 @@ func messageReceiveLoop(ctx context.Context,
 			log.Debugf("subscribe: cancel")
 			return nil
 
+		case err, more := <-errorChan:
+			if more {
+				log.Errorf("subscribe: %v", err)
+			}
+
 		case message, more := <-messageChan:
 			if !more {
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
-				return nil //ErrMessageLoopEnded
+				return nil // ErrMessageLoopEnded
 			}
 			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
 

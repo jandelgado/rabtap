@@ -57,8 +57,10 @@ Usage:
   rabtap queue unbind QUEUE from EXCHANGE [--uri=URI] [-kv]
               (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue rm QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue purge QUEUE [--uri=URI] [-kv] [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap queue rm QUEUE [--uri=URI] [-kv] 
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap queue purge QUEUE [--uri=URI] [-kv] 
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] 
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap --version
@@ -123,7 +125,7 @@ Arguments and options:
  -s, --silent         suppress message output to stdout.
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
- --type=TYPE		  type of exchange [default: fanout].
+ -t, --type=TYPE		  type of exchange [default: fanout].
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS.

@@ -366,7 +366,7 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 	var err error
 	if result.APIURL, err = parseAPIURI(args); err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse API URL: %w", err)
 	}
 	return result, nil
 }
@@ -377,7 +377,7 @@ func parseConnCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 	var err error
 	if result.APIURL, err = parseAPIURI(args); err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse API URL: %w", err)
 	}
 	if args["close"].(bool) {
 		result.Cmd = ConnCloseCmd
@@ -425,13 +425,13 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if args["--limit"] != nil {
 		limit, err := strconv.ParseInt(args["--limit"].(string), 10, 64)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --limit: %w", err)
 		}
 		result.Limit = limit
 	}
 	result.Args, err = parseKVListOption("--args", args)
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse --args: %w", err)
 	}
 
 	if args["--saveto"] != nil {
@@ -439,7 +439,7 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.SaveDir = &saveDir
 	}
 	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse AMQP URL: %w", err)
 	}
 	if offset := args["--offset"]; offset != nil {
 		result.Args["x-stream-offset"] = offset.(string)
@@ -479,7 +479,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	var err error
 	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse AMQP URL: %w", err)
 	}
 	switch {
 	case args["create"].(bool):
@@ -488,7 +488,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.Autodelete = args["--autodelete"].(bool)
 		result.Args, err = parseKVListOption("--args", args)
 		if err != nil {
-			return result, nil
+			return result, fmt.Errorf("failed to parse --args: %w", err)
 		}
 		result.Args["x-queue-type"] = args["--queue-type"].(string)
 		if args["--lazy"].(bool) {
@@ -504,7 +504,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 		result.Args, err = parseKVListOption("--header", args)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --header: %w", err)
 		}
 		result.HeaderMode = parseHeaderMode(args)
 		result.ExchangeName = args["EXCHANGE"].(string)
@@ -515,7 +515,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.QueueBindingKey = parseBindingKey(args)
 		result.Args, err = parseKVListOption("--header", args)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --header: %w", err)
 		}
 		result.HeaderMode = parseHeaderMode(args)
 		result.ExchangeName = args["EXCHANGE"].(string)
@@ -542,7 +542,7 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 		result.Autodelete = args["--autodelete"].(bool)
 		result.Args, err = parseKVListOption("--args", args)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --args: %w", err)
 		}
 	case args["rm"].(bool):
 		result.Cmd = ExchangeRemoveCmd
@@ -572,7 +572,7 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	result.Args, err = parseKVListOption("--header", args)
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse --header: %w", err)
 	}
 	if args["--routingkey"] != nil {
 		routingKey := args["--routingkey"].(string)
@@ -592,7 +592,7 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if args["--speed"] != nil {
 		result.Speed, err = strconv.ParseFloat(args["--speed"].(string), 64)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --speed: %w", err)
 		}
 	}
 	return result, nil
@@ -614,7 +614,7 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if args["--limit"] != nil {
 		limit, err := strconv.ParseInt(args["--limit"].(string), 10, 64)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --limit: %w", err)
 		}
 		result.Limit = limit
 	}
@@ -630,11 +630,11 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		// is used from the RABTAP_AMQPURI environment variable.
 		amqpURL, err := getAMQPURL(amqpURLs, i)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse AMQP URL: %w", err)
 		}
 		tapConfig, err := rabtap.NewTapConfiguration(amqpURL, exchange)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse tap configuration: %w", err)
 		}
 		result.TapConfig = append(result.TapConfig, *tapConfig)
 	}

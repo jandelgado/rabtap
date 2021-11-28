@@ -256,7 +256,9 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 	}
 	continuePred := func(rabtap.TapMessage) bool { return true }
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	go func() { _ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, continuePred, acknowledger) }()
+	go func() {
+		_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, continuePred, acknowledger, time.Second*10)
+	}()
 
 	messageChan <- rabtap.TapMessage{}
 	<-done // TODO add timeout
@@ -272,7 +274,7 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 
 	close(messageChan)
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, continuePred, acknowledger)
+	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, continuePred, acknowledger, time.Second*10)
 
 	assert.Nil(t, err)
 }
@@ -285,7 +287,22 @@ func TestMessageReceiveLoopExitsWhenLoopPredReturnsFalse(t *testing.T) {
 
 	messageChan <- rabtap.TapMessage{}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, stopPred, acknowledger)
+	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, stopPred, acknowledger, time.Second*10)
 
 	assert.Nil(t, err)
+}
+
+func TestMessageReceiveLoopExitsWitErrorWhenIdle(t *testing.T) {
+	// given
+	ctx := context.Background()
+	messageChan := make(rabtap.TapChannel)
+	errorChan := make(rabtap.SubscribeErrorChannel)
+	continuePred := func(rabtap.TapMessage) bool { return true }
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+
+	// when
+	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, continuePred, acknowledger, time.Second*1)
+
+	// Then
+	assert.Equal(t, ErrIdleTimeout, err)
 }

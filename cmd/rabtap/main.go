@@ -169,6 +169,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 		messageReceiveFunc:     messageReceiveFunc,
 		messageReceiveLoopPred: pred,
 		args:                   args.Args,
+		timeout:                args.IdleTimeout,
 	})
 	failOnError(err, "error subscribing messages", os.Exit)
 }
@@ -185,8 +186,14 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 	pred := createCountingMessageReceivePred(args.Limit)
-	cmdTap(ctx, args.TapConfig, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
-		messageReceiveFunc, pred)
+	cmdTap(ctx,
+		CmdTapArg{
+			tapConfig:          args.TapConfig,
+			tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+			messageReceiveFunc: messageReceiveFunc,
+			pred:               pred,
+			timeout:            args.IdleTimeout,
+		})
 }
 
 func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) {

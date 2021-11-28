@@ -1,5 +1,11 @@
 # Changelog for rabtap
 
+## v1.35 (2021-11-27)
+
+* new: new option `--idle-timeout=DURATION` added to `sub` and `tap` commands
+* chg: always wait for server notifications after pubishing, to be informed
+       on potential problems like publishing to a non existing exchange
+
 ## v1.34 (2021-11-24)
 
 * new: specify multiple `--args=KEY=VALUE` options to pass additional arguments

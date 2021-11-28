@@ -137,26 +137,29 @@ rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
-  rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
+  rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] [-jknsv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR]
+              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] [-jknsv]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR]
+              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] 
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
               [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jksvn]
+			  [--idle-timeout=DURATION]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
+  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
               [--routingkey=KEY | (--header=KV)...]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-kv]
               [--autodelete] [--durable]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] 
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]... [-kv] 
+  rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]... [-kv]
               [--autodelete] [--durable] [--lazy]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-kv]
@@ -165,11 +168,11 @@ Usage:
   rabtap queue unbind QUEUE from EXCHANGE [--uri=URI] [-kv]
               (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue rm QUEUE [--uri=URI] [-kv] 
+  rabtap queue rm QUEUE [--uri=URI] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue purge QUEUE [--uri=URI] [-kv] 
+  rabtap queue purge QUEUE [--uri=URI] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] 
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap --version
 
@@ -193,20 +196,23 @@ Arguments and options:
  --confirms           enable publisher confirms and wait for confirmations.
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
-                      If not set then messages will be delayed as recorded. 
+                      If not set then messages will be delayed as recorded.
 					  The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
  --filter=EXPR        Predicate for info command to filter queues [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
-                        and optionally to file (when --saveto DIR is given). 
+                        and optionally to file (when --saveto DIR is given).
                         Valid options are: "raw", "json", "json-nopp". Default: raw
-                      * for info command: controls generated output format. Valid 
+                      * for info command: controls generated output format. Valid
                         options are: "text", "dot". Default: text
  -h, --help           print this help.
  --header=KV          A key value pair in the form of "key=value" used as a
                       routing- or binding-key. Can occur multiple times.
+ --idle-timeout=DURATION end reading messages when no new message was received
+                      for the given duration.  The value must be suffixed with 
+					  a time unit, e.g. ms, s etc.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --lazy               create a lazy queue.
@@ -218,15 +224,15 @@ Arguments and options:
  -n, --no-color       don't colorize output (see also environment variable NO_COLOR).
  --omit-empty         don't show echanges without bindings in info command.
  --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last',
-                      'next', a duration like '10m', a RFC3339-Timestamp or 
-					  an integer index value. Basically it is an alias for 
+                      'next', a duration like '10m', a RFC3339-Timestamp or
+					  an integer index value. Basically it is an alias for
 					  '--args=x-stream-offset=OFFSET'.
  --queue-type=TYPE    type of queue [default: classic].
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  --reject             Reject messages. Default behaviour is to acknowledge messages.
  --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
-                      will be taken from message being published (see JSON 
+                      will be taken from message being published (see JSON
 					  message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
@@ -490,8 +496,9 @@ The `sub` command reads messages from a queue or a stream. The general form
 of the `sub` command is:
 
 ```
-rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] 
-          [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jksvn]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
+              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jksvn]
+			  [--idle-timeout=DURATION]
 ```
 
 Use the `--limit=NUM` option to limit the number of received messages. If 
@@ -509,6 +516,10 @@ stream and must be any of: `first`, `last`, `next`, a numerical offset, a
 RFC3339-Timestamp or a duration specification like `10m`. Consult the RabbitMQ
 documentation for more information on [streams](https://www.rabbitmq.com/streams.html).
 
+When `--idle-timeout=DURATION` is set, the subscribe command will terminate when no new
+messages were received in the given time period. Look for the description of the 
+`--delay` option for the format of the `DURATION` parameter.
+
 Examples:
 
 * `$ rabtap sub somequeue --format=json` - will consume messages from queue
@@ -523,6 +534,8 @@ Examples:
   starting with the 50th message.
 * `rabtap sub mystream --offset=10m` - read messages from stream `mystream`
   which are aged 10 minutes or less.
+* `rabtap sub somequeue --idle-timeout=5s` - read messages from queue `somequeue`
+  and exit when there is no new message received for 5 seconds.
 
 #### Publish messages
 
@@ -550,6 +563,9 @@ consecutive recorded messages using the metadata, and delay publishing
 accordingly. To set the publishing delay to a fix value, use the `--delay`
 option. To publish without delays, use `--delay=0s`. To modify publishing speed
 use the `--speed` option, which allows to set a factor to apply to the delays.
+A delay is a sequence of decimal numbers, each with optional fraction and a
+unit suffix, such as "300ms", "-1.5h" 0or "2h45m". Valid time units are "ns",
+"us" (or "µs"), "ms", "s", "m", "h". 
 
 When the `--confirms` option is set, rabtap waits for publisher confirmations
 from the server and logs an error if a confirmation is negative or not received

@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"regexp"
@@ -29,26 +30,29 @@ const (
 
 Usage:
   rabtap -h|--help
-  rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty] 
+  rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
               [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] [-jknsv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR]
+              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] [-jknsv]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR]
+              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jknsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM] 
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
               [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jksvn]
+			  [--idle-timeout=DURATION]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
+  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
               [--routingkey=KEY | (--header=KV)...]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-kv]
               [--autodelete] [--durable]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap exchange rm EXCHANGE [--uri=URI] [-kv] 
+  rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]... [-kv] 
+  rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]... [-kv]
               [--autodelete] [--durable] [--lazy]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-kv]
@@ -57,11 +61,11 @@ Usage:
   rabtap queue unbind QUEUE from EXCHANGE [--uri=URI] [-kv]
               (--bindingkey=KEY | (--header=KV)... (--all|--any))
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue rm QUEUE [--uri=URI] [-kv] 
+  rabtap queue rm QUEUE [--uri=URI] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap queue purge QUEUE [--uri=URI] [-kv] 
+  rabtap queue purge QUEUE [--uri=URI] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv] 
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap --version
 
@@ -85,20 +89,23 @@ Arguments and options:
  --confirms           enable publisher confirms and wait for confirmations.
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
-                      If not set then messages will be delayed as recorded. 
+                      If not set then messages will be delayed as recorded.
 					  The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
  --filter=EXPR        Predicate for info command to filter queues [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
-                        and optionally to file (when --saveto DIR is given). 
+                        and optionally to file (when --saveto DIR is given).
                         Valid options are: "raw", "json", "json-nopp". Default: raw
-                      * for info command: controls generated output format. Valid 
+                      * for info command: controls generated output format. Valid
                         options are: "text", "dot". Default: text
  -h, --help           print this help.
  --header=KV          A key value pair in the form of "key=value" used as a
                       routing- or binding-key. Can occur multiple times.
+ --idle-timeout=DURATION end reading messages when no new message was received
+                      for the given duration.  The value must be suffixed with 
+					  a time unit, e.g. ms, s etc.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --lazy               create a lazy queue.
@@ -110,15 +117,15 @@ Arguments and options:
  -n, --no-color       don't colorize output (see also environment variable NO_COLOR).
  --omit-empty         don't show echanges without bindings in info command.
  --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last',
-                      'next', a duration like '10m', a RFC3339-Timestamp or 
-					  an integer index value. Basically it is an alias for 
+                      'next', a duration like '10m', a RFC3339-Timestamp or
+					  an integer index value. Basically it is an alias for
 					  '--args=x-stream-offset=OFFSET'.
  --queue-type=TYPE    type of queue [default: classic].
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  --reject             Reject messages. Default behaviour is to acknowledge messages.
  --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
-                      will be taken from message being published (see JSON 
+                      will be taken from message being published (see JSON
 					  message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
@@ -256,6 +263,7 @@ type CommandLineArgs struct {
 	Limit               int64             // sub: optional limit
 	Reject              bool              // sub: reject messages
 	Requeue             bool              // sub: requeue rejectied messages
+	IdleTimeout         time.Duration     // sub: idle timeout
 	QueueName           string            // queue create, remove, bind, sub
 	QueueBindingKey     string            // queue bind
 	ExchangeName        string            // exchange name  create, remove or queue bind
@@ -366,7 +374,7 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 	var err error
 	if result.APIURL, err = parseAPIURI(args); err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse API URL: %w", err)
 	}
 	return result, nil
 }
@@ -377,7 +385,7 @@ func parseConnCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 	var err error
 	if result.APIURL, err = parseAPIURI(args); err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse API URL: %w", err)
 	}
 	if args["close"].(bool) {
 		result.Cmd = ConnCloseCmd
@@ -408,12 +416,13 @@ func parsePubSubFormatArg(args map[string]interface{}) (string, error) {
 
 func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
-		Cmd:        SubCmd,
-		commonArgs: parseCommonArgs(args),
-		Reject:     args["--reject"].(bool),
-		Requeue:    args["--requeue"].(bool),
-		QueueName:  args["QUEUE"].(string),
-		Silent:     args["--silent"].(bool),
+		Cmd:         SubCmd,
+		commonArgs:  parseCommonArgs(args),
+		Reject:      args["--reject"].(bool),
+		Requeue:     args["--requeue"].(bool),
+		QueueName:   args["QUEUE"].(string),
+		Silent:      args["--silent"].(bool),
+		IdleTimeout: time.Duration(math.MaxInt64),
 	}
 
 	format, err := parsePubSubFormatArg(args)
@@ -422,16 +431,23 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	result.Format = format
 
+	if timeout := args["--idle-timeout"]; timeout != nil {
+		duration, err := time.ParseDuration(timeout.(string))
+		if err != nil {
+			return result, fmt.Errorf("failed to parse --idle-timeout: %w", err)
+		}
+		result.IdleTimeout = duration
+	}
 	if args["--limit"] != nil {
 		limit, err := strconv.ParseInt(args["--limit"].(string), 10, 64)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --limit: %w", err)
 		}
 		result.Limit = limit
 	}
 	result.Args, err = parseKVListOption("--args", args)
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse --args: %w", err)
 	}
 
 	if args["--saveto"] != nil {
@@ -439,7 +455,7 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.SaveDir = &saveDir
 	}
 	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse AMQP URL: %w", err)
 	}
 	if offset := args["--offset"]; offset != nil {
 		result.Args["x-stream-offset"] = offset.(string)
@@ -479,7 +495,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	var err error
 	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse AMQP URL: %w", err)
 	}
 	switch {
 	case args["create"].(bool):
@@ -488,7 +504,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.Autodelete = args["--autodelete"].(bool)
 		result.Args, err = parseKVListOption("--args", args)
 		if err != nil {
-			return result, nil
+			return result, fmt.Errorf("failed to parse --args: %w", err)
 		}
 		result.Args["x-queue-type"] = args["--queue-type"].(string)
 		if args["--lazy"].(bool) {
@@ -504,7 +520,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 		result.Args, err = parseKVListOption("--header", args)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --header: %w", err)
 		}
 		result.HeaderMode = parseHeaderMode(args)
 		result.ExchangeName = args["EXCHANGE"].(string)
@@ -515,7 +531,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		result.QueueBindingKey = parseBindingKey(args)
 		result.Args, err = parseKVListOption("--header", args)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --header: %w", err)
 		}
 		result.HeaderMode = parseHeaderMode(args)
 		result.ExchangeName = args["EXCHANGE"].(string)
@@ -542,7 +558,7 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 		result.Autodelete = args["--autodelete"].(bool)
 		result.Args, err = parseKVListOption("--args", args)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --args: %w", err)
 		}
 	case args["rm"].(bool):
 		result.Cmd = ExchangeRemoveCmd
@@ -572,7 +588,7 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	result.Args, err = parseKVListOption("--header", args)
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("failed to parse --header: %w", err)
 	}
 	if args["--routingkey"] != nil {
 		routingKey := args["--routingkey"].(string)
@@ -592,7 +608,7 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	if args["--speed"] != nil {
 		result.Speed, err = strconv.ParseFloat(args["--speed"].(string), 64)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --speed: %w", err)
 		}
 	}
 	return result, nil
@@ -600,10 +616,11 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
-		Cmd:        TapCmd,
-		commonArgs: parseCommonArgs(args),
-		Silent:     args["--silent"].(bool),
-		TapConfig:  []rabtap.TapConfiguration{}}
+		Cmd:         TapCmd,
+		commonArgs:  parseCommonArgs(args),
+		Silent:      args["--silent"].(bool),
+		TapConfig:   []rabtap.TapConfiguration{},
+		IdleTimeout: time.Duration(math.MaxInt64)}
 
 	format, err := parsePubSubFormatArg(args)
 	if err != nil {
@@ -611,10 +628,17 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	}
 	result.Format = format
 
+	if timeout := args["--idle-timeout"]; timeout != nil {
+		duration, err := time.ParseDuration(timeout.(string))
+		if err != nil {
+			return result, fmt.Errorf("failed to parse --idle-timeout: %w", err)
+		}
+		result.IdleTimeout = duration
+	}
 	if args["--limit"] != nil {
 		limit, err := strconv.ParseInt(args["--limit"].(string), 10, 64)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse --limit: %w", err)
 		}
 		result.Limit = limit
 	}
@@ -630,11 +654,11 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		// is used from the RABTAP_AMQPURI environment variable.
 		amqpURL, err := getAMQPURL(amqpURLs, i)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse AMQP URL: %w", err)
 		}
 		tapConfig, err := rabtap.NewTapConfiguration(amqpURL, exchange)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("failed to parse tap configuration: %w", err)
 		}
 		result.TapConfig = append(result.TapConfig, *tapConfig)
 	}

@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/url"
+	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"golang.org/x/sync/errgroup"
@@ -23,6 +24,7 @@ type CmdSubscribeArg struct {
 	reject                 bool
 	requeue                bool
 	args                   rabtap.KeyValueMap
+	timeout                time.Duration
 }
 
 // cmdSub subscribes to messages from the given queue
@@ -42,12 +44,18 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel, errorChannel) })
 	g.Go(func() error {
 		acknowledger := createAcknowledgeFunc(cmd.reject, cmd.requeue)
-		err := messageReceiveLoop(ctx, messageChannel, errorChannel, cmd.messageReceiveFunc, cmd.messageReceiveLoopPred, acknowledger)
+		err := messageReceiveLoop(ctx,
+			messageChannel,
+			errorChannel,
+			cmd.messageReceiveFunc,
+			cmd.messageReceiveLoopPred,
+			acknowledger,
+			cmd.timeout)
 		cancel()
 		return err
 	})
 
-	if err := g.Wait(); err != nil {
+	if err := g.Wait(); err != nil && err != ErrIdleTimeout {
 		return fmt.Errorf("subscribe failed: %w", err)
 	}
 	return nil

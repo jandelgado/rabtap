@@ -47,7 +47,11 @@ func TestCmdTap(t *testing.T) {
 	pred := func(rabtap.TapMessage) bool { return true }
 
 	// when
-	go cmdTap(ctx, tapConfig, &tls.Config{}, receiveFunc, pred)
+	go cmdTap(ctx, CmdTapArg{tapConfig: tapConfig,
+		tlsConfig:          &tls.Config{},
+		messageReceiveFunc: receiveFunc,
+		pred:               pred,
+		timeout:            time.Second * 10})
 
 	time.Sleep(time.Second * 1)
 	err := ch.Publish(

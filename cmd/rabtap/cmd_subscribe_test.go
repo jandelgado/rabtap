@@ -37,6 +37,7 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 			tlsConfig:              &tls.Config{},
 			messageReceiveFunc:     func(rabtap.TapMessage) error { return nil },
 			messageReceiveLoopPred: func(rabtap.TapMessage) bool { return true },
+			timeout:                time.Second * 10,
 		})
 		done <- true
 	}()
@@ -82,6 +83,7 @@ func TestCmdSub(t *testing.T) {
 		tlsConfig:              tlsConfig,
 		messageReceiveFunc:     receiveFunc,
 		messageReceiveLoopPred: func(rabtap.TapMessage) bool { return true },
+		timeout:                time.Second * 10,
 	})
 
 	time.Sleep(time.Second * 1)

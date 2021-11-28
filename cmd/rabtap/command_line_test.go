@@ -5,6 +5,7 @@ package main
 // the command line is the UI of the tool. so we test it carefully.
 
 import (
+	"math"
 	"net/url"
 	"os"
 	"testing"
@@ -191,6 +192,7 @@ func TestCliTapCmdSingleUriFromEnv(t *testing.T) {
 	assert.Equal(t, 1, len(args.TapConfig[0].Exchanges))
 	assert.Equal(t, "exchange1", args.TapConfig[0].Exchanges[0].Exchange)
 	assert.Equal(t, "binding1", args.TapConfig[0].Exchanges[0].BindingKey)
+	assert.Equal(t, time.Duration(math.MaxInt64), args.IdleTimeout)
 	assert.False(t, args.NoColor)
 	assert.Equal(t, int64(99), args.Limit)
 }
@@ -240,7 +242,8 @@ func TestCliTapCmdWithMultipleUris(t *testing.T) {
 func TestCliAllOptsInTapCommandiAreRecognized(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=uri", "exchange:binding", "--silent", "--verbose",
-			"--format=json-nopp", "--insecure", "--saveto", "savedir", "--limit", "123"})
+			"--format=json-nopp", "--insecure", "--saveto", "savedir", "--limit", "123",
+			"--idle-timeout=10s"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(args.TapConfig))
@@ -250,6 +253,7 @@ func TestCliAllOptsInTapCommandiAreRecognized(t *testing.T) {
 	assert.Equal(t, "exchange", args.TapConfig[0].Exchanges[0].Exchange)
 	assert.Equal(t, "binding", args.TapConfig[0].Exchanges[0].BindingKey)
 	assert.Equal(t, int64(123), args.Limit)
+	assert.Equal(t, time.Duration(time.Second*10), args.IdleTimeout)
 	assert.Equal(t, "savedir", *args.SaveDir)
 	assert.Equal(t, "json-nopp", args.Format)
 	assert.True(t, args.Verbose)
@@ -463,6 +467,12 @@ func TestCliSubCmdOffsetSetsStreamOffsetArg(t *testing.T) {
 	assert.Equal(t, args.Args["x-stream-offset"], "123")
 }
 
+func TestCliSubSetsInfiniteTimeoutWhenNotSpecified(t *testing.T) {
+	args, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri"})
+	assert.NoError(t, err)
+	assert.Equal(t, time.Duration(math.MaxInt64), args.IdleTimeout)
+}
+
 func TestCliSubCmdInvalidFormatReturnsError(t *testing.T) {
 	_, err := ParseCommandLineArgs([]string{"sub", "queue", "--uri=uri", "--format=invalid"})
 	assert.Error(t, err)
@@ -473,9 +483,10 @@ func TestCliSubCmdInvalidNumReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCliSubCmdSaveToDir(t *testing.T) {
+func TestCliSubCmdAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir", "--limit=99"})
+		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir",
+			"--limit=99", "--offset=123", "--idle-timeout=10s"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, SubCmd, args.Cmd)
@@ -483,6 +494,7 @@ func TestCliSubCmdSaveToDir(t *testing.T) {
 	assertEqualURL(t, "uri", args.AMQPURL)
 	assert.Equal(t, "dir", *args.SaveDir)
 	assert.Equal(t, int64(99), args.Limit)
+	assert.Equal(t, time.Duration(time.Second*10), args.IdleTimeout)
 	assert.False(t, args.Reject)
 	assert.False(t, args.Requeue)
 }

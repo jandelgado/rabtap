@@ -8,9 +8,14 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
+
+// ErrIdleTimeout is returned by the message loop when the loop was terminated
+// due to an timeout when no message was received
+var ErrIdleTimeout = fmt.Errorf("idle timeout")
 
 // FilenameProvider returns a filename to save a subscribed message to.
 type FilenameProvider func() string
@@ -73,15 +78,27 @@ func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
 	}
 }
 
+// messageReceiveLoop passes received AMQP messages to messageReceiveFunc
+// and handles errors received on the errorChan. AMQP messages are ascknowledged
+// by the provides acknowleder function. Each message is passed to the predicate
+// pred function. If false is returned, processing is ended. Timeout specifies
+// an idle timeout, which will end processing when for the given duration no
+// new messages are received on messageChan.
+// TODO pass in struct, limit number of arguments
 func messageReceiveLoop(ctx context.Context,
 	messageChan rabtap.TapChannel,
 	errorChan rabtap.SubscribeErrorChannel,
 	messageReceiveFunc MessageReceiveFunc,
 	pred MessageReceiveLoopPred,
-	acknowledger AcknowledgeFunc) error {
+	acknowledger AcknowledgeFunc,
+	timeout time.Duration) error {
+
+	timeoutTicker := time.NewTicker(timeout)
+	defer timeoutTicker.Stop()
 
 	for {
 		select {
+
 		case <-ctx.Done():
 			log.Debugf("subscribe: cancel")
 			return nil
@@ -110,6 +127,10 @@ func messageReceiveLoop(ctx context.Context,
 			if !pred(message) {
 				return nil
 			}
+			timeoutTicker.Reset(timeout)
+
+		case <-timeoutTicker.C:
+			return ErrIdleTimeout
 		}
 	}
 }

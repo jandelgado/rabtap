@@ -13,7 +13,7 @@ import (
 )
 
 const timeoutWaitACK = time.Second * 2
-const timeoutWaitServer = time.Second * 1
+const timeoutWaitServer = time.Millisecond * 500
 
 // PublishMessage is a message to be published by AmqpPublish via
 // a PublishChannel
@@ -136,10 +136,6 @@ func (s *AmqpPublish) createWorkerFunc(
 		// wait a while for outstanding errors and returned messages
 		// since these can arrive after we finished publishing.
 		defer func() {
-
-			if !s.mandatory {
-				return
-			}
 
 			s.logger.Debugf("waiting for pending server messages ... ")
 			timeout := time.After(timeoutWaitServer)

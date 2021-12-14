@@ -898,10 +898,10 @@ type Binding struct {
 
 ## Build from source
 
-### Download and build using go get
+### Download and build using go install
 
 ```
-$ GO111MODULE=on go get github.com/jandelgado/rabtap/cmd/rabtap
+$ go install github.com/jandelgado/rabtap/cmd/rabtap@latest
 ```
 
 ### Build using Makefile and tests

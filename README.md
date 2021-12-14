@@ -52,7 +52,7 @@ and exchanges, inspect broker.
         * [Queue type](#queue-type)
         * [Binding type](#binding-type)
 * [Build from source](#build-from-source)
-    * [Download and build using go get](#download-and-build-using-go-get)
+    * [Download and build using go get](#download-and-build-using-go-install)
     * [Build using Makefile and tests](#build-using-makefile-and-tests)
 * [Test data generator](#test-data-generator)
 * [Contributing](#contributing)

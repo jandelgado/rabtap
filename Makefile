@@ -14,7 +14,7 @@ tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)
 
 lint:
-	@./pre-commit
+	golangci-lint run
 
 short-test: 
 	go test -v -race  github.com/jandelgado/rabtap/cmd/rabtap

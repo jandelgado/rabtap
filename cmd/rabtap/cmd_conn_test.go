@@ -65,8 +65,7 @@ func TestCmdCloseConnection(t *testing.T) {
 	connToClose := findClosedConnName(connsBefore, connsAfter)
 	require.NotEqual(t, "", connToClose)
 
-	// now close the newly created connection. TODO handle potential
-	// call to failOnError in cmdConnClose
+	// now close the newly created connection
 	err = cmdConnClose(context.TODO(),
 		url, connToClose, "some reason", &tls.Config{})
 	require.Nil(t, err)

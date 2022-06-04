@@ -1,6 +1,6 @@
 # rabtap - RabbitMQ wire tap
 
-![rBuild Status](https://github.com/jandelgado/rabtap/workflows/run%20tests/badge.svg)
+![Build Status](https://github.com/jandelgado/rabtap/workflows/run%20tests/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/jandelgado/rabtap/badge.svg?branch=master)](https://coveralls.io/github/jandelgado/rabtap?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jandelgado/rabtap)](https://goreportcard.com/report/github.com/jandelgado/rabtap)
 
@@ -52,7 +52,7 @@ and exchanges, inspect broker.
         * [Queue type](#queue-type)
         * [Binding type](#binding-type)
 * [Build from source](#build-from-source)
-    * [Download and build using go get](#download-and-build-using-go-install)
+    * [Download and build using go install](#download-and-build-using-go-install)
     * [Build using Makefile and tests](#build-using-makefile-and-tests)
 * [Test data generator](#test-data-generator)
 * [Contributing](#contributing)
@@ -931,7 +931,6 @@ included in the `cmd/testgen` directory.
 * create your feature branch
 * add code
 * add tests and make sure test coverage does not fall (`make test`)
-* make sure pre-commit hook does not fail (`./pre-commit`)
 * add [documentation](README.md)
 * commit changes
 * submit a PR

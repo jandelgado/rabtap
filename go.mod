@@ -9,8 +9,8 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/mattn/go-colorable v0.1.1
 	github.com/mattn/go-isatty v0.0.6 // indirect
+	github.com/rabbitmq/amqp091-go v1.3.4
 	github.com/sirupsen/logrus v1.3.0
-	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859

@@ -237,8 +237,10 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			headerMode: args.HeaderMode, args: args.Args,
 			tlsConfig: tlsConfig})
 	case ConnCloseCmd:
-		cmdConnClose(ctx, args.APIURL, args.ConnName,
-			args.CloseReason, tlsConfig)
+		failOnError(cmdConnClose(ctx, args.APIURL, args.ConnName,
+			args.CloseReason, tlsConfig),
+			fmt.Sprintf("close connection '%s'", args.ConnName), os.Exit)
+
 	}
 }
 

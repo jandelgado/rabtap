@@ -10,7 +10,7 @@ import (
 	"net/url"
 
 	uuid "github.com/google/uuid"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // AmqpTap allows to tap to an RabbitMQ exchange.

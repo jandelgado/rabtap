@@ -12,7 +12,7 @@ import (
 	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // RabtapPersistentMessage is a messages as persisted from/to a JSON file

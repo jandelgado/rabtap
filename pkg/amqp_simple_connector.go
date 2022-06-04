@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"net/url"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // openAMQPChannel tries to open a channel on the given broker

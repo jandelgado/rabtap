@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // amqpMessageLoop forwards incoming amqp messages from an "in" chan to an "out"

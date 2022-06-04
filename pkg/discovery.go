@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // DiscoverBindingsForExchange returns a string list of routing-keys that

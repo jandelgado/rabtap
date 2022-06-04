@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
@@ -20,7 +20,7 @@ func DialTLS(url string, amqps *tls.Config) (*amqp.Connection, error) {
 
 	if amqps.Certificates != nil {
 		// client certificate are set to we must use EXTERNAL auth
-		sasl = []amqp.Authentication{&ExternalAuth{}}
+		sasl = []amqp.Authentication{&amqp.ExternalAuth{}}
 	}
 
 	return amqp.DialConfig(url, amqp.Config{

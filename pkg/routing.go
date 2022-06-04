@@ -3,7 +3,7 @@ package rabtap
 import (
 	"fmt"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Routing describes where a message should be published

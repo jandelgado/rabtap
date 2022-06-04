@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func TestSubscribeReceivesMessages(t *testing.T) {

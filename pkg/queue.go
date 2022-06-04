@@ -3,7 +3,7 @@
 
 package rabtap
 
-import "github.com/streadway/amqp"
+import amqp "github.com/rabbitmq/amqp091-go"
 
 // CreateQueue creates a new queue
 // TODO(JD) get rid of bool types

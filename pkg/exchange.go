@@ -3,7 +3,7 @@
 
 package rabtap
 
-import "github.com/streadway/amqp"
+import amqp "github.com/rabbitmq/amqp091-go"
 
 // CreateExchange creates a new echange on the given channel
 func CreateExchange(session Session, exchangeName, exchangeType string,

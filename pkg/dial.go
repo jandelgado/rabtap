@@ -2,6 +2,7 @@ package rabtap
 
 import (
 	"crypto/tls"
+	"net/url"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -15,17 +16,23 @@ const (
 // DialTLS is a Wrapper for amqp.DialTLS that supports EXTERNAL auth for mtls
 // can be removed when https://github.com/streadway/amqp/pull/121 gets some day
 // merged.
-func DialTLS(url string, amqps *tls.Config) (*amqp.Connection, error) {
-	var sasl []amqp.Authentication
+func DialTLS(uri string, tlsConfig *tls.Config) (*amqp.Connection, error) {
 
-	if amqps.Certificates != nil {
-		// client certificate are set to we must use EXTERNAL auth
+	u, err := url.Parse(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	// if client certificates are specified and no explicit credentials in the
+	// amqp connect url are given, then request EXTERNAL auth.
+	var sasl []amqp.Authentication
+	if tlsConfig.Certificates != nil && u.User == nil {
 		sasl = []amqp.Authentication{&amqp.ExternalAuth{}}
 	}
 
-	return amqp.DialConfig(url, amqp.Config{
+	return amqp.DialConfig(uri, amqp.Config{
 		Heartbeat:       defaultHeartbeat,
-		TLSClientConfig: amqps,
+		TLSClientConfig: tlsConfig,
 		Locale:          defaultLocale,
 		SASL:            sasl,
 	})

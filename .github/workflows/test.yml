@@ -48,3 +48,16 @@ jobs:
         with:
           github-token: ${{ secrets.github_token }}
           path-to-lcov: coverage.lcov
+
+      - name: Build release artifacts
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          version: latest
+          args: build --rm-dist --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload assets
+        uses: actions/upload-artifact@v3
+        with:
+          name: rabtap-binaries
+          path: dist/*

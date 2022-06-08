@@ -1,5 +1,11 @@
 # Changelog for rabtap
 
+## v1.36 (2022-06-08)
+
+* chg: use PLAIN auth when both a client certificate and username and 
+       password is provided (#73)
+* switch to github.com/rabbitmq/amqp091-go amqp lib (#72)
+       
 ## v1.35 (2021-11-27)
 
 * new: new option `--idle-timeout=DURATION` added to `sub` and `tap` commands

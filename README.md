@@ -24,6 +24,7 @@ and exchanges, inspect broker.
 * [Usage](#usage)
     * [Basic commands](#basic-commands)
     * [Broker URI specification](#broker-uri-specification)
+        * [Authentication](#authentication)
     * [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
     * [Environment variables](#environment-variables)
         * [Default RabbitMQ broker](#default-rabbitmq-broker)
@@ -240,9 +241,9 @@ Arguments and options:
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE		  type of exchange [default: fanout].
- --tls-cert-file=CERTFILE A Cert file to use for client authentication.
- --tls-key-file=KEYFILE   A Key file to use for client authentication.
- --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
+ --tls-cert-file=CERTFILE A Cert file to use for client authentication (PEM).
+ --tls-key-file=KEYFILE   A Key file to use for client authentication (PEM).
+ --tls-ca-file=CAFILE     A CA Cert file to use with TLS (PEM).
  --uri=URI            connect to given AQMP broker. If omitted, the
                       environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
@@ -268,7 +269,7 @@ Examples:
   rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 
-  # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
+  # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environment variables
   # instead of specifying --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
 ```
 
@@ -303,6 +304,15 @@ Examples:
 Note that according to [RFC3986](https://tools.ietf.org/html/rfc3986) it might be 
 necessary to escape certain characters like e.g. `?` (%3F) or `#` (%23) as otherwise 
 parsing of the URI may fail with an error.
+
+#### Authentication
+
+Authentication is either by the username and password provided in the broker
+URI as desribed above (RabbitMQ `PLAIN` method), or by mTLS providing a client
+certificate and key using the `--tls-key`, `--tls-cert` options (RabbitMQ
+`EXTERNAL` method). If both mTLS and a username and password is provided, then
+rabtap will use mTLS and `PLAIN` authentication with the given username and
+password.
 
 ### Format specification for tap and sub command
 
@@ -351,14 +361,15 @@ $ rabtap info
 
 #### Default RabbitMQ TLS config
 
-The default TLS config certificates path can be set using the
+The default TLS certificates path can be set using the
 `RABTAP_TLS_CERTFILE` and `RABTAP_TLS_KEYFILE` and `RABTAP_TLS_CAFILE`
-environments variables. Example:
+environments variables. All certificate and key files are expected in PEM 
+format. Example:
 
 ```console
-$ export RABTAP_TLS_CERTFILE=/etc/rabbitmq/ssl/cert.pem
-$ export RABTAP_TLS_KEYFILE=/etc/rabbitmq/ssl/key.pem
-$ export RABTAP_TLS_CAFILE =/etc/rabbitmq/ssl/ca.pem
+$ export RABTAP_TLS_CERTFILE=/path/to/certs/user.crt
+$ export RABTAP_TLS_KEYFILE=/path/to/certs/user.key
+$ export RABTAP_TLS_CAFILE =/path/to/certs/ca.crt
 $ echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
 ...
 ```

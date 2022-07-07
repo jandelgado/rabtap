@@ -34,26 +34,6 @@ var testMessage = &amqp.Delivery{
 	Body:            []byte("simple test message."),
 }
 
-func TestEnsureTableKeepsTable(t *testing.T) {
-	table := amqp.Table{"test": "a"}
-	assert.Equal(t, table, ensureTable(table))
-}
-
-func TestEnsureTableKeepsArray(t *testing.T) {
-	array := []interface{}{"a"}
-	assert.Equal(t, array, ensureTable(array))
-}
-
-func TestEnsureTableTransformsMapToTable(t *testing.T) {
-	m := map[string]interface{}{"k": "v"}
-	assert.Equal(t, amqp.Table{"k": "v"}, ensureTable(m))
-}
-
-func TestEnsureTableKeepsBasicType(t *testing.T) {
-	s := "test"
-	assert.Equal(t, s, ensureTable(s))
-}
-
 func TestJSONMarshalIndentMarshalsToIndentedJSON(t *testing.T) {
 	data, err := JSONMarshalIndent(map[string]string{"Test": "ABC"})
 	assert.Nil(t, err)

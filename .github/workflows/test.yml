@@ -14,7 +14,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17.x
+          go-version: 1.18.x
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run linters
@@ -35,7 +35,7 @@ jobs:
         if: success()
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17.x
+          go-version: 1.18.x
       - name: wait for RabbitMQ becoming ready
         run:
           timeout 30 sh -c "while true; do curl -s http://guest:password@localhost:15672/api/exchanges/%2f/amq.topic && break || sleep 3; done"

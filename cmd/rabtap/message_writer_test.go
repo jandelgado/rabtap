@@ -193,6 +193,7 @@ func TestFromFireHoseMessageTransformsMessage(t *testing.T) {
 	// given
 	headers := map[string]interface{}{
 		"exchange_name": "newexchange",
+		"routing_keys":  []interface{}{"newkey"},
 		"properties": map[string]interface{}{
 			"headers": map[string]interface{}{
 				"a": 10,
@@ -200,8 +201,8 @@ func TestFromFireHoseMessageTransformsMessage(t *testing.T) {
 			},
 			"content_type":     "newcontenttype",
 			"content_encoding": "newcontentencoding",
-			"delivery_mode":    uint8(199),
-			"priority":         uint8(198),
+			"delivery_mode":    json.Number("199"),
+			"priority":         json.Number("198"),
 			"correlation_id":   "newcorrelationid",
 			"reply_to":         "newreplyto",
 			"expiration":       "newexpiration",
@@ -209,8 +210,7 @@ func TestFromFireHoseMessageTransformsMessage(t *testing.T) {
 			"type":             "newtype",
 			"user_id":          "newuserid",
 			"app_id":           "newappid",
-			"timestamp":        "2020 June 10 10:23:45",
-			"routing_keys":     []string{"newkey"},
+			"timestamp":        json.Number("123456"),
 		}}
 
 	m := RabtapPersistentMessage{
@@ -252,6 +252,7 @@ func TestFromFireHoseMessageTransformsMessage(t *testing.T) {
 	assert.Equal(t, "newappid", n.AppID)
 	assert.Equal(t, "newexchange", n.Exchange)
 	assert.Equal(t, "newkey", n.RoutingKey)
+	assert.Equal(t, time.Unix(123456, 0), n.Timestamp)
 }
 
 func TestMessageFromFireHoseIsTransformed(t *testing.T) {

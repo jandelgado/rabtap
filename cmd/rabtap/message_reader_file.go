@@ -18,27 +18,21 @@ type MessageReaderFunc func() (RabtapPersistentMessage, bool, error)
 // readMessageFromRawFile reads a single messages from the given io.Reader
 // which is typically stdin or a file. If reading from stdin, CTRL+D (linux)
 // or CTRL+Z (Win) on an empty line terminates the reader.
-// -> readRawMessage
 func readMessageFromRawFile(reader io.Reader) ([]byte, error) {
 	return ioutil.ReadAll(reader)
 }
 
-// -> readJSONMessage
 func readMessageFromJSON(reader io.Reader) (RabtapPersistentMessage, error) {
 	var message RabtapPersistentMessage
 
-	contents, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return message, err
-	}
-	err = json.Unmarshal(contents, &message)
-
+	decoder := json.NewDecoder(reader)
+	decoder.UseNumber() // decode numbers as json.Number, not float64
+	err := decoder.Decode(&message)
 	return message, err
 }
 
 // readMessageFromJSONStream reads JSON messages from the given decoder as long
 // as there are messages available.
-// -> readStreamedJSONMessage
 func readMessageFromJSONStream(decoder *json.Decoder) (RabtapPersistentMessage, bool, error) {
 	var message RabtapPersistentMessage
 	err := decoder.Decode(&message)

@@ -132,6 +132,17 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		fmt.Fprint(os.Stderr, "Warning: using raw message format but neither exchange or routing key are set.\n")
 	}
 	readerFunc, err := createMessageReaderForPublishFunc(args.Source, args.Format)
+	// TEST: transform firehose recorded messages
+	transformingReaderFunc := func() (RabtapPersistentMessage, bool, error) {
+		m, more, err := readerFunc()
+		if err == nil && IsFromFireHoseExchange(m) {
+			m, err = FromFireHoseMessage(m)
+			return m, more, err
+		}
+		return m, more, err
+	}
+	// END TEST
+
 	failOnError(err, "message-reader", os.Exit)
 	err = cmdPublish(ctx, CmdPublishArg{
 		amqpURL:    args.AMQPURL,
@@ -143,7 +154,7 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		mandatory:  args.Mandatory,
 		confirms:   args.Confirms,
-		readerFunc: readerFunc})
+		readerFunc: transformingReaderFunc})
 	failOnError(err, "publish", os.Exit)
 }
 

@@ -10,11 +10,6 @@ import (
 	"io/ioutil"
 )
 
-// MessageReaderFunc provides messages that can be sent to an exchange.
-// returns the message to be published, a flag if more messages are to be read,
-// and an error.
-type MessageReaderFunc func() (RabtapPersistentMessage, bool, error)
-
 // readMessageFromRawFile reads a single messages from the given io.Reader
 // which is typically stdin or a file. If reading from stdin, CTRL+D (linux)
 // or CTRL+Z (Win) on an empty line terminates the reader.
@@ -24,7 +19,6 @@ func readMessageFromRawFile(reader io.Reader) ([]byte, error) {
 
 func readMessageFromJSON(reader io.Reader) (RabtapPersistentMessage, error) {
 	var message RabtapPersistentMessage
-
 	decoder := json.NewDecoder(reader)
 	decoder.UseNumber() // decode numbers as json.Number, not float64
 	err := decoder.Decode(&message)

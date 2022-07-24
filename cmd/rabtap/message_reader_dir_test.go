@@ -4,6 +4,7 @@ package main
 
 import (
 	"errors"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -263,9 +264,8 @@ func TestCreateMessageFromDirReaderFuncReturnsCorrectReaderForJSONFormat(t *test
 		assert.NotNil(t, reader)
 
 		// TODO test the reader func with actual data
-		_, more, err := reader()
-		assert.False(t, more)
-		assert.Nil(t, err)
+		_, err = reader()
+		assert.Equal(t, err, io.EOF)
 	}
 }
 
@@ -277,7 +277,6 @@ func TestCreateMessageFromDirReaderFuncReturnsCorrectReaderForRawFormat(t *testi
 	assert.NotNil(t, reader)
 
 	// TODO test the reader func with actual data
-	_, more, err := reader()
-	assert.False(t, more)
-	assert.Nil(t, err)
+	_, err = reader()
+	assert.Equal(t, err, io.EOF)
 }

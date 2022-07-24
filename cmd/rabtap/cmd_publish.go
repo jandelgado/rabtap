@@ -97,9 +97,9 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 
 	var lastMsg *RabtapPersistentMessage
 	for {
-		msg, more, err := readNextMessageFunc()
+		msg, err := readNextMessageFunc()
 		switch err {
-		case io.EOF:
+		case io.EOF: //  if errors.Is(err, io.EOF)
 			return nil
 		case nil:
 			delayFunc(lastMsg, &msg)
@@ -115,10 +115,6 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 			lastMsg = &msg
 		default:
 			return err
-		}
-
-		if !more {
-			return nil
 		}
 	}
 }

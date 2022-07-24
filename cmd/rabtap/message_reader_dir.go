@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -109,28 +110,27 @@ func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata)
 	case "json-nopp":
 		fallthrough
 	case "json":
-		return func() (RabtapPersistentMessage, bool, error) {
+		return func() (RabtapPersistentMessage, error) {
 			var message RabtapPersistentMessage
 			if curfile >= len(files) {
-				return message, false, nil
+				return message, io.EOF
 			}
-
 			message, err := readRabtapPersistentMessage(files[curfile].filename)
 			curfile++
-			return message, curfile < len(files), err
+			return message, err
 		}, nil
 	case "raw":
-		return func() (RabtapPersistentMessage, bool, error) {
+		return func() (RabtapPersistentMessage, error) {
 			var message RabtapPersistentMessage
 			if curfile >= len(files) {
-				return message, false, nil
+				return message, io.EOF
 			}
 			rawFile := filenameWithoutExtension(files[curfile].filename) + ".dat"
 			body, err := ioutil.ReadFile(rawFile)
 			message = files[curfile].metadata
 			message.Body = body
 			curfile++
-			return message, curfile < len(files), err
+			return message, err
 		}, nil
 	}
 	return nil, fmt.Errorf("invaild format %s", format)

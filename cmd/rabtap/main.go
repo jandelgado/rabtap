@@ -112,19 +112,20 @@ func createMessageReaderForPublishFunc(source *string, format string) (MessageRe
 		}
 		// TODO close file
 		return CreateMessageReaderFunc(format, file)
+	} else {
+
+		metadataFiles, err := LoadMetadataFilesFromDir(*source, ioutil.ReadDir, NewRabtapFileInfoPredicate())
+		if err != nil {
+			return nil, err
+		}
+
+		sort.SliceStable(metadataFiles, func(i, j int) bool {
+			return metadataFiles[i].metadata.XRabtapReceivedTimestamp.Before(
+				metadataFiles[j].metadata.XRabtapReceivedTimestamp)
+		})
+
+		return CreateMessageFromDirReaderFunc(format, metadataFiles)
 	}
-
-	metadataFiles, err := LoadMetadataFilesFromDir(*source, ioutil.ReadDir, NewRabtapFileInfoPredicate())
-	if err != nil {
-		return nil, err
-	}
-
-	sort.SliceStable(metadataFiles, func(i, j int) bool {
-		return metadataFiles[i].metadata.XRabtapReceivedTimestamp.Before(
-			metadataFiles[j].metadata.XRabtapReceivedTimestamp)
-	})
-
-	return CreateMessageFromDirReaderFunc(format, metadataFiles)
 }
 
 func startCmdPublish(ctx context.Context, args CommandLineArgs) {
@@ -133,13 +134,13 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 	}
 	readerFunc, err := createMessageReaderForPublishFunc(args.Source, args.Format)
 	// TEST: transform firehose recorded messages
-	transformingReaderFunc := func() (RabtapPersistentMessage, bool, error) {
-		m, more, err := readerFunc()
+	transformingReaderFunc := func() (RabtapPersistentMessage, error) {
+		m, err := readerFunc()
 		if err == nil && IsFromFireHoseExchange(m) {
 			m, err = FromFireHoseMessage(m)
-			return m, more, err
+			return m, err
 		}
-		return m, more, err
+		return m, err
 	}
 	// END TEST
 

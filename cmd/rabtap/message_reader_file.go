@@ -10,13 +10,6 @@ import (
 	"io/ioutil"
 )
 
-// readMessageFromRawFile reads a single messages from the given io.Reader
-// which is typically stdin or a file. If reading from stdin, CTRL+D (linux)
-// or CTRL+Z (Win) on an empty line terminates the reader.
-func readMessageFromRawFile(reader io.Reader) ([]byte, error) {
-	return ioutil.ReadAll(reader)
-}
-
 func readMessageFromJSON(reader io.Reader) (RabtapPersistentMessage, error) {
 	var message RabtapPersistentMessage
 	decoder := json.NewDecoder(reader)
@@ -27,13 +20,10 @@ func readMessageFromJSON(reader io.Reader) (RabtapPersistentMessage, error) {
 
 // readMessageFromJSONStream reads JSON messages from the given decoder as long
 // as there are messages available.
-func readMessageFromJSONStream(decoder *json.Decoder) (RabtapPersistentMessage, bool, error) {
+func readMessageFromJSONStream(decoder *json.Decoder) (RabtapPersistentMessage, error) {
 	var message RabtapPersistentMessage
 	err := decoder.Decode(&message)
-	if err != nil {
-		return message, false, err
-	}
-	return message, true, nil
+	return message, err
 }
 
 // CreateMessageReaderFunc returns a MessageReaderFunc that reads messages from
@@ -44,14 +34,19 @@ func CreateMessageReaderFunc(format string, reader io.ReadCloser) (MessageReader
 		fallthrough
 	case "json":
 		decoder := json.NewDecoder(reader)
-		return func() (RabtapPersistentMessage, bool, error) {
-			msg, more, err := readMessageFromJSONStream(decoder)
-			return msg, more, err
+		return func() (RabtapPersistentMessage, error) {
+			msg, err := readMessageFromJSONStream(decoder)
+			return msg, err
 		}, nil
 	case "raw":
-		return func() (RabtapPersistentMessage, bool, error) {
-			buf, err := readMessageFromRawFile(reader)
-			return RabtapPersistentMessage{Body: buf}, false, err
+		read := false // only read one file, then return EOF
+		return func() (RabtapPersistentMessage, error) {
+			if read {
+				return RabtapPersistentMessage{}, io.EOF
+			}
+			buf, err := ioutil.ReadAll(reader) // note: does not return EOF
+			read = true
+			return RabtapPersistentMessage{Body: buf}, err
 		}, nil
 	}
 	return nil, fmt.Errorf("invaild format %s", format)

@@ -1,11 +1,13 @@
 // Copyright (C) 2017-2020 Jan Delgado
 
+//go:build integration
 // +build integration
 
 package main
 
 import (
 	"errors"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -92,8 +94,14 @@ func TestSelectOptionOrDefaultReturnsDefaultIfOptionalIsNil(t *testing.T) {
 }
 
 func TestPublishMessageStreamPublishesNextMessage(t *testing.T) {
-	mockReader := func() (RabtapPersistentMessage, bool, error) {
-		return RabtapPersistentMessage{Body: []byte("hello")}, false, nil
+	count := 0
+	mockReader := func() (RabtapPersistentMessage, error) {
+		count++
+		if count > 1 {
+			return RabtapPersistentMessage{}, io.EOF
+		} else {
+			return RabtapPersistentMessage{Body: []byte("hello")}, nil
+		}
 	}
 	delayer := func(first, second *RabtapPersistentMessage) {}
 
@@ -121,8 +129,8 @@ func TestPublishMessageStreamPublishesNextMessage(t *testing.T) {
 }
 
 func TestPublishMessageStreamPropagatesMessageReadError(t *testing.T) {
-	mockReader := func() (RabtapPersistentMessage, bool, error) {
-		return RabtapPersistentMessage{}, false, errors.New("error")
+	mockReader := func() (RabtapPersistentMessage, error) {
+		return RabtapPersistentMessage{}, errors.New("error")
 	}
 	delayer := func(first, second *RabtapPersistentMessage) {}
 

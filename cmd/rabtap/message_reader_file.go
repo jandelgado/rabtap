@@ -1,6 +1,5 @@
 // read persisted messages from files
-// Copyright (C) 2019 Jan Delgado
-
+// Copyright (C) 2019-2022 Jan Delgado
 package main
 
 import (
@@ -26,9 +25,9 @@ func readMessageFromJSONStream(decoder *json.Decoder) (RabtapPersistentMessage, 
 	return message, err
 }
 
-// CreateMessageReaderFunc returns a MessageReaderFunc that reads messages from
+// CreateMessageReaderFunc returns a MessageProviderFunc that reads messages from
 // the the given reader in the provided format
-func CreateMessageReaderFunc(format string, reader io.ReadCloser) (MessageReaderFunc, error) {
+func CreateMessageReaderFunc(format string, reader io.ReadCloser) (MessageProviderFunc, error) {
 	switch format {
 	case "json-nopp":
 		fallthrough

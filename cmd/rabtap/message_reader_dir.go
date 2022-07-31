@@ -1,6 +1,5 @@
 // read persisted metadata and messages from a directory
-// Copyright (C) 2019 Jan Delgado
-
+// Copyright (C) 2019-2022 Jan Delgado
 package main
 
 import (
@@ -100,9 +99,9 @@ func LoadMetadataFilesFromDir(dirname string, dirReader DirReader, pred FileInfo
 	return readMetadataOfFiles(dirname, filenames)
 }
 
-// createMessageFromDirReaderFunc returns a MessageReaderFunc that reads
+// createMessageFromDirReaderFunc returns a MessageProvicerFunc that reads
 // messages from the given list of filenames in the given format.
-func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata) (MessageReaderFunc, error) {
+func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata) (MessageProviderFunc, error) {
 
 	curfile := 0
 

@@ -95,7 +95,7 @@ func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) 
 // createMessageReaderForPublish returns a MessageReaderFunc that reads
 // messages from the given source in the specified format. The source can
 // be either empty (=stdin), a filename or a directory name
-func createMessageReaderForPublishFunc(source *string, format string) (MessageReaderFunc, error) {
+func createMessageReaderForPublishFunc(source *string, format string) (MessageProviderFunc, error) {
 	if source == nil {
 		return CreateMessageReaderFunc(format, os.Stdin)
 	}
@@ -132,30 +132,21 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 	if args.Format == "raw" && args.PubExchange == nil && args.PubRoutingKey == nil {
 		fmt.Fprint(os.Stderr, "Warning: using raw message format but neither exchange or routing key are set.\n")
 	}
-	readerFunc, err := createMessageReaderForPublishFunc(args.Source, args.Format)
-	// TEST: transform firehose recorded messages
-	transformingReaderFunc := func() (RabtapPersistentMessage, error) {
-		m, err := readerFunc()
-		if err == nil && IsFromFireHoseExchange(m) {
-			m, err = FromFireHoseMessage(m)
-			return m, err
-		}
-		return m, err
-	}
-	// END TEST
+	provider, err := createMessageReaderForPublishFunc(args.Source, args.Format)
+	provider = NewTransformingMessageProvider(FireHoseTransformer, provider)
 
 	failOnError(err, "message-reader", os.Exit)
 	err = cmdPublish(ctx, CmdPublishArg{
-		amqpURL:    args.AMQPURL,
-		exchange:   args.PubExchange,
-		routingKey: args.PubRoutingKey,
-		headers:    args.Args,
-		fixedDelay: args.Delay,
-		speed:      args.Speed,
-		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
-		mandatory:  args.Mandatory,
-		confirms:   args.Confirms,
-		readerFunc: transformingReaderFunc})
+		amqpURL:      args.AMQPURL,
+		exchange:     args.PubExchange,
+		routingKey:   args.PubRoutingKey,
+		headers:      args.Args,
+		fixedDelay:   args.Delay,
+		speed:        args.Speed,
+		tlsConfig:    getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+		mandatory:    args.Mandatory,
+		confirms:     args.Confirms,
+		providerFunc: provider})
 	failOnError(err, "publish", os.Exit)
 }
 

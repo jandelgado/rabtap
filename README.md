@@ -463,7 +463,7 @@ The following example connects to multiple exchanges:
 
 The [RabbitMQ Firehose Tracer](https://www.rabbitmq.com/firehose.html) allows
 to "see" every message that is published or delivered. To use it, the FireHose
-tracer, it has to be enabled first:
+tracer has to be enabled first:
 
 ```console
 $ rabbitmqctl trace_on 
@@ -473,17 +473,22 @@ Afterwards, every message published or delivered will be CC'd to the topic
 exhange `amq.rabbitmq.trace`.  The messages can now be tapped with rabtap:
 
 ```console
-$ rabtap --uri amqp://guest:guest@localhost:5672/ tap amq.rabbitmq.trace:#
+$ rabtap --uri amqp://guest:guest@localhost:5672/ tap amq.rabbitmq.trace:published.#
 ```
+
+RabbitMQ sends all messages published or delivered to the FireHose exchange. 
+Published messages are sent with the routing key `publish.{exchangename}`, while
+delivered messages are sent with the routing key `deliver.{queuename}`. 
+Depending on what you want to record, specify your binding accordingly.
 
 ###### Replaying messages from the FireHose exchange 
 
 When messages are tapped or subscribed from the FireHose tracer exchange, these
 messages have the original meta data stored in the headers section of the
-message. When published later, rabtap detects that these message were recorded
+message. When published later, rabtap detects that these message was recorded
 from the FireHose (by examining the `exchange` attribute, which will be set to
-`amq.rabbitmq.trace`) and automatically transforms these messages so that the
-originally published messages are replayed again.
+`amq.rabbitmq.trace` by RabbitMQ in that case) and automatically transform the
+message so that the originally published messages are replayed again.
 
 ##### Connect to multiple brokers
 

@@ -10,14 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReadMessageFromRawFile(t *testing.T) {
-	reader := bytes.NewReader([]byte("hello"))
-
-	buf, err := readMessageFromRawFile(reader)
-	assert.Nil(t, err)
-	assert.Equal(t, []byte("hello"), buf)
-}
-
 func TestReadMessageFromJSON(t *testing.T) {
 	// note: base64dec("aGVsbG8=") == "hello"
 	data := `
@@ -47,7 +39,6 @@ func TestReadMessageFromJSON(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, []byte("hello"), msg.Body)
 	assert.Equal(t, "amq.topic", msg.Exchange)
-	// TODO test additional attributes
 }
 
 func TestReadMessageFromJSONStreamReturnsOneMessagePerCall(t *testing.T) {
@@ -80,21 +71,17 @@ func TestReadMessageFromJSONStreamReturnsOneMessagePerCall(t *testing.T) {
 	reader := bytes.NewReader([]byte(data))
 	decoder := json.NewDecoder(reader)
 
-	msg, more, err := readMessageFromJSONStream(decoder)
-	assert.Nil(t, err)
-	assert.True(t, more)
+	msg, err := readMessageFromJSONStream(decoder)
+	assert.NoError(t, err)
 	assert.Equal(t, []byte("hello"), msg.Body)
 	assert.Equal(t, "amq.topic", msg.Exchange)
-	// TODO test additional attributes
 
-	msg, more, err = readMessageFromJSONStream(decoder)
-	assert.Nil(t, err)
-	assert.True(t, more)
+	msg, err = readMessageFromJSONStream(decoder)
+	assert.NoError(t, err)
 	assert.Equal(t, []byte("second\n"), msg.Body)
 
-	msg, more, err = readMessageFromJSONStream(decoder)
+	msg, err = readMessageFromJSONStream(decoder)
 	assert.Equal(t, io.EOF, err)
-	assert.False(t, more)
 }
 
 func TestCreateMessageReaderFuncReturnsErrorForUnknownFormat(t *testing.T) {
@@ -111,14 +98,12 @@ func TestCreateMessageReaderFuncReturnsJSONReaderForJSONFormats(t *testing.T) {
 		readFunc, err := CreateMessageReaderFunc(format, reader)
 		assert.Nil(t, err)
 
-		msg, more, err := readFunc()
-		assert.Nil(t, err)
-		assert.True(t, more)
+		msg, err := readFunc()
+		assert.NoError(t, err)
 		assert.Equal(t, []byte("hello"), msg.Body)
 
-		msg, more, err = readFunc()
-		assert.Equal(t, err, io.EOF)
-		assert.False(t, more)
+		msg, err = readFunc()
+		assert.Equal(t, io.EOF, err)
 	}
 }
 
@@ -129,8 +114,10 @@ func TestCreateMessageReaderFuncReturnsRawFileReaderForRawFormats(t *testing.T) 
 	readFunc, err := CreateMessageReaderFunc("raw", reader)
 	assert.Nil(t, err)
 
-	msg, more, err := readFunc()
-	assert.Nil(t, err)
-	assert.False(t, more)
+	msg, err := readFunc()
+	assert.NoError(t, err)
 	assert.Equal(t, []byte("hello"), msg.Body)
+
+	msg, err = readFunc()
+	assert.Equal(t, io.EOF, err)
 }

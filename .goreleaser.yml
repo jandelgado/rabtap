@@ -22,7 +22,7 @@ builds:
       - 7
     ignore:
       - goos: darwin
-        goarch: 386
+        goarch: "386"
       - goos: darwin
         goarch: arm
       - goos: openbsd

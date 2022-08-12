@@ -34,26 +34,6 @@ var testMessage = &amqp.Delivery{
 	Body:            []byte("simple test message."),
 }
 
-func TestEnsureTableKeepsTable(t *testing.T) {
-	table := amqp.Table{"test": "a"}
-	assert.Equal(t, table, ensureTable(table))
-}
-
-func TestEnsureTableKeepsArray(t *testing.T) {
-	array := []interface{}{"a"}
-	assert.Equal(t, array, ensureTable(array))
-}
-
-func TestEnsureTableTransformsMapToTable(t *testing.T) {
-	m := map[string]interface{}{"k": "v"}
-	assert.Equal(t, amqp.Table{"k": "v"}, ensureTable(m))
-}
-
-func TestEnsureTableKeepsBasicType(t *testing.T) {
-	s := "test"
-	assert.Equal(t, s, ensureTable(s))
-}
-
 func TestJSONMarshalIndentMarshalsToIndentedJSON(t *testing.T) {
 	data, err := JSONMarshalIndent(map[string]string{"Test": "ABC"})
 	assert.Nil(t, err)
@@ -146,12 +126,6 @@ func TestSaveMessageToFileToInvalidDir(t *testing.T) {
 	filename := filepath.Join("/thispathshouldnotexist", "test")
 	err := SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, time.Now()), JSONMarshalIndent)
 	assert.NotNil(t, err)
-}
-
-func TestCreateTimestampFilename(t *testing.T) {
-	tm := time.Date(2009, time.November, 10, 23, 1, 2, 3, time.UTC)
-	filename := CreateTimestampFilename(tm)
-	assert.Equal(t, "2009-11-10T23_01_02.000000003Z", filename)
 }
 
 func ExampleWriteMessage() {

@@ -1,5 +1,6 @@
 // Copyright (C) 2017 Jan Delgado
 
+//go:build integration
 // +build integration
 
 package main
@@ -99,17 +100,17 @@ func TestCmdSub(t *testing.T) {
 			routingKey: &testKey,
 			headers:    rabtap.KeyValueMap{},
 			tlsConfig:  tlsConfig,
-			readerFunc: func() (RabtapPersistentMessage, bool, error) {
+			providerFunc: func() (RabtapPersistentMessage, error) {
 				// provide exactly one message
 				if messageCount > 0 {
-					return RabtapPersistentMessage{}, false, io.EOF
+					return RabtapPersistentMessage{}, io.EOF
 				}
 				messageCount++
 				return RabtapPersistentMessage{
 					Body:         []byte(testMessage),
 					ContentType:  "text/plain",
 					DeliveryMode: amqp.Transient,
-				}, true, nil
+				}, nil
 			}})
 
 	// test if we received the message

@@ -1,10 +1,10 @@
 // read persisted metadata and messages from a directory
-// Copyright (C) 2019 Jan Delgado
-
+// Copyright (C) 2019-2022 Jan Delgado
 package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -99,9 +99,9 @@ func LoadMetadataFilesFromDir(dirname string, dirReader DirReader, pred FileInfo
 	return readMetadataOfFiles(dirname, filenames)
 }
 
-// createMessageFromDirReaderFunc returns a MessageReaderFunc that reads
+// createMessageFromDirReaderFunc returns a MessageProvicerFunc that reads
 // messages from the given list of filenames in the given format.
-func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata) (MessageReaderFunc, error) {
+func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata) (MessageProviderFunc, error) {
 
 	curfile := 0
 
@@ -109,28 +109,27 @@ func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata)
 	case "json-nopp":
 		fallthrough
 	case "json":
-		return func() (RabtapPersistentMessage, bool, error) {
+		return func() (RabtapPersistentMessage, error) {
 			var message RabtapPersistentMessage
 			if curfile >= len(files) {
-				return message, false, nil
+				return message, io.EOF
 			}
-
 			message, err := readRabtapPersistentMessage(files[curfile].filename)
 			curfile++
-			return message, curfile < len(files), err
+			return message, err
 		}, nil
 	case "raw":
-		return func() (RabtapPersistentMessage, bool, error) {
+		return func() (RabtapPersistentMessage, error) {
 			var message RabtapPersistentMessage
 			if curfile >= len(files) {
-				return message, false, nil
+				return message, io.EOF
 			}
 			rawFile := filenameWithoutExtension(files[curfile].filename) + ".dat"
 			body, err := ioutil.ReadFile(rawFile)
 			message = files[curfile].metadata
 			message.Body = body
 			curfile++
-			return message, curfile < len(files), err
+			return message, err
 		}, nil
 	}
 	return nil, fmt.Errorf("invaild format %s", format)

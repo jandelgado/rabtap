@@ -137,11 +137,19 @@ func generateTestMessages(ch *amqp.Channel, exchanges []string, numTestQueues in
 						Body: []byte(fmt.Sprintf(
 							"test message #%d was pushed to exchange '%s' with routing key '%s' and headers %#+v",
 							count, exchange, routingKey, headers)),
-						ContentType:  "text/plain",
-						AppId:        "rabtap.testgen",
-						Timestamp:    time.Now(),
-						DeliveryMode: amqp.Transient,
-						Headers:      headers,
+						ContentType:     "text/plain",
+						ContentEncoding: "",
+						AppId:           "rabtap.testgen",
+						UserId:          "guest", // must match authenticated user
+						Priority:        99,
+						CorrelationId:   "correlationId",
+						ReplyTo:         "replyTo",
+						Expiration:      "1234",
+						MessageId:       "messageId",
+						Type:            "type",
+						Timestamp:       time.Now(),
+						DeliveryMode:    amqp.Transient,
+						Headers:         headers,
 					})
 				failOnError(err, "publish failed")
 				count++

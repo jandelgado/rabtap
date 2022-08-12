@@ -1,5 +1,10 @@
 # Changelog for rabtap
 
+## v1.37 (2022-08-12)
+
+* new: detect and replay messages subscribed from the RabbitMQ FireHose
+       exchange.
+
 ## v1.36 (2022-06-08)
 
 * chg: use PLAIN auth when both a client certificate and username and 

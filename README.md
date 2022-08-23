@@ -124,7 +124,7 @@ Pre-compiled binaries can be downloaded for multiple platforms from the
 Rabtap can be installed from the Arch Linux User Repository (AUR):
 
 ```console
-$ yay -S rabtap-bin
+$ yay -S rabtap
 ```
 
 ### Installation from source

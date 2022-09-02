@@ -24,3 +24,9 @@ func RemoveExchange(session Session,
 	exchangeName string, ifUnused bool) error {
 	return session.ExchangeDelete(exchangeName, ifUnused, false /* wait*/)
 }
+
+// BindExchangeToExchange binds the given queue to the given exchange.
+func BindExchangeToExchange(session Session,
+	sourceExchange, key, targetExchange string, args amqp.Table) error {
+	return session.ExchangeBind(sourceExchange, key, targetExchange, false /* wait */, args)
+}

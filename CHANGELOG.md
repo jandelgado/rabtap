@@ -1,5 +1,9 @@
 # Changelog for rabtap
 
+## v1.38 (2022-09-02)
+
+* new: create exchange to exchange bindings with `rabtap exchange bind ...`
+
 ## v1.37 (2022-08-12)
 
 * new: detect and replay messages subscribed from the RabbitMQ FireHose
@@ -7,10 +11,10 @@
 
 ## v1.36 (2022-06-08)
 
-* chg: use PLAIN auth when both a client certificate and username and 
+* chg: use PLAIN auth when both a client certificate and username and
        password is provided (#73)
 * switch to github.com/rabbitmq/amqp091-go amqp lib (#72)
-       
+
 ## v1.35 (2021-11-27)
 
 * new: new option `--idle-timeout=DURATION` added to `sub` and `tap` commands
@@ -24,26 +28,26 @@
 * new: create lazy queue with `queue create ... --lazy`
 * new: specify queue type to create with `queue create ... --queue-type=TYPE`
 * new: specify offset with `--offset=OFFSET` when reading from streams
-       
+
 ## v1.33 (2021-11-14)
 
 * new: specify multiple `--args=KEY=VALUE` options to pass additional arguments
        to the `queue` and `exchange` commands.
-       
+
 ## v1.32 (2021-11-13)
 
 * new: `--limit=NUM` option in sub and tap command to limit the number
       of messages to receive.
 * change: `--no-auto-ack` option in `sub` command was replaced by options
-      `--reject` and `--requeue`. Prefetch count is now 1 and by default 
+      `--reject` and `--requeue`. Prefetch count is now 1 and by default
       every message will be acknowledged by rabtap.
-      
+
 ## v1.31 (2021-11-07)
 
 * new: show queue utilisation and type (e.g. classic, quorum, stream) to info
   command
 * new: build rabtap for more targets using goreleaser
-  
+
 ## v1.30 (2021-10-13)
 
 * new: support header based routing (pub, queue bind, queue unbind)
@@ -56,19 +60,19 @@
 
 * fix: do not print messages to stdout in parallel, which can result in garbled
   output when the queue is filled up and messages are read at high frequency.
-* new: listen for channel errors and print an error when a message is e.g. 
+* new: listen for channel errors and print an error when a message is e.g.
   published to a non-existing exchange.
 * new: `--confirms` option for `pub` command: wait for publisher confirmations
   from the server and log an error if a confirmation is negative or not
-  received. 
+  received.
 * new: `--mandatory` option for `pub` command: publish message with mandatory
   flag set. If set and a message can not be delivered to a queue, the server
   returns the message and rabtap will log error when the returned message
   is received (e.g. unroutable messages)
 * new: listen for channel close events messages by the broker (e.g.  when
   publishing to an non-existant exchange)
-* improved logging capabilities while reducing dependencies 
-       
+* improved logging capabilities while reducing dependencies
+
 ## v1.27 (2021-03-28)
 
 * new: `info` and `close` commands can now be cancelled by SIGTERM
@@ -100,11 +104,11 @@
   recorded. The pub command also honors the recorded timestamps and delays the
   messages during replay.  The signature of of the `pub` command was changed
   (see README.md). Note that the exchange is now optional and will be taken
-  from the message metadata that is published. 
+  from the message metadata that is published.
 
 ## v1.21 (2019-12-14)
 
-* new option: `--format FORMAT` which controls output format in `tap`, 
+* new option: `--format FORMAT` which controls output format in `tap`,
  `subscribe` commands. `--format json` is equivalent to `--json`, which is
   now deprecated
 * new output format: `--format json-nopp` which is not-pretty-printed JSON in
@@ -124,7 +128,7 @@
 
 * new option `--no-auto-ack` for `sub` command disables auto acknowledge when
   messages are received by rabtap (#15)
-* new: output of `info` command can now also be rendered to dot format, to 
+* new: output of `info` command can now also be rendered to dot format, to
   create a visualization using graphviz. Set format with `--format=dot`, e.g.
   `rabtap info --format=dot`.
 * fix: termination with ctrl+c in `tap`, `pub`, `sub` commands now works reliably
@@ -145,7 +149,7 @@
 ## v1.16 (2019-04-03)
 
 * new option `--by-connection` for info command added, making `info` show
-  connection > 
+  connection >
 * new: prefetch count added to output of `info` command (on consumer level)
 
 ## v1.15 (2019-03-01)
@@ -155,7 +159,7 @@
 ## v1.14 (2019-02-28)
 
 * change: in subscribe mode, the consumer will use non-exclusive mode,
-          allowing multiple consumers on the same queue. 
+          allowing multiple consumers on the same queue.
 
 ## v1.13 (2019-02-26)
 
@@ -178,7 +182,7 @@
 
 ## v1.11 (2018-08-08)
 
-### Changed 
+### Changed
 
 * fix: `--saveto=DIR` option had no effect in `sub` command
 
@@ -186,9 +190,9 @@
 
 ### Added
 
-* new options `--filter FILTER` to filter output of `info` command. 
+* new options `--filter FILTER` to filter output of `info` command.
 
-### Changed 
+### Changed
 
 * fix: bug in REST-client panicking when endpoint not available
 

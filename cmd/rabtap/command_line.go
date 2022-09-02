@@ -50,6 +50,9 @@ Usage:
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-kv]
               [--autodelete] [--durable]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI] [-kv]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any))
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]... [-kv]
@@ -73,6 +76,7 @@ Arguments and options:
  EXCHANGES            comma-separated list of exchanges and optional binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
+ DESTEXCHANGE         name of a a destination exchange in an exchange-to-exchange binding.
  SOURCE               file or directory to publish in pub mode. If omitted, stdin will be read.
  QUEUE                name of a queue.
  CONNECTION           name of a connection.
@@ -182,6 +186,8 @@ const (
 	ExchangeCreateCmd
 	// ExchangeRemoveCmd remove an exchange
 	ExchangeRemoveCmd
+	// ExchangeBindToExchange binds an exchange to another exchange
+	ExchangeBindToExchangeCmd
 	// QueueCreateCmd creates a new queue
 	QueueCreateCmd
 	// QueueRemoveCmd removes a queue
@@ -265,8 +271,9 @@ type CommandLineArgs struct {
 	Requeue             bool              // sub: requeue rejectied messages
 	IdleTimeout         time.Duration     // sub: idle timeout
 	QueueName           string            // queue create, remove, bind, sub
-	QueueBindingKey     string            // queue bind
+	BindingKey          string            // a binding key
 	ExchangeName        string            // exchange name  create, remove or queue bind
+	DestExchangeName    string            // target exchange name  bind e2e
 	ExchangeType        string            // exchange type create
 	ShowConsumers       bool              // info: also show consumer
 	InfoMode            string            // info: byExchange, byConnection
@@ -516,7 +523,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		// bind QUEUE to EXCHANGE ([--bindingkey key] | (--header KEYVAL)* )
 		var err error
 		result.Cmd = QueueBindCmd
-		result.QueueBindingKey = parseBindingKey(args)
+		result.BindingKey = parseBindingKey(args)
 
 		result.Args, err = parseKVListOption("--header", args)
 		if err != nil {
@@ -528,7 +535,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	case args["unbind"].(bool):
 		// unbind QUEUE from EXCHANGE [--bindingkey key]
 		result.Cmd = QueueUnbindCmd
-		result.QueueBindingKey = parseBindingKey(args)
+		result.BindingKey = parseBindingKey(args)
 		result.Args, err = parseKVListOption("--header", args)
 		if err != nil {
 			return result, fmt.Errorf("failed to parse --header: %w", err)
@@ -562,6 +569,18 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 		}
 	case args["rm"].(bool):
 		result.Cmd = ExchangeRemoveCmd
+	case args["bind"].(bool):
+		// bind EXCHANGE to EXCHANGE ([--bindingkey key] | (--header KEYVAL)* )
+		var err error
+		result.Cmd = ExchangeBindToExchangeCmd
+		result.BindingKey = parseBindingKey(args)
+
+		result.Args, err = parseKVListOption("--header", args)
+		if err != nil {
+			return result, fmt.Errorf("failed to parse --header: %w", err)
+		}
+		result.HeaderMode = parseHeaderMode(args)
+		result.DestExchangeName = args["DESTEXCHANGE"].(string)
 	}
 	return result, nil
 }

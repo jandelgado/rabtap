@@ -216,6 +216,13 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			tlsConfig: tlsConfig, args: args.Args})
 	case ExchangeRemoveCmd:
 		cmdExchangeRemove(args.AMQPURL, args.ExchangeName, tlsConfig)
+	case ExchangeBindToExchangeCmd:
+		cmdExchangeBindToExchange(CmdExchangeBindArg{
+			amqpURL:        args.AMQPURL,
+			sourceExchange: args.ExchangeName,
+			targetExchange: args.DestExchangeName, key: args.BindingKey,
+			headerMode: args.HeaderMode, args: args.Args,
+			tlsConfig: tlsConfig})
 	case QueueCreateCmd:
 		cmdQueueCreate(CmdQueueCreateArg{amqpURL: args.AMQPURL,
 			queue: args.QueueName, durable: args.Durable,
@@ -229,14 +236,14 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 		cmdQueueBindToExchange(CmdQueueBindArg{
 			amqpURL:  args.AMQPURL,
 			exchange: args.ExchangeName,
-			queue:    args.QueueName, key: args.QueueBindingKey,
+			queue:    args.QueueName, key: args.BindingKey,
 			headerMode: args.HeaderMode, args: args.Args,
 			tlsConfig: tlsConfig})
 	case QueueUnbindCmd:
 		cmdQueueUnbindFromExchange(CmdQueueBindArg{
 			amqpURL:  args.AMQPURL,
 			exchange: args.ExchangeName,
-			queue:    args.QueueName, key: args.QueueBindingKey,
+			queue:    args.QueueName, key: args.BindingKey,
 			headerMode: args.HeaderMode, args: args.Args,
 			tlsConfig: tlsConfig})
 	case ConnCloseCmd:

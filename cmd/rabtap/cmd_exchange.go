@@ -23,6 +23,16 @@ type CmdExchangeCreateArg struct {
 	tlsConfig    *tls.Config
 }
 
+type CmdExchangeBindArg struct {
+	amqpURL        *url.URL
+	sourceExchange string
+	targetExchange string
+	key            string
+	args           rabtap.KeyValueMap
+	headerMode     HeaderMode
+	tlsConfig      *tls.Config
+}
+
 // exchangeCreate creates a new exchange on the given broker
 func cmdExchangeCreate(cmd CmdExchangeCreateArg) {
 	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL,
@@ -43,4 +53,18 @@ func cmdExchangeRemove(amqpURL *url.URL, exchangeName string, tlsConfig *tls.Con
 			log.Debugf("removing exchange %s", exchangeName)
 			return rabtap.RemoveExchange(session, exchangeName, false)
 		}), "removing exchange failed", os.Exit)
+}
+
+// cmdExchangeBindToExchange binds an exchange  to another exchange
+func cmdExchangeBindToExchange(cmd CmdExchangeBindArg) {
+	failOnError(rabtap.SimpleAmqpConnector(cmd.amqpURL, cmd.tlsConfig,
+		func(session rabtap.Session) error {
+			if cmd.headerMode != HeaderNone {
+				cmd.args["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
+			}
+			log.Debugf("binding exchange %s to exchange %s w/ key %s and headers %v",
+				cmd.sourceExchange, cmd.targetExchange, cmd.key, cmd.args)
+
+			return rabtap.BindExchangeToExchange(session, cmd.sourceExchange, cmd.key, cmd.targetExchange, rabtap.ToAMQPTable(cmd.args))
+		}), "bind exchange failed", os.Exit)
 }

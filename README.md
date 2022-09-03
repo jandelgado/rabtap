@@ -159,6 +159,9 @@ Usage:
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-kv]
               [--autodelete] [--durable]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI] [-kv]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any))
+              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange rm EXCHANGE [--uri=URI] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]... [-kv]
@@ -182,6 +185,7 @@ Arguments and options:
  EXCHANGES            comma-separated list of exchanges and optional binding keys,
                       e.g. amq.topic:# or exchange1:key1,exchange2:key2.
  EXCHANGE             name of an exchange, e.g. amq.direct.
+ DESTEXCHANGE         name of a a destination exchange in an exchange-to-exchange binding.
  SOURCE               file or directory to publish in pub mode. If omitted, stdin will be read.
  QUEUE                name of a queue.
  CONNECTION           name of a connection.
@@ -242,9 +246,9 @@ Arguments and options:
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
  -t, --type=TYPE		  type of exchange [default: fanout].
- --tls-cert-file=CERTFILE A Cert file to use for client authentication (PEM).
- --tls-key-file=KEYFILE   A Key file to use for client authentication (PEM).
- --tls-ca-file=CAFILE     A CA Cert file to use with TLS (PEM).
+ --tls-cert-file=CERTFILE A Cert file to use for client authentication.
+ --tls-key-file=KEYFILE   A Key file to use for client authentication.
+ --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
  --uri=URI            connect to given AQMP broker. If omitted, the
                       environment variable RABTAP_AMQPURI will be used.
  -v, --verbose        enable verbose mode.
@@ -270,7 +274,7 @@ Examples:
   rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 
-  # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environment variables
+  # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
   # instead of specifying --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
 ```
 
@@ -674,6 +678,13 @@ RabbitMQ using the `--args=key=value` syntax:
 $ rabtap exchange create myexchange --type topic --args=alternate-exchange=myae
 ```
 
+The `bind` command creates an exchange-to-exchange binding (similar to a 
+queue-to-exchange binding):
+
+```console
+$ rabtap exchange bind myechange to destexchange --bindingkey=KEY
+```
+
 #### Queue commands
 
 The `queue` command is used to create, remove, bind or unbind queues:
@@ -725,7 +736,7 @@ the queue type or mode:
 * `rabtap queue create lazy_queue --lazy` - create a classic queue in lazy 
   mode that is named `lazy_queue`. `--lazy` is an alias for setting the arg
   `x-queue-mode`.
-  
+
 ## JSON message format
 
 When using the `--format json` option, messages are print/read as a stream of JSON

@@ -61,9 +61,9 @@ func PrintTree(node *TreeNode, buffer io.Writer) {
 		case parent.Parent == nil:
 			// nop
 		case parent.IsLastChild():
-			treeLines = "    " + treeLines
+			treeLines = "   " + treeLines
 		default:
-			treeLines = "│   " + treeLines
+			treeLines = "│  " + treeLines
 		}
 	}
 
@@ -71,9 +71,9 @@ func PrintTree(node *TreeNode, buffer io.Writer) {
 	case node.Parent == nil:
 		// no treeLine for root element
 	case node.IsLastChild():
-		treeLines += "└── "
+		treeLines += "└─ "
 	default:
-		treeLines += "├── "
+		treeLines += "├─ "
 	}
 	fmt.Fprintf(buffer, "%s%s\n", treeLines, node.Text)
 

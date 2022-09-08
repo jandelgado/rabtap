@@ -76,9 +76,11 @@ const (
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
 		{{- ""}}, [{{ .QueueFlags}}])`
 	tplBoundQueue = `
-	    {{- QueueColor .Binding.Destination }} (queue({{ .Queue.Type}}),
+	    {{- QueueColor .Queue.Name }} (queue({{ .Queue.Type}}),
+		{{- if .Binding }}
 		{{- with .Binding.RoutingKey }} key='{{ KeyColor .}}',{{end}}
 		{{- with .Binding.Arguments}} args='{{ KeyColor .}}',{{end}}
+		{{- end }}
 		{{- if .Config.ShowStats }}
 		{{- .Queue.Consumers  }} cons, (
 		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
@@ -134,11 +136,11 @@ func (s brokerInfoRendererText) renderQueueElementAsString(queue rabtap.RabbitQu
 	return resolveTemplate("queue-tpl", tplQueue, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderBoundQueueElementAsString(queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
+func (s brokerInfoRendererText) renderBoundQueueElementAsString(queue rabtap.RabbitQueue, binding *rabtap.RabbitBinding) string {
 	queueFlags := s.renderQueueFlagsAsString(queue)
 	var args = struct {
 		Config     BrokerInfoRendererConfig
-		Binding    rabtap.RabbitBinding
+		Binding    *rabtap.RabbitBinding
 		Queue      rabtap.RabbitQueue
 		QueueFlags string
 	}{s.config, binding, queue, queueFlags}
@@ -176,8 +178,8 @@ func (s brokerInfoRendererText) renderNode(n interface{}) *TreeNode {
 		node = NewTreeNode(s.renderConnectionElementAsString(n.(*connectionNode).Connection))
 	case *consumerNode:
 		node = NewTreeNode(s.renderConsumerElementAsString(n.(*consumerNode).Consumer))
-	case *queueNode:
-		node = NewTreeNode(s.renderQueueElementAsString(n.(*queueNode).Queue))
+	// case *queueNode:
+	//     node = NewTreeNode(s.renderQueueElementAsString(n.(*queueNode).Queue))
 	case *boundQueueNode:
 		node = NewTreeNode(s.renderBoundQueueElementAsString(n.(*boundQueueNode).Queue, n.(*boundQueueNode).Binding))
 	case *exchangeNode:

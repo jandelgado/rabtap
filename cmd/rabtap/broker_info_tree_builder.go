@@ -95,7 +95,7 @@ type queueNode struct {
 type boundQueueNode struct {
 	baseNode
 	Queue   rabtap.RabbitQueue
-	Binding rabtap.RabbitBinding
+	Binding *rabtap.RabbitBinding
 }
 
 type connectionNode struct {
@@ -200,7 +200,7 @@ func (s defaultBrokerInfoTreeBuilder) createQueueNodeFromBinding(
 		return []*boundQueueNode{}
 	}
 
-	queueNode := boundQueueNode{baseNode{[]interface{}{}}, queue, binding}
+	queueNode := boundQueueNode{baseNode{[]interface{}{}}, queue, &binding}
 
 	if s.config.ShowConsumers {
 		consumers := s.createConsumerNodes(queue, brokerInfo)
@@ -319,11 +319,9 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(rootNodeURL *url.URL
 					continue
 				}
 				consNode := consumerNode{b, consumer}
-				for _, queue := range brokerInfo.Queues {
-					if consumer.Queue.Vhost == vhost && consumer.Queue.Name == queue.Name {
-						queueNode := queueNode{b, queue}
-						consNode.Add(&queueNode)
-					}
+				if qi := rabtap.FindQueueByName(brokerInfo.Queues, vhost, consumer.Queue.Name); qi != -1 {
+					queueNode := boundQueueNode{b, brokerInfo.Queues[qi], nil} // TODO ctor
+					consNode.Add(&queueNode)
 				}
 				connNode.Add(&consNode)
 			}

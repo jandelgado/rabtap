@@ -142,23 +142,23 @@ func (s brokerInfoRendererDot) renderExchangeElementAsString(name string, childr
 	return resolveTemplate("exchange-dotTpl", s.template.dotTplExchange, args, funcMap)
 }
 
-func (s brokerInfoRendererDot) renderQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue) string {
-	var args = struct {
-		Name     string
-		Children []dotNode
-		Config   BrokerInfoRendererConfig
-		Queue    rabtap.RabbitQueue
-	}{name, children, s.config, queue}
-	funcMap := map[string]interface{}{"q": strconv.Quote}
-	return resolveTemplate("queue-dotTpl", s.template.dotTplQueue, args, funcMap)
-}
+// func (s brokerInfoRendererDot) renderQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue) string {
+//     var args = struct {
+//         Name     string
+//         Children []dotNode
+//         Config   BrokerInfoRendererConfig
+//         Queue    rabtap.RabbitQueue
+//     }{name, children, s.config, queue}
+//     funcMap := map[string]interface{}{"q": strconv.Quote}
+//     return resolveTemplate("queue-dotTpl", s.template.dotTplQueue, args, funcMap)
+// }
 
-func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding rabtap.RabbitBinding) string {
+func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding *rabtap.RabbitBinding) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
-		Binding  rabtap.RabbitBinding
+		Binding  *rabtap.RabbitBinding
 		Queue    rabtap.RabbitQueue
 	}{name, children, s.config, binding, queue}
 	funcMap := map[string]interface{}{"q": strconv.Quote}
@@ -207,16 +207,20 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}) dotNode {
 		exchange := n.(*exchangeNode).Exchange
 		name := fmt.Sprintf("exchange_%s", exchange.Name)
 		node = dotNode{name, s.renderExchangeElementAsString(name, children, exchange), ""}
-	case *queueNode:
-		queue := n.(*queueNode).Queue
-		name := fmt.Sprintf("queue_%s", queue.Name)
-		node = dotNode{name, s.renderQueueElementAsString(name, children, queue), ""}
+	// case *queueNode:
+	//     queue := n.(*queueNode).Queue
+	//     name := fmt.Sprintf("queue_%s", queue.Name)
+	//     node = dotNode{name, s.renderQueueElementAsString(name, children, queue), ""}
 	case *boundQueueNode:
 		boundQueue := n.(*boundQueueNode)
 		queue := boundQueue.Queue
-		binding := boundQueue.Binding
+		binding := boundQueue.Binding // TODO can be nil
 		name := fmt.Sprintf("boundqueue_%s", queue.Name)
-		node = dotNode{name, s.renderBoundQueueElementAsString(name, children, queue, binding), binding.RoutingKey}
+		key := ""
+		if binding != nil {
+			key = binding.RoutingKey
+		}
+		node = dotNode{name, s.renderBoundQueueElementAsString(name, children, queue, binding), key}
 	case *connectionNode:
 		conn := n.(*connectionNode)
 		name := fmt.Sprintf("connection_%s", conn.Connection.Name)

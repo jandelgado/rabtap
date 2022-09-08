@@ -61,9 +61,9 @@ func ExamplePrintTree() {
 
 	// Output:
 	// root
-	// ├── child1
-	// │   └── child1.1
-	// ├── child2
-	// └── child3
-	//     └── child4
+	// ├─ child1
+	// │  └─ child1.1
+	// ├─ child2
+	// └─ child3
+	//    └─ child4
 }

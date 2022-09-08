@@ -14,3 +14,10 @@ func TestFloatsAreConvertedIntoPercentageValues(t *testing.T) {
 	assert.Equal(t, 100, f.toPercent(0.999))
 	assert.Equal(t, 100, f.toPercent(1.0))
 }
+
+func TestBoolIsConvertedToYesOrNo(t *testing.T) {
+	f := rabtapTemplateFuncs{}
+
+	assert.Equal(t, "no", f.asYesNo(false))
+	assert.Equal(t, "yes", f.asYesNo(true))
+}

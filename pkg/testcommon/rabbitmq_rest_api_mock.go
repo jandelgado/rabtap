@@ -60,6 +60,8 @@ func mockStdHandler(w http.ResponseWriter, r *http.Request) {
 func mockStdGetHandler(w http.ResponseWriter, r *http.Request) {
 	result := ""
 	switch r.URL.RequestURI() {
+	case "/vhosts":
+		result = vhostsResult
 	case "/exchanges":
 		result = exchangeResult
 	case "/bindings":
@@ -93,6 +95,9 @@ func mockStdDeleteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 const (
+	vhostsResult = `
+[{"cluster_state":{"rabbit@108f57d1fe8ab":"running"},"description":"","message_stats":{"ack":13187,"ack_details":{"rate":0.0},"confirm":0,"confirm_details":{"rate":0.0},"deliver":13190,"deliver_details":{"rate":0.0},"deliver_get":13190,"deliver_get_details":{"rate":0.0},"deliver_no_ack":0,"deliver_no_ack_details":{"rate":0.0},"drop_unroutable":1,"drop_unroutable_details":{"rate":0.0},"get":0,"get_details":{"rate":0.0},"get_empty":0,"get_empty_details":{"rate":0.0},"get_no_ack":0,"get_no_ack_details":{"rate":0.0},"publish":109674,"publish_details":{"rate":0.0},"redeliver":0,"redeliver_details":{"rate":0.0},"return_unroutable":0,"return_unroutable_details":{"rate":0.0}},"messages":4,"messages_details":{"rate":0.0},"messages_ready":4,"messages_ready_details":{"rate":0.0},"messages_unacknowledged":0,"messages_unacknowledged_details":{"rate":0.0},"metadata":{"description":"","tags":[]},"name":"/","recv_oct":31769538,"recv_oct_details":{"rate":3.2},"send_oct":4738294,"send_oct_details":{"rate":3.2},"tags":[],"tracing":false}]`
+
 	bindingResult = `
 [
     {

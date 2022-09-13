@@ -2,7 +2,12 @@
 
 ## v1.38 (2022-09-02)
 
-* new: create exchange to exchange bindings with `rabtap exchange bind ...`
+* new: create exchange-to-exchange bindings with `rabtap exchange bind ...`
+* new: show exchange-to-exchange bindings in `info` command
+* fix: drastically improve performance of `info` command for large topologies
+    with 1000's of queues/connections/channels
+* chg: show channel information in `info` command
+* chg: improve output of `info` command (attributes)
 
 ## v1.37 (2022-08-12)
 

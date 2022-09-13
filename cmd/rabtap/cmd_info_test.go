@@ -56,31 +56,33 @@ func Example_cmdInfoByExchangeInTextFormat() {
 
 	// Output:
 	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
-	// └── Vhost /
-	//     ├── amq.direct (exchange, type 'direct', [D])
-	//     ├── amq.fanout (exchange, type 'fanout', [D])
-	//     ├── amq.headers (exchange, type 'headers', [D])
-	//     ├── amq.match (exchange, type 'headers', [D])
-	//     ├── amq.rabbitmq.log (exchange, type 'topic', [D|I])
-	//     ├── amq.rabbitmq.trace (exchange, type 'topic', [D|I])
-	//     ├── amq.topic (exchange, type 'topic', [D])
-	//     ├── test-direct (exchange, type 'direct', [D|AD|I])
-	//     │   ├── direct-q1 (queue(classic), key='direct-q1', running, [D])
-	//     │   │   ├── some_consumer (consumer user='guest', prefetch=0, chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
-	//     │   │   │   └── '172.17.0.1:40874 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:40874')
-	//     │   │   └── another_consumer w/ faulty channel (consumer user='', prefetch=0, chan='')
-	//     │   └── direct-q2 (queue(classic), key='direct-q2', running, [D])
-	//     ├── test-fanout (exchange, type 'fanout', [D])
-	//     │   ├── fanout-q1 (queue(classic), idle since 2017-05-25 19:14:32, [D])
-	//     │   └── fanout-q2 (queue(classic), idle since 2017-05-25 19:14:32, [D])
-	//     ├── test-headers (exchange, type 'headers', [D|AD])
-	//     │   ├── header-q1 (queue(classic), key='headers-q1', idle since 2017-05-25 19:14:53, [D])
-	//     │   └── header-q2 (queue(classic), key='headers-q2', idle since 2017-05-25 19:14:47, [D])
-	//     └── test-topic (exchange, type 'topic', [D])
-	//         ├── topic-q1 (queue(classic), key='topic-q1', idle since 2017-05-25 19:14:17, [D|AD|EX])
-	//         ├── topic-q2 (queue(classic), key='topic-q2', idle since 2017-05-25 19:14:21, [D])
-	//         └── test-topic (exchange, type 'topic', [D])
-
+	// └─ Vhost /
+	//    ├─ amq.direct (exchange(direct), [D])
+	//    ├─ amq.fanout (exchange(fanout), [D])
+	//    ├─ amq.headers (exchange(headers), [D])
+	//    ├─ amq.match (exchange(headers), [D])
+	//    ├─ amq.rabbitmq.log (exchange(topic), [D|I])
+	//    ├─ amq.rabbitmq.trace (exchange(topic), [D|I])
+	//    ├─ amq.topic (exchange(topic), [D])
+	//    ├─ test-direct (exchange(direct), [D|AD|I])
+	//    │  ├─ direct-q1 (queue(classic), key='direct-q1',  running, [D])
+	//    │  │  ├─ '172.17.0.1:40874 -> 172.17.0.2:5672' (connection guest@172.17.0.2:5672, state='running', client='https://github.com/streadway/amqp', ver='β', peer='172.17.0.1:40874')
+	//    │  │  │  └─ '172.17.0.1:40874 -> 172.17.0.2:5672 (1)' (channel prefetch=0, state=running, unacked=0, confirms=no)
+	//    │  │  │     └─ some_consumer (consumer prefetch=0, ack_req=no, active=no, status=)
+	//    │  │  └─ ? (connection)
+	//    │  │     └─ ? (channel)
+	//    │  │        └─ another_consumer w/ faulty channel (consumer prefetch=0, ack_req=no, active=no, status=)
+	//    │  └─ direct-q2 (queue(classic), key='direct-q2',  running, [D])
+	//    ├─ test-fanout (exchange(fanout), [D])
+	//    │  ├─ fanout-q1 (queue(classic),  idle since 2017-05-25 19:14:32, [D])
+	//    │  └─ fanout-q2 (queue(classic),  idle since 2017-05-25 19:14:32, [D])
+	//    ├─ test-headers (exchange(headers), [D|AD])
+	//    │  ├─ header-q1 (queue(classic), key='headers-q1',  idle since 2017-05-25 19:14:53, [D])
+	//    │  └─ header-q2 (queue(classic), key='headers-q2',  idle since 2017-05-25 19:14:47, [D])
+	//    └─ test-topic (exchange(topic), [D])
+	//       ├─ topic-q1 (queue(classic), key='topic-q1',  idle since 2017-05-25 19:14:17, [D|AD|EX])
+	//       ├─ topic-q2 (queue(classic), key='topic-q2',  idle since 2017-05-25 19:14:21, [D])
+	//       └─ test-topic (exchange(topic), [D])
 }
 
 func Example_cmdInfoByConnectionInTextFormat() {
@@ -109,10 +111,11 @@ func Example_cmdInfoByConnectionInTextFormat() {
 
 	// Output:
 	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
-	// └── Vhost /
-	//     └── '172.17.0.1:40874 -> 172.17.0.2:5672' (connection client='https://github.com/streadway/amqp', host='172.17.0.2:5672', peer='172.17.0.1:40874')
-	//         └── some_consumer (consumer user='guest', prefetch=0, chan='172.17.0.1:40874 -> 172.17.0.2:5672 (1)')
-	//             └── direct-q1 (queue(classic), running, [D])
+	// └─ Vhost /
+	//    └─ '172.17.0.1:40874 -> 172.17.0.2:5672' (connection guest@172.17.0.2:5672, state='running', client='https://github.com/streadway/amqp', ver='β', peer='172.17.0.1:40874')
+	//       └─ '172.17.0.1:40874 -> 172.17.0.2:5672 (1)' (channel prefetch=0, state=running, unacked=0, confirms=no)
+	//          └─ some_consumer (consumer prefetch=0, ack_req=no, active=no, status=)
+	//             └─ direct-q1 (queue(classic),  running, [D])
 }
 
 const expectedResultDotByExchange = `graph broker {
@@ -156,47 +159,47 @@ const expectedResultDotByExchange = `graph broker {
 
 "exchange_test-direct" [shape="record"; label="{ test-direct |direct | { D  | AD  | I  } }"];
 
-"exchange_test-direct" -- "boundqueue_direct-q1" [fontsize=10; headport=n; label="direct-q1"];
-"exchange_test-direct" -- "boundqueue_direct-q2" [fontsize=10; headport=n; label="direct-q2"];
+"exchange_test-direct" -- "queue_direct-q1" [fontsize=10; headport=n; label="direct-q1"];
+"exchange_test-direct" -- "queue_direct-q2" [fontsize=10; headport=n; label="direct-q2"];
 
-"boundqueue_direct-q1" [shape="record"; label="{ direct-q1 | { D  | | } }"];
+"queue_direct-q1" [shape="record"; label="{ direct-q1 | { D  | | } }"];
 
 
-"boundqueue_direct-q2" [shape="record"; label="{ direct-q2 | { D  | | } }"];
+"queue_direct-q2" [shape="record"; label="{ direct-q2 | { D  | | } }"];
 
 
 "exchange_test-fanout" [shape="record"; label="{ test-fanout |fanout | { D  | | } }"];
 
-"exchange_test-fanout" -- "boundqueue_fanout-q1" [fontsize=10; headport=n; label=""];
-"exchange_test-fanout" -- "boundqueue_fanout-q2" [fontsize=10; headport=n; label=""];
+"exchange_test-fanout" -- "queue_fanout-q1" [fontsize=10; headport=n; label=""];
+"exchange_test-fanout" -- "queue_fanout-q2" [fontsize=10; headport=n; label=""];
 
-"boundqueue_fanout-q1" [shape="record"; label="{ fanout-q1 | { D  | | } }"];
+"queue_fanout-q1" [shape="record"; label="{ fanout-q1 | { D  | | } }"];
 
 
-"boundqueue_fanout-q2" [shape="record"; label="{ fanout-q2 | { D  | | } }"];
+"queue_fanout-q2" [shape="record"; label="{ fanout-q2 | { D  | | } }"];
 
 
 "exchange_test-headers" [shape="record"; label="{ test-headers |headers | { D  | AD  | } }"];
 
-"exchange_test-headers" -- "boundqueue_header-q1" [fontsize=10; headport=n; label="headers-q1"];
-"exchange_test-headers" -- "boundqueue_header-q2" [fontsize=10; headport=n; label="headers-q2"];
+"exchange_test-headers" -- "queue_header-q1" [fontsize=10; headport=n; label="headers-q1"];
+"exchange_test-headers" -- "queue_header-q2" [fontsize=10; headport=n; label="headers-q2"];
 
-"boundqueue_header-q1" [shape="record"; label="{ header-q1 | { D  | | } }"];
+"queue_header-q1" [shape="record"; label="{ header-q1 | { D  | | } }"];
 
 
-"boundqueue_header-q2" [shape="record"; label="{ header-q2 | { D  | | } }"];
+"queue_header-q2" [shape="record"; label="{ header-q2 | { D  | | } }"];
 
 
 "exchange_test-topic" [shape="record"; label="{ test-topic |topic | { D  | | } }"];
 
-"exchange_test-topic" -- "boundqueue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
-"exchange_test-topic" -- "boundqueue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
+"exchange_test-topic" -- "queue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
+"exchange_test-topic" -- "queue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
 "exchange_test-topic" -- "exchange_test-topic" [fontsize=10; headport=n; label=""];
 
-"boundqueue_topic-q1" [shape="record"; label="{ topic-q1 | { D  | AD  | EX  } }"];
+"queue_topic-q1" [shape="record"; label="{ topic-q1 | { D  | AD  | EX  } }"];
 
 
-"boundqueue_topic-q2" [shape="record"; label="{ topic-q2 | { D  | | } }"];
+"queue_topic-q2" [shape="record"; label="{ topic-q2 | { D  | | } }"];
 
 
 "exchange_test-topic" [shape="record"; label="{ test-topic |topic | { D  | | } }"];
@@ -239,9 +242,12 @@ const expectedResultDotByConnection = `graph broker {
 
 "vhost_/" -- "connection_172.17.0.1:40874 -> 172.17.0.2:5672"[headport=n];
 
-"connection_172.17.0.1:40874 -> 172.17.0.2:5672" [shape="record" label="172.17.0.1:40874 -> 172.17.0.2:5672"];
+"connection_172.17.0.1:40874 -> 172.17.0.2:5672" [shape="record" label="172.17.0.1:40874 -&gt; 172.17.0.2:5672"];
 
-"connection_172.17.0.1:40874 -> 172.17.0.2:5672" -- "consumer_some_consumer"
+"connection_172.17.0.1:40874 -> 172.17.0.2:5672" -- "channel_172.17.0.1:40874 -> 172.17.0.2:5672 (1)"
+"channel_172.17.0.1:40874 -> 172.17.0.2:5672 (1)" [shape="record" label="172.17.0.1:40874 -&gt; 172.17.0.2:5672 (1)"];
+
+"channel_172.17.0.1:40874 -> 172.17.0.2:5672 (1)" -- "consumer_some_consumer"
 "consumer_some_consumer" [shape="record" label="some_consumer"];
 
 "consumer_some_consumer" -- "queue_direct-q1"

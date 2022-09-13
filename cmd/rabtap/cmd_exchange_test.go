@@ -1,5 +1,6 @@
 // Copyright (C) 2017 Jan Delgado
 
+//go:build integration
 // +build integration
 
 package main
@@ -7,6 +8,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/url"
 	"os"
 	"testing"
@@ -15,16 +17,20 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-// exchangeExists queries the API to check if a given exchange exists
-func exchangeExists(t *testing.T, apiURL *url.URL, exchange string) bool {
-	// TODO add a simple client to testcommon
+func findExchangeByName(apiURL *url.URL, vhost, name string) (*rabtap.RabbitExchange, error) {
 	client := rabtap.NewRabbitHTTPClient(apiURL, &tls.Config{})
 	exchanges, err := client.Exchanges(context.TODO())
-	require.Nil(t, err)
-	return rabtap.FindExchangeByName(exchanges, "/", exchange) != -1
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range exchanges {
+		if e.Name == name && e.Vhost == vhost {
+			return &e, nil
+		}
+	}
+	return nil, fmt.Errorf("exchange not found")
 }
 
 func TestIntegrationCmdExchangeCreateRemoveExchange(t *testing.T) {
@@ -37,16 +43,21 @@ func TestIntegrationCmdExchangeCreateRemoveExchange(t *testing.T) {
 	amqpURL := testcommon.IntegrationURIFromEnv()
 	apiURL, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 
-	assert.False(t, exchangeExists(t, apiURL, testExchange))
+	_, err := findExchangeByName(apiURL, "/", testExchange)
+	assert.Error(t, fmt.Errorf("exchange not found"))
+
 	os.Args = []string{"rabtap", "exchange", "create", testExchange, "--uri", amqpURL.String()}
 	main()
 	time.Sleep(2 * time.Second)
-	assert.True(t, exchangeExists(t, apiURL, testExchange))
+	_, err = findExchangeByName(apiURL, "/", testExchange)
+	assert.NoError(t, err)
 
 	// TODO validation
 
 	os.Args = []string{"rabtap", "exchange", "rm", testExchange, "--uri", amqpURL.String()}
 	main()
 	time.Sleep(2 * time.Second)
-	assert.False(t, exchangeExists(t, apiURL, testExchange))
+
+	_, err = findExchangeByName(apiURL, "/", testExchange)
+	assert.Error(t, fmt.Errorf("exchange not found"))
 }

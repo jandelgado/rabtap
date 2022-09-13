@@ -47,45 +47,64 @@ const (
 		{{- "" }} mgmt ver='{{ .Overview.ManagementVersion }}',
 		{{- "" }} cluster='{{ .Overview.ClusterName }}{{end}}')`
 	tplVhost = `
-	    {{- printf "Vhost %s" .Vhost | VHostColor }}`
-	tplConsumer = `
-		{{- ConsumerColor .Consumer.ConsumerTag }} (consumer 
-		{{- ""}} user='{{ .Consumer.ChannelDetails.User }}', 
-		{{- ""}} prefetch={{ .Consumer.PrefetchCount }}, chan='
-		{{- .Consumer.ChannelDetails.Name }}')`
+	    {{- printf "Vhost %s" .Vhost.Name | VHostColor }}`
 	tplConnection = ` 
-	    {{- ""}}'{{ ConnectionColor .Connection.Name }}' (connection 
-		{{- ""}} client='{{ .Connection.ClientProperties.Product}}',
-		{{- ""}} host='{{ .Connection.Host }}:{{ .Connection.Port }}',
-		{{- ""}} peer='{{ .Connection.PeerHost }}:{{ .Connection.PeerPort }}')`
+	    {{- ""}}{{- if .NotFound }}{{ "? (connection)" | ErrorColor }}{{else}}
+		{{-   ""}}'{{ ConnectionColor .Connection.Name }}'
+		{{-   ""}}{{- if .Connection.ClientProperties.ConnectionName }} ({{- .Connection.ClientProperties.ConnectionName }}) {{end}}
+		{{-   ""}} (connection {{ .Connection.User}}@{{ .Connection.Host }}:{{ .Connection.Port }},
+		{{-   ""}} state='{{ .Connection.State }}',
+		{{-   ""}} client='{{ .Connection.ClientProperties.Product }}',
+		{{-   ""}} ver='{{ .Connection.ClientProperties.Version }}',
+		{{-   ""}} peer='{{ .Connection.PeerHost }}:{{ .Connection.PeerPort }}')
+		{{- end}}`
+	tplChannel = ` 
+	    {{- ""}}{{- if .NotFound }}{{ "? (channel)" | ErrorColor }}{{else}}
+	    {{-   ""}}'{{ ChannelColor .Channel.Name }}' (channel 
+		{{-   ""}} prefetch={{ .Channel.PrefetchCount }},
+		{{-   ""}} state={{ .Channel.State }},
+		{{-   ""}} unacked={{ .Channel.MessagesUnacknowledged }},
+		{{-   ""}} confirms={{ .Channel.Confirm | YesNo }}
+		{{-   if .Channel.IdleSince}}{{- ", idle since "}}{{ .Channel.IdleSince}}{{else}}
+		{{-     if and .Config.ShowStats .Channel.MessageStats }} (
+		{{-       ", "}}
+		{{-       with .Channel.MessageStats.PublishDetails }}{{ if gt .Rate 0. }}{{printf "pub=%.1f" .Rate}}{{end}}{{end}}
+		{{-       with .Channel.MessageStats.ConfirmDetails }}{{ if gt .Rate 0. }}{{printf ", confirms=%.1f " .Rate}}{{end}}{{end}}
+		{{-       with .Channel.MessageStats.ReturnUnroutableDetails }}{{ if gt .Rate 0. }}{{printf ", drop=%.1f " .Rate}}{{end}}{{end}}
+		{{-       with .Channel.MessageStats.DeliverGetDetails }}{{ if gt .Rate 0. }}{{printf "get=%.1f" .Rate}}{{end}}{{end}}
+		{{-       with .Channel.MessageStats.AckDetails }}{{ if gt .Rate 0. }}{{printf ", ack=%.1f" .Rate}}{{end}}{{end}}) msg/s
+		{{-     end }}
+		{{-   end}})
+		{{- end}}`
+	tplConsumer = `
+		{{- ConsumerColor .Consumer.ConsumerTag }} (consumer
+		{{- ""}} prefetch={{ .Consumer.PrefetchCount }},
+		{{- ""}} ack_req={{ .Consumer.AckRequired | YesNo }},
+		{{- ""}} active={{ .Consumer.Active | YesNo }},
+		{{- ""}} status={{ .Consumer.ActivityStatus }})`
 	tplExchange = `
 	    {{- if eq .Exchange.Name "" }}{{ ExchangeColor "(default)" }}{{ else }}{{ ExchangeColor .Exchange.Name }}{{ end }}
-	    {{- "" }} (exchange, type '{{ .Exchange.Type  }}'
-		{{- if and .Config.ShowStats .Exchange.MessageStats }}, in=(
-		{{- .Exchange.MessageStats.PublishIn }}, {{printf "%.1f" .Exchange.MessageStats.PublishInDetails.Rate}}/s) msg, out=(
-		{{- .Exchange.MessageStats.PublishOut }}, {{printf "%.1f" .Exchange.MessageStats.PublishOutDetails.Rate}}/s) msg
-		{{- end }}, [{{ .ExchangeFlags  }}])`
-	tplQueue = `
-	    {{- QueueColor .Queue.Name }} (queue({{ .Queue.Type}}),
-		{{- if .Config.ShowStats }}
-		{{- .Queue.Consumers  }} cons, (
-		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
-		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
-		{{- " " }}{{ ToPercent .Queue.ConsumerUtilisation }}% utl,
+	    {{- "" }} (exchange({{ .Exchange.Type }}),
+		{{- if .Binding }}
+		{{-   with .Binding.RoutingKey }} key='{{ KeyColor .}}',{{end}}
+		{{-   with .Binding.Arguments}} args='{{ KeyColor .}}',{{end}}
 		{{- end }}
-		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
-		{{- ""}}, [{{ .QueueFlags}}])`
+		{{- if and .Config.ShowStats .Exchange.MessageStats }} in=(
+		{{-   .Exchange.MessageStats.PublishIn }}, {{printf "%.1f" .Exchange.MessageStats.PublishInDetails.Rate}}/s) msg, out=(
+		{{-   .Exchange.MessageStats.PublishOut }}, {{printf "%.1f" .Exchange.MessageStats.PublishOutDetails.Rate}}/s) msg,
+		{{- end }} [{{ .ExchangeFlags  }}])`
 	tplBoundQueue = `
 	    {{- QueueColor .Queue.Name }} (queue({{ .Queue.Type}}),
 		{{- if .Binding }}
-		{{- with .Binding.RoutingKey }} key='{{ KeyColor .}}',{{end}}
-		{{- with .Binding.Arguments}} args='{{ KeyColor .}}',{{end}}
+		{{-   with .Binding.RoutingKey }} key='{{ KeyColor .}}',{{end}}
+		{{-   with .Binding.Arguments}} args='{{ KeyColor .}}',{{end}}
 		{{- end }}
+		{{- " " }}
 		{{- if .Config.ShowStats }}
-		{{- .Queue.Consumers  }} cons, (
-		{{- .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
-		{{- .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
-		{{- " " }}{{ ToPercent .Queue.ConsumerUtilisation }}% utl,
+		{{-   .Queue.Consumers  }} cons, (
+		{{-   .Queue.Messages }}, {{printf "%.1f" .Queue.MessagesDetails.Rate}}/s) msg, (
+		{{-   .Queue.MessagesReady }}, {{printf "%.1f" .Queue.MessagesReadyDetails.Rate}}/s) msg ready,
+		{{-   " " }}{{ ToPercent .Queue.ConsumerUtilisation }}% utl,
 		{{- end }}
 		{{- if .Queue.IdleSince}}{{- " idle since "}}{{ .Queue.IdleSince}}{{else}}{{ " running" }}{{end}}
 		{{- ""}}, [{{ .QueueFlags}}])`
@@ -103,9 +122,9 @@ func (s brokerInfoRendererText) renderExchangeFlagsAsString(exchange rabtap.Rabb
 	return strings.Join(filterStringList(flags, names), "|")
 }
 
-func (s brokerInfoRendererText) renderVhostAsString(vhost string) string {
+func (s brokerInfoRendererText) renderVhostAsString(vhost rabtap.RabbitVhost) string {
 	var args = struct {
-		Vhost string
+		Vhost rabtap.RabbitVhost
 	}{vhost}
 	return resolveTemplate("vhost-tpl", tplVhost, args, s.templateFuncs)
 }
@@ -118,22 +137,22 @@ func (s brokerInfoRendererText) renderConsumerElementAsString(consumer rabtap.Ra
 	return resolveTemplate("consumer-tpl", tplConsumer, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderConnectionElementAsString(conn rabtap.RabbitConnection) string {
+func (s brokerInfoRendererText) renderConnectionElementAsString(conn rabtap.RabbitConnection, notFound bool) string {
 	var args = struct {
 		Config     BrokerInfoRendererConfig
 		Connection rabtap.RabbitConnection
-	}{s.config, conn}
+		NotFound   bool
+	}{s.config, conn, notFound}
 	return resolveTemplate("connnection-tpl", tplConnection, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderQueueElementAsString(queue rabtap.RabbitQueue) string {
-	queueFlags := s.renderQueueFlagsAsString(queue)
+func (s brokerInfoRendererText) renderChannelElementAsString(channel rabtap.RabbitChannel, notFound bool) string {
 	var args = struct {
-		Config     BrokerInfoRendererConfig
-		Queue      rabtap.RabbitQueue
-		QueueFlags string
-	}{s.config, queue, queueFlags}
-	return resolveTemplate("queue-tpl", tplQueue, args, s.templateFuncs)
+		Config   BrokerInfoRendererConfig
+		Channel  rabtap.RabbitChannel
+		NotFound bool
+	}{s.config, channel, notFound}
+	return resolveTemplate("channel-tpl", tplChannel, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderBoundQueueElementAsString(queue rabtap.RabbitQueue, binding *rabtap.RabbitBinding) string {
@@ -156,36 +175,37 @@ func (s brokerInfoRendererText) renderRootNodeAsString(rabbitURL *url.URL, overv
 	return resolveTemplate("rootnode", tplRootNode, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderExchangeElementAsString(exchange rabtap.RabbitExchange) string {
+func (s brokerInfoRendererText) renderExchangeElementAsString(exchange rabtap.RabbitExchange, binding *rabtap.RabbitBinding) string {
 	exchangeFlags := s.renderExchangeFlagsAsString(exchange)
 	var args = struct {
 		Config        BrokerInfoRendererConfig
 		Exchange      rabtap.RabbitExchange
 		ExchangeFlags string
-	}{s.config, exchange, exchangeFlags}
+		Binding       *rabtap.RabbitBinding
+	}{s.config, exchange, exchangeFlags, binding}
 	return resolveTemplate("exchange-tpl", tplExchange, args, s.templateFuncs)
 }
 
 func (s brokerInfoRendererText) renderNode(n interface{}) *TreeNode {
 	var node *TreeNode
 
-	switch t := n.(type) {
+	switch e := n.(type) {
 	case *rootNode:
-		node = NewTreeNode(s.renderRootNodeAsString(n.(*rootNode).URL, n.(*rootNode).Overview))
+		node = NewTreeNode(s.renderRootNodeAsString(e.URL, e.Overview))
 	case *vhostNode:
-		node = NewTreeNode(s.renderVhostAsString(n.(*vhostNode).Vhost))
+		node = NewTreeNode(s.renderVhostAsString(e.Vhost))
 	case *connectionNode:
-		node = NewTreeNode(s.renderConnectionElementAsString(n.(*connectionNode).Connection))
+		node = NewTreeNode(s.renderConnectionElementAsString(e.OptConnection, e.NotFound))
+	case *channelNode:
+		node = NewTreeNode(s.renderChannelElementAsString(e.OptChannel, e.NotFound))
 	case *consumerNode:
-		node = NewTreeNode(s.renderConsumerElementAsString(n.(*consumerNode).Consumer))
-	// case *queueNode:
-	//     node = NewTreeNode(s.renderQueueElementAsString(n.(*queueNode).Queue))
-	case *boundQueueNode:
-		node = NewTreeNode(s.renderBoundQueueElementAsString(n.(*boundQueueNode).Queue, n.(*boundQueueNode).Binding))
+		node = NewTreeNode(s.renderConsumerElementAsString(e.Consumer))
+	case *queueNode:
+		node = NewTreeNode(s.renderBoundQueueElementAsString(e.Queue, e.OptBinding))
 	case *exchangeNode:
-		node = NewTreeNode(s.renderExchangeElementAsString(n.(*exchangeNode).Exchange))
+		node = NewTreeNode(s.renderExchangeElementAsString(e.Exchange, e.OptBinding))
 	default:
-		panic(fmt.Sprintf("unexpected node encountered %T", t))
+		panic(fmt.Sprintf("unexpected node encountered %T", e))
 	}
 
 	for _, child := range n.(Node).Children() {

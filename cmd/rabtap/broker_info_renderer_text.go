@@ -110,76 +110,76 @@ const (
 		{{- ""}}, [{{ .QueueFlags}}])`
 )
 
-func (s brokerInfoRendererText) renderQueueFlagsAsString(queue rabtap.RabbitQueue) string {
+func (s brokerInfoRendererText) renderQueueFlagsAsString(queue *rabtap.RabbitQueue) string {
 	flags := []bool{queue.Durable, queue.AutoDelete, queue.Exclusive}
 	names := []string{"D", "AD", "EX"}
 	return strings.Join(filterStringList(flags, names), "|")
 }
 
-func (s brokerInfoRendererText) renderExchangeFlagsAsString(exchange rabtap.RabbitExchange) string {
+func (s brokerInfoRendererText) renderExchangeFlagsAsString(exchange *rabtap.RabbitExchange) string {
 	flags := []bool{exchange.Durable, exchange.AutoDelete, exchange.Internal}
 	names := []string{"D", "AD", "I"}
 	return strings.Join(filterStringList(flags, names), "|")
 }
 
-func (s brokerInfoRendererText) renderVhostAsString(vhost rabtap.RabbitVhost) string {
+func (s brokerInfoRendererText) renderVhostAsString(vhost *rabtap.RabbitVhost) string {
 	var args = struct {
-		Vhost rabtap.RabbitVhost
+		Vhost *rabtap.RabbitVhost
 	}{vhost}
 	return resolveTemplate("vhost-tpl", tplVhost, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderConsumerElementAsString(consumer rabtap.RabbitConsumer) string {
+func (s brokerInfoRendererText) renderConsumerElementAsString(consumer *rabtap.RabbitConsumer) string {
 	var args = struct {
 		Config   BrokerInfoRendererConfig
-		Consumer rabtap.RabbitConsumer
+		Consumer *rabtap.RabbitConsumer
 	}{s.config, consumer}
 	return resolveTemplate("consumer-tpl", tplConsumer, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderConnectionElementAsString(conn rabtap.RabbitConnection, notFound bool) string {
+func (s brokerInfoRendererText) renderConnectionElementAsString(conn *rabtap.RabbitConnection, notFound bool) string {
 	var args = struct {
 		Config     BrokerInfoRendererConfig
-		Connection rabtap.RabbitConnection
+		Connection *rabtap.RabbitConnection
 		NotFound   bool
 	}{s.config, conn, notFound}
 	return resolveTemplate("connnection-tpl", tplConnection, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderChannelElementAsString(channel rabtap.RabbitChannel, notFound bool) string {
+func (s brokerInfoRendererText) renderChannelElementAsString(channel *rabtap.RabbitChannel, notFound bool) string {
 	var args = struct {
 		Config   BrokerInfoRendererConfig
-		Channel  rabtap.RabbitChannel
+		Channel  *rabtap.RabbitChannel
 		NotFound bool
 	}{s.config, channel, notFound}
 	return resolveTemplate("channel-tpl", tplChannel, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderBoundQueueElementAsString(queue rabtap.RabbitQueue, binding *rabtap.RabbitBinding) string {
+func (s brokerInfoRendererText) renderBoundQueueElementAsString(queue *rabtap.RabbitQueue, binding *rabtap.RabbitBinding) string {
 	queueFlags := s.renderQueueFlagsAsString(queue)
 	var args = struct {
 		Config     BrokerInfoRendererConfig
 		Binding    *rabtap.RabbitBinding
-		Queue      rabtap.RabbitQueue
+		Queue      *rabtap.RabbitQueue
 		QueueFlags string
 	}{s.config, binding, queue, queueFlags}
 	return resolveTemplate("bound-queue-tpl", tplBoundQueue, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderRootNodeAsString(rabbitURL *url.URL, overview rabtap.RabbitOverview) string {
+func (s brokerInfoRendererText) renderRootNodeAsString(rabbitURL *url.URL, overview *rabtap.RabbitOverview) string {
 	var args = struct {
 		Config   BrokerInfoRendererConfig
 		URL      *url.URL
-		Overview rabtap.RabbitOverview
+		Overview *rabtap.RabbitOverview
 	}{s.config, rabbitURL, overview}
 	return resolveTemplate("rootnode", tplRootNode, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderExchangeElementAsString(exchange rabtap.RabbitExchange, binding *rabtap.RabbitBinding) string {
+func (s brokerInfoRendererText) renderExchangeElementAsString(exchange *rabtap.RabbitExchange, binding *rabtap.RabbitBinding) string {
 	exchangeFlags := s.renderExchangeFlagsAsString(exchange)
 	var args = struct {
 		Config        BrokerInfoRendererConfig
-		Exchange      rabtap.RabbitExchange
+		Exchange      *rabtap.RabbitExchange
 		ExchangeFlags string
 		Binding       *rabtap.RabbitBinding
 	}{s.config, exchange, exchangeFlags, binding}

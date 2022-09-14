@@ -5,10 +5,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 
@@ -30,13 +30,14 @@ func Example_startCmdInfo() {
 	// http://rootnode/vhost (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 }
 
-func Example_cmdInfoByExchangeInTextFormat() {
+func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 
+	var actual bytes.Buffer
 	rootURL, _ := url.Parse("http://rabbitmq/api")
 	cmdInfo(context.TODO(),
 		CmdInfoArg{
@@ -52,40 +53,42 @@ func Example_cmdInfoByExchangeInTextFormat() {
 				Format:    "text",
 				ShowStats: false,
 				NoColor:   true},
-			out: os.Stdout})
+			out: &actual})
 
-	// Output:
-	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
-	// └─ Vhost /
-	//    ├─ amq.direct (exchange(direct), [D])
-	//    ├─ amq.fanout (exchange(fanout), [D])
-	//    ├─ amq.headers (exchange(headers), [D])
-	//    ├─ amq.match (exchange(headers), [D])
-	//    ├─ amq.rabbitmq.log (exchange(topic), [D|I])
-	//    ├─ amq.rabbitmq.trace (exchange(topic), [D|I])
-	//    ├─ amq.topic (exchange(topic), [D])
-	//    ├─ test-direct (exchange(direct), [D|AD|I])
-	//    │  ├─ direct-q1 (queue(classic), key='direct-q1',  running, [D])
-	//    │  │  ├─ '172.17.0.1:40874 -> 172.17.0.2:5672' (connection guest@172.17.0.2:5672, state='running', client='https://github.com/streadway/amqp', ver='β', peer='172.17.0.1:40874')
-	//    │  │  │  └─ '172.17.0.1:40874 -> 172.17.0.2:5672 (1)' (channel prefetch=0, state=running, unacked=0, confirms=no)
-	//    │  │  │     └─ some_consumer (consumer prefetch=0, ack_req=no, active=no, status=)
-	//    │  │  └─ ? (connection)
-	//    │  │     └─ ? (channel)
-	//    │  │        └─ another_consumer w/ faulty channel (consumer prefetch=0, ack_req=no, active=no, status=)
-	//    │  └─ direct-q2 (queue(classic), key='direct-q2',  running, [D])
-	//    ├─ test-fanout (exchange(fanout), [D])
-	//    │  ├─ fanout-q1 (queue(classic),  idle since 2017-05-25 19:14:32, [D])
-	//    │  └─ fanout-q2 (queue(classic),  idle since 2017-05-25 19:14:32, [D])
-	//    ├─ test-headers (exchange(headers), [D|AD])
-	//    │  ├─ header-q1 (queue(classic), key='headers-q1',  idle since 2017-05-25 19:14:53, [D])
-	//    │  └─ header-q2 (queue(classic), key='headers-q2',  idle since 2017-05-25 19:14:47, [D])
-	//    └─ test-topic (exchange(topic), [D])
-	//       ├─ topic-q1 (queue(classic), key='topic-q1',  idle since 2017-05-25 19:14:17, [D|AD|EX])
-	//       ├─ topic-q2 (queue(classic), key='topic-q2',  idle since 2017-05-25 19:14:21, [D])
-	//       └─ test-topic (exchange(topic), [D])
+	expected := `http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
+└─ Vhost /
+   ├─ amq.direct (exchange(direct), [D])
+   ├─ amq.fanout (exchange(fanout), [D])
+   ├─ amq.headers (exchange(headers), [D])
+   ├─ amq.match (exchange(headers), [D])
+   ├─ amq.rabbitmq.log (exchange(topic), [D|I])
+   ├─ amq.rabbitmq.trace (exchange(topic), [D|I])
+   ├─ amq.topic (exchange(topic), [D])
+   │  └─ test-topic (exchange(topic), key='test', [D])
+   ├─ test-direct (exchange(direct), [D|AD|I])
+   │  ├─ direct-q1 (queue(classic), key='direct-q1',  running, [D])
+   │  │  ├─ '172.17.0.1:40874 -> 172.17.0.2:5672' (connection guest@172.17.0.2:5672, state='running', client='https://github.com/streadway/amqp', ver='β', peer='172.17.0.1:40874')
+   │  │  │  └─ '172.17.0.1:40874 -> 172.17.0.2:5672 (1)' (channel prefetch=0, state=running, unacked=0, confirms=no)
+   │  │  │     └─ another_consumer w/ faulty channel (consumer prefetch=0, ack_req=no, active=no, status=)
+   │  │  └─ ? (connection)
+   │  │     └─ ? (channel)
+   │  │        └─ another_consumer w/ faulty channel (consumer prefetch=0, ack_req=no, active=no, status=)
+   │  └─ direct-q2 (queue(classic), key='direct-q2',  running, [D])
+   ├─ test-fanout (exchange(fanout), [D])
+   │  ├─ fanout-q1 (queue(classic),  idle since 2017-05-25 19:14:32, [D])
+   │  └─ fanout-q2 (queue(classic),  idle since 2017-05-25 19:14:32, [D])
+   ├─ test-headers (exchange(headers), [D|AD])
+   │  ├─ header-q1 (queue(classic), key='headers-q1',  idle since 2017-05-25 19:14:53, [D])
+   │  └─ header-q2 (queue(classic), key='headers-q2',  idle since 2017-05-25 19:14:47, [D])
+   └─ test-topic (exchange(topic), [D])
+      ├─ topic-q1 (queue(classic), key='topic-q1',  idle since 2017-05-25 19:14:17, [D|AD|EX])
+      └─ topic-q2 (queue(classic), key='topic-q2',  idle since 2017-05-25 19:14:21, [D])
+`
+
+	assert.Equal(t, expected, actual.String())
 }
 
-func Example_cmdInfoByConnectionInTextFormat() {
+func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
 
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
@@ -93,6 +96,7 @@ func Example_cmdInfoByConnectionInTextFormat() {
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 	rootURL, _ := url.Parse("http://rabbitmq/api")
 
+	var actual bytes.Buffer
 	cmdInfo(context.TODO(),
 		CmdInfoArg{
 			rootNode: rootURL,
@@ -107,15 +111,17 @@ func Example_cmdInfoByConnectionInTextFormat() {
 				Format:    "text",
 				ShowStats: false,
 				NoColor:   true},
-			out: os.Stdout})
+			out: &actual})
 
-	// Output:
-	// http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
-	// └─ Vhost /
-	//    └─ '172.17.0.1:40874 -> 172.17.0.2:5672' (connection guest@172.17.0.2:5672, state='running', client='https://github.com/streadway/amqp', ver='β', peer='172.17.0.1:40874')
-	//       └─ '172.17.0.1:40874 -> 172.17.0.2:5672 (1)' (channel prefetch=0, state=running, unacked=0, confirms=no)
-	//          └─ some_consumer (consumer prefetch=0, ack_req=no, active=no, status=)
-	//             └─ direct-q1 (queue(classic),  running, [D])
+	expected := `http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
+└─ Vhost /
+   └─ '172.17.0.1:40874 -> 172.17.0.2:5672' (connection guest@172.17.0.2:5672, state='running', client='https://github.com/streadway/amqp', ver='β', peer='172.17.0.1:40874')
+      └─ '172.17.0.1:40874 -> 172.17.0.2:5672 (1)' (channel prefetch=0, state=running, unacked=0, confirms=no)
+         └─ some_consumer (consumer prefetch=0, ack_req=no, active=no, status=)
+            └─ direct-q1 (queue(classic),  running, [D])
+`
+	assert.Equal(t, expected, actual.String())
+
 }
 
 const expectedResultDotByExchange = `graph broker {
@@ -156,6 +162,10 @@ const expectedResultDotByExchange = `graph broker {
 
 "exchange_amq.topic" [shape="record"; label="{ amq.topic |topic | { D  | | } }"];
 
+"exchange_amq.topic" -- "exchange_test-topic" [fontsize=10; headport=n; label=""];
+
+"exchange_test-topic" [shape="record"; label="{ test-topic |topic | { D  | | } }"];
+
 
 "exchange_test-direct" [shape="record"; label="{ test-direct |direct | { D  | AD  | I  } }"];
 
@@ -194,15 +204,11 @@ const expectedResultDotByExchange = `graph broker {
 
 "exchange_test-topic" -- "queue_topic-q1" [fontsize=10; headport=n; label="topic-q1"];
 "exchange_test-topic" -- "queue_topic-q2" [fontsize=10; headport=n; label="topic-q2"];
-"exchange_test-topic" -- "exchange_test-topic" [fontsize=10; headport=n; label=""];
 
 "queue_topic-q1" [shape="record"; label="{ topic-q1 | { D  | AD  | EX  } }"];
 
 
 "queue_topic-q2" [shape="record"; label="{ topic-q2 | { D  | | } }"];
-
-
-"exchange_test-topic" [shape="record"; label="{ test-topic |topic | { D  | | } }"];
 
 }`
 
@@ -214,24 +220,23 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 	rootURL, _ := url.Parse("http://rabbitmq/api")
 
-	testfunc := func() {
-		cmdInfo(
-			context.TODO(),
-			CmdInfoArg{
-				rootNode: rootURL,
-				client:   client,
-				treeConfig: BrokerInfoTreeBuilderConfig{
-					Mode:                "byExchange",
-					ShowConsumers:       false,
-					ShowDefaultExchange: false,
-					QueueFilter:         TruePredicate,
-					OmitEmptyExchanges:  false},
-				renderConfig: BrokerInfoRendererConfig{Format: "dot"},
-				out:          os.Stdout})
-	}
-	result := testcommon.CaptureOutput(testfunc)
+	var actual bytes.Buffer
+	cmdInfo(
+		context.TODO(),
+		CmdInfoArg{
+			rootNode: rootURL,
+			client:   client,
+			treeConfig: BrokerInfoTreeBuilderConfig{
+				Mode:                "byExchange",
+				ShowConsumers:       false,
+				ShowDefaultExchange: false,
+				QueueFilter:         TruePredicate,
+				OmitEmptyExchanges:  false},
+			renderConfig: BrokerInfoRendererConfig{Format: "dot"},
+			out:          &actual})
+
 	assert.Equal(t, strings.Trim(expectedResultDotByExchange, " \n"),
-		strings.Trim(result, " \n"))
+		strings.Trim(actual.String(), " \n"))
 }
 
 const expectedResultDotByConnection = `graph broker {
@@ -263,22 +268,20 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 	rootURL, _ := url.Parse("http://rabbitmq/api")
 
-	testfunc := func() {
-		cmdInfo(
-			context.TODO(),
-			CmdInfoArg{
-				rootNode: rootURL,
-				client:   client,
-				treeConfig: BrokerInfoTreeBuilderConfig{
-					Mode:                "byConnection",
-					ShowConsumers:       false,
-					ShowDefaultExchange: false,
-					QueueFilter:         TruePredicate,
-					OmitEmptyExchanges:  false},
-				renderConfig: BrokerInfoRendererConfig{Format: "dot"},
-				out:          os.Stdout})
-	}
-	result := testcommon.CaptureOutput(testfunc)
+	var actual bytes.Buffer
+	cmdInfo(
+		context.TODO(),
+		CmdInfoArg{
+			rootNode: rootURL,
+			client:   client,
+			treeConfig: BrokerInfoTreeBuilderConfig{
+				Mode:                "byConnection",
+				ShowConsumers:       false,
+				ShowDefaultExchange: false,
+				QueueFilter:         TruePredicate,
+				OmitEmptyExchanges:  false},
+			renderConfig: BrokerInfoRendererConfig{Format: "dot"},
+			out:          &actual})
 	assert.Equal(t, strings.Trim(expectedResultDotByConnection, " \n"),
-		strings.Trim(result, " \n"))
+		strings.Trim(actual.String(), " \n"))
 }

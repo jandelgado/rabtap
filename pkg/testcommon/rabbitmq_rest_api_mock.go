@@ -277,11 +277,11 @@ const (
         "properties_key": "topic-q2"
     },
     {
-        "source": "test-topic",
+        "source": "amq.topic",
         "vhost": "/",
         "destination": "test-topic",
         "destination_type": "exchange",
-        "routing_key": "",
+        "routing_key": "test",
         "arguments": {
 
         },

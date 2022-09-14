@@ -66,7 +66,7 @@ func newDotRendererTpl() dotRendererTpl {
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}
 }`,
 
-		dotTplVhost: `{{ q .Name }} [shape="box", label="Virtual host {{ esc .Vhost }}"];
+		dotTplVhost: `{{ q .Name }} [shape="box", label="Virtual host {{ esc .Vhost.Name }}"];
 
 {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name -}} [headport=n]{{ printf ";\n" }}{{ end -}}
 {{ range $i, $e := .Children }}{{ $e.Text -}}{{ end -}}`,
@@ -119,84 +119,89 @@ func (s brokerInfoRendererDot) funcMap() map[string]interface{} {
 		"esc": html.EscapeString}
 }
 
-func (s brokerInfoRendererDot) renderRootNodeAsString(name string, children []dotNode, rabbitURL *url.URL, overview rabtap.RabbitOverview) string {
+func (s brokerInfoRendererDot) renderRootNodeAsString(name string,
+	children []dotNode,
+	rabbitURL *url.URL,
+	overview *rabtap.RabbitOverview) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
 		URL      *url.URL
-		Overview rabtap.RabbitOverview
+		Overview *rabtap.RabbitOverview
 	}{name, children, s.config, rabbitURL, overview}
 	return resolveTemplate("root-dotTpl", s.template.dotTplRootNode, args, s.funcMap())
 }
 
-func (s brokerInfoRendererDot) renderVhostAsString(name string, children []dotNode, vhost rabtap.RabbitVhost) string {
+func (s brokerInfoRendererDot) renderVhostAsString(name string,
+	children []dotNode,
+	vhost *rabtap.RabbitVhost) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
-		Vhost    rabtap.RabbitVhost
+		Vhost    *rabtap.RabbitVhost
 	}{name, children, vhost}
 	return resolveTemplate("vhost-dotTpl", s.template.dotTplVhost, args, s.funcMap())
 }
 
-func (s brokerInfoRendererDot) renderExchangeElementAsString(name string, children []dotNode, exchange rabtap.RabbitExchange) string {
+func (s brokerInfoRendererDot) renderExchangeElementAsString(name string,
+	children []dotNode,
+	exchange *rabtap.RabbitExchange) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
-		Exchange rabtap.RabbitExchange
+		Exchange *rabtap.RabbitExchange
 	}{name, children, s.config, exchange}
 	return resolveTemplate("exchange-dotTpl", s.template.dotTplExchange, args, s.funcMap())
 }
 
-// func (s brokerInfoRendererDot) renderQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue) string {
-//     var args = struct {
-//         Name     string
-//         Children []dotNode
-//         Config   BrokerInfoRendererConfig
-//         Queue    rabtap.RabbitQueue
-//     }{name, children, s.config, queue}
-//     funcMap := map[string]interface{}{"q": strconv.Quote}
-//     return resolveTemplate("queue-dotTpl", s.template.dotTplQueue, args, funcMap)
-// }
-
-func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string, children []dotNode, queue rabtap.RabbitQueue, binding *rabtap.RabbitBinding) string {
+func (s brokerInfoRendererDot) renderBoundQueueElementAsString(name string,
+	children []dotNode,
+	queue *rabtap.RabbitQueue,
+	binding *rabtap.RabbitBinding) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
 		Binding  *rabtap.RabbitBinding
-		Queue    rabtap.RabbitQueue
+		Queue    *rabtap.RabbitQueue
 	}{name, children, s.config, binding, queue}
 	return resolveTemplate("bound-queue-dotTpl", s.template.dotTplBoundQueue, args, s.funcMap())
 }
 
-func (s brokerInfoRendererDot) renderConsumerElementAsString(name string, children []dotNode, consumer rabtap.RabbitConsumer) string {
+func (s brokerInfoRendererDot) renderConsumerElementAsString(name string,
+	children []dotNode,
+	consumer *rabtap.RabbitConsumer) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
-		Consumer rabtap.RabbitConsumer
+		Consumer *rabtap.RabbitConsumer
 	}{name, children, s.config, consumer}
 	return resolveTemplate("consumer-dotTpl", s.template.dotTplConsumer, args, s.funcMap())
 }
 
-func (s brokerInfoRendererDot) renderChannelElementAsString(name string, children []dotNode, channel rabtap.RabbitChannel) string {
+func (s brokerInfoRendererDot) renderChannelElementAsString(name string,
+	children []dotNode,
+	channel *rabtap.RabbitChannel) string {
 	var args = struct {
 		Name     string
 		Children []dotNode
 		Config   BrokerInfoRendererConfig
-		Channel  rabtap.RabbitChannel
+		Channel  *rabtap.RabbitChannel
 	}{name, children, s.config, channel}
 	return resolveTemplate("channel-dotTpl", s.template.dotTplChannel, args, s.funcMap())
 }
 
-func (s brokerInfoRendererDot) renderConnectionElementAsString(name string, children []dotNode, conn rabtap.RabbitConnection) string {
+func (s brokerInfoRendererDot) renderConnectionElementAsString(name string,
+	children []dotNode,
+	conn *rabtap.RabbitConnection) string {
 	var args = struct {
 		Name       string
 		Children   []dotNode
 		Config     BrokerInfoRendererConfig
-		Connection rabtap.RabbitConnection
+		Connection *rabtap.RabbitConnection
 	}{name, children, s.config, conn}
 	return resolveTemplate("connnection-dotTpl", s.template.dotTplConnection, args, s.funcMap())
 }
@@ -223,10 +228,6 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}, queueRendered map[stri
 	case *exchangeNode:
 		name := fmt.Sprintf("exchange_%s", t.Exchange.Name)
 		node = dotNode{name, s.renderExchangeElementAsString(name, children, t.Exchange), ""}
-	// case *queueNode:
-	//     queue := n.(*queueNode).Queue
-	//     name := fmt.Sprintf("queue_%s", queue.Name)
-	//     node = dotNode{name, s.renderQueueElementAsString(name, children, queue), ""}
 	case *queueNode:
 		queue := t.Queue
 		name := fmt.Sprintf("queue_%s", queue.Name)

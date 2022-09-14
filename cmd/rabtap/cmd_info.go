@@ -33,5 +33,5 @@ func cmdInfo(ctx context.Context, cmd CmdInfoArg) {
 
 	metadataService := rabtap.NewInMemoryMetadataService(brokerInfo)
 	tree, _ := treeBuilder.BuildTree(cmd.rootNode, metadataService)
-	failOnError(renderer.Render(tree, os.Stdout), "rendering failed", os.Exit)
+	failOnError(renderer.Render(tree, cmd.out), "rendering failed", os.Exit)
 }

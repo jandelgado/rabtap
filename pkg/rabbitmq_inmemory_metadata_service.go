@@ -31,10 +31,7 @@ func entityByName[T any](entities []T, nameFunc func(T) string) map[string]*T {
 }
 
 func findByName[T any](m map[string]*T, vhost, name string) *T {
-	if e, ok := m[scopedName(vhost, name)]; ok {
-		return e
-	}
-	return nil
+	return m[scopedName(vhost, name)]
 }
 
 func channelsByConnection(channels []RabbitChannel) map[string][]*RabbitChannel {
@@ -42,11 +39,8 @@ func channelsByConnection(channels []RabbitChannel) map[string][]*RabbitChannel 
 	for _, channel := range channels {
 		connName := scopedName(channel.Vhost, channel.ConnectionDetails.Name)
 		c := channel
-		if chans, ok := chanByConn[connName]; ok {
-			chanByConn[connName] = append(chans, &c)
-		} else {
-			chanByConn[connName] = []*RabbitChannel{&c}
-		}
+		chans := chanByConn[connName]
+		chanByConn[connName] = append(chans, &c)
 	}
 	return chanByConn
 }
@@ -56,11 +50,8 @@ func consumersByChannel(consumers []RabbitConsumer) map[string][]*RabbitConsumer
 	for _, consumer := range consumers {
 		chanName := scopedName(consumer.Queue.Vhost, consumer.ChannelDetails.Name)
 		c := consumer
-		if consumers, ok := consumerByChan[chanName]; ok {
-			consumerByChan[chanName] = append(consumers, &c)
-		} else {
-			consumerByChan[chanName] = []*RabbitConsumer{&c}
-		}
+		consumers := consumerByChan[chanName]
+		consumerByChan[chanName] = append(consumers, &c)
 	}
 	return consumerByChan
 }
@@ -70,11 +61,8 @@ func bindingsByExchange(bindings []RabbitBinding) map[string][]*RabbitBinding {
 	for _, binding := range bindings {
 		exchangeName := scopedName(binding.Vhost, binding.Source)
 		b := binding
-		if bindings, ok := bindingsByExchange[exchangeName]; ok {
-			bindingsByExchange[exchangeName] = append(bindings, &b)
-		} else {
-			bindingsByExchange[exchangeName] = []*RabbitBinding{&b}
-		}
+		bindings := bindingsByExchange[exchangeName]
+		bindingsByExchange[exchangeName] = append(bindings, &b)
 	}
 	return bindingsByExchange
 }

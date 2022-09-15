@@ -10,6 +10,7 @@ package main
 import (
 	"fmt"
 	"net/url"
+	"sort"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -158,6 +159,16 @@ func (s defaultBrokerInfoTreeBuilder) shouldDisplayExchange(
 	return true
 }
 
+// orderedKeySet returns the key set of the given map as a sorted array of strings
+func orderedKeySet[T any](m map[string]T) []string {
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func (s defaultBrokerInfoTreeBuilder) shouldDisplayQueue(
 	queue *rabtap.RabbitQueue,
 	exchange *rabtap.RabbitExchange,
@@ -226,8 +237,8 @@ func (s defaultBrokerInfoTreeBuilder) createConnectionNodes(
 	}
 
 	var nodes []*connectionNode
-	for _, v := range connectionNodes {
-		nodes = append(nodes, v)
+	for _, key := range orderedKeySet(connectionNodes) {
+		nodes = append(nodes, connectionNodes[key])
 	}
 	return nodes
 }
@@ -410,8 +421,8 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 		}
 	}
 
-	for _, vhost := range vhosts {
-		rootNode.Add(vhost)
+	for _, key := range orderedKeySet(vhosts) {
+		rootNode.Add(vhosts[key])
 	}
 	return rootNode, nil
 }

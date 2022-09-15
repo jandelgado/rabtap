@@ -187,7 +187,8 @@ func (s *AmqpPublish) createWorkerFunc(
 				s.logger.Debugf("publish message to %s (%d bytes)", message.Routing, size)
 				headers := EnsureAMQPTable(message.Routing.Headers()).(amqp.Table)
 				message.Publishing.Headers = headers
-				err := session.Publish(
+				err := session.PublishWithContext(
+					ctx,
 					message.Routing.Exchange(),
 					message.Routing.Key(),
 					s.mandatory,

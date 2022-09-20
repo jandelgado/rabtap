@@ -226,16 +226,12 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}, queueRendered map[stri
 		name := fmt.Sprintf("vhost_%s", t.Vhost.Name)
 		node = dotNode{name, s.renderVhostAsString(name, children, t.Vhost), ""}
 	case *exchangeNode:
-		name := fmt.Sprintf("exchange_%s", t.Exchange.Name)
+		name := fmt.Sprintf("exchange_%s_%s", t.Exchange.Vhost, t.Exchange.Name)
 		node = dotNode{name, s.renderExchangeElementAsString(name, children, t.Exchange), ""}
 	case *queueNode:
 		queue := t.Queue
-		name := fmt.Sprintf("queue_%s", queue.Name)
-		// if found := queueRendered[name]; found {
-		//     return emptyDotNode
-		// }
+		name := fmt.Sprintf("queue_%s_%s", queue.Vhost, queue.Name)
 		queueRendered[name] = true
-
 		binding := t.OptBinding
 		key := ""
 		if binding != nil {
@@ -243,11 +239,11 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}, queueRendered map[stri
 		}
 		node = dotNode{name, s.renderBoundQueueElementAsString(name, children, queue, binding), key}
 	case *connectionNode:
-		name := fmt.Sprintf("connection_%s", t.OptConnection.Name)
-		node = dotNode{name, s.renderConnectionElementAsString(name, children, t.OptConnection), ""}
+		name := fmt.Sprintf("connection_%s", t.Connection.Name)
+		node = dotNode{name, s.renderConnectionElementAsString(name, children, t.Connection), ""}
 	case *channelNode:
-		name := fmt.Sprintf("channel_%s", t.OptChannel.Name)
-		node = dotNode{name, s.renderChannelElementAsString(name, children, t.OptChannel), ""}
+		name := fmt.Sprintf("channel_%s", t.Channel.Name)
+		node = dotNode{name, s.renderChannelElementAsString(name, children, t.Channel), ""}
 	case *consumerNode:
 		name := fmt.Sprintf("consumer_%s", t.Consumer.ConsumerTag)
 		node = dotNode{name, s.renderConsumerElementAsString(name, children, t.Consumer), ""}

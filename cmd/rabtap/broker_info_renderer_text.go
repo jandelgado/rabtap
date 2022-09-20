@@ -49,7 +49,7 @@ const (
 	tplVhost = `
 	    {{- printf "Vhost %s" .Vhost.Name | VHostColor }}`
 	tplConnection = ` 
-	    {{- ""}}{{- if .NotFound }}{{ "? (connection)" | ErrorColor }}{{else}}
+	    {{- ""}}{{- if .NotFound }}{{ printf "? (connection %s)" .Connection.Name | ErrorColor }}{{else}}
 		{{-   ""}}'{{ ConnectionColor .Connection.Name }}'
 		{{-   ""}}{{- if .Connection.ClientProperties.ConnectionName }} ({{- .Connection.ClientProperties.ConnectionName }}) {{end}}
 		{{-   ""}} (connection {{ .Connection.User}}@{{ .Connection.Host }}:{{ .Connection.Port }},
@@ -59,7 +59,7 @@ const (
 		{{-   ""}} peer='{{ .Connection.PeerHost }}:{{ .Connection.PeerPort }}')
 		{{- end}}`
 	tplChannel = ` 
-	    {{- ""}}{{- if .NotFound }}{{ "? (channel)" | ErrorColor }}{{else}}
+	    {{- ""}}{{- if .NotFound }}{{ printf "? (channel %s)" .Channel.Name | ErrorColor }}{{else}}
 	    {{-   ""}}'{{ ChannelColor .Channel.Name }}' (channel 
 		{{-   ""}} prefetch={{ .Channel.PrefetchCount }},
 		{{-   ""}} state={{ .Channel.State }},
@@ -137,21 +137,21 @@ func (s brokerInfoRendererText) renderConsumerElementAsString(consumer *rabtap.R
 	return resolveTemplate("consumer-tpl", tplConsumer, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderConnectionElementAsString(conn *rabtap.RabbitConnection, notFound bool) string {
+func (s brokerInfoRendererText) renderConnectionElementAsString(conn *rabtap.RabbitConnection, status nodeStatus) string {
 	var args = struct {
 		Config     BrokerInfoRendererConfig
 		Connection *rabtap.RabbitConnection
 		NotFound   bool
-	}{s.config, conn, notFound}
+	}{s.config, conn, status == NotFound}
 	return resolveTemplate("connnection-tpl", tplConnection, args, s.templateFuncs)
 }
 
-func (s brokerInfoRendererText) renderChannelElementAsString(channel *rabtap.RabbitChannel, notFound bool) string {
+func (s brokerInfoRendererText) renderChannelElementAsString(channel *rabtap.RabbitChannel, status nodeStatus) string {
 	var args = struct {
 		Config   BrokerInfoRendererConfig
 		Channel  *rabtap.RabbitChannel
 		NotFound bool
-	}{s.config, channel, notFound}
+	}{s.config, channel, status == NotFound}
 	return resolveTemplate("channel-tpl", tplChannel, args, s.templateFuncs)
 }
 
@@ -195,9 +195,9 @@ func (s brokerInfoRendererText) renderNode(n interface{}) *TreeNode {
 	case *vhostNode:
 		node = NewTreeNode(s.renderVhostAsString(e.Vhost))
 	case *connectionNode:
-		node = NewTreeNode(s.renderConnectionElementAsString(e.OptConnection, e.NotFound))
+		node = NewTreeNode(s.renderConnectionElementAsString(e.Connection, e.Status))
 	case *channelNode:
-		node = NewTreeNode(s.renderChannelElementAsString(e.OptChannel, e.NotFound))
+		node = NewTreeNode(s.renderChannelElementAsString(e.Channel, e.Status))
 	case *consumerNode:
 		node = NewTreeNode(s.renderConsumerElementAsString(e.Consumer))
 	case *queueNode:

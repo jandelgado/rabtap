@@ -66,7 +66,7 @@ func (s *baseNode) Children() []interface{} {
 	return s.children
 }
 
-func (s *baseNode) HasChildren() bool {
+func (s *baseNode) hasChildren() bool {
 	return len(s.children) > 0
 }
 
@@ -109,24 +109,33 @@ func newQueueNodeWithBinding(queue *rabtap.RabbitQueue, binding *rabtap.RabbitBi
 	return &queueNode{baseNode{[]interface{}{}}, queue, binding}
 }
 
+type nodeStatus int
+
+const (
+	// object was found and contains actual data
+	Valid nodeStatus = iota
+	// object was not found and usually contains only the name attribute set
+	NotFound
+)
+
 type connectionNode struct {
 	baseNode
-	OptConnection *rabtap.RabbitConnection // may be nil if not found
-	NotFound      bool                     // true if the channel was not found during a lookup TODO
+	Connection *rabtap.RabbitConnection
+	Status     nodeStatus
 }
 
-func newConnectionNode(connection *rabtap.RabbitConnection, notFound bool) *connectionNode {
-	return &connectionNode{baseNode{[]interface{}{}}, connection, notFound}
+func newConnectionNode(connection *rabtap.RabbitConnection, status nodeStatus) *connectionNode {
+	return &connectionNode{baseNode{[]interface{}{}}, connection, status}
 }
 
 type channelNode struct {
 	baseNode
-	OptChannel *rabtap.RabbitChannel // may be nil if not found
-	NotFound   bool                  // true if the channel was not found during a lookup TODO
+	Channel *rabtap.RabbitChannel
+	Status  nodeStatus
 }
 
-func newChannelNode(channel *rabtap.RabbitChannel, notFound bool) *channelNode {
-	return &channelNode{baseNode{[]interface{}{}}, channel, notFound}
+func newChannelNode(channel *rabtap.RabbitChannel, status nodeStatus) *channelNode {
+	return &channelNode{baseNode{[]interface{}{}}, channel, status}
 }
 
 type consumerNode struct {
@@ -208,13 +217,13 @@ func (s defaultBrokerInfoTreeBuilder) createConnectionNodes(
 		if connNode, ok = connectionNodes[connectionName]; !ok {
 			connection := metadataService.FindConnectionByName(vhostName, connectionName)
 			if connection != nil {
-				connNode = newConnectionNode(connection, false) // TODO false/true -> Type TODO ptr
+				connNode = newConnectionNode(connection, Valid)
 			} else {
 				// for some reason, the connection could not be found by it's name.
 				// So we create an empty connection object and mark it as "Not found"
 				// and let the renderer decide what to do.
 				dummyConnection := rabtap.RabbitConnection{Name: connectionName}
-				connNode = newConnectionNode(&dummyConnection, true)
+				connNode = newConnectionNode(&dummyConnection, NotFound)
 			}
 			connectionNodes[connectionName] = connNode
 		}
@@ -224,10 +233,10 @@ func (s defaultBrokerInfoTreeBuilder) createConnectionNodes(
 		if chanNode, ok = channelNodes[channelName]; !ok {
 			channel := metadataService.FindChannelByName(vhostName, channelName)
 			if channel != nil {
-				chanNode = newChannelNode(channel, false) // TODO ptr
+				chanNode = newChannelNode(channel, Valid)
 			} else {
 				dummyChan := rabtap.RabbitChannel{Name: channelName}
-				chanNode = newChannelNode(&dummyChan, true) // TODO bool
+				chanNode = newChannelNode(&dummyChan, NotFound)
 			}
 			channelNodes[channelName] = chanNode
 		}
@@ -351,7 +360,7 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(
 				continue
 			}
 			exNode := s.createExchangeNode(&exchange, metadataService, nil)
-			if s.config.OmitEmptyExchanges && !exNode.HasChildren() {
+			if s.config.OmitEmptyExchanges && !exNode.hasChildren() {
 				continue
 			}
 			vhostNode.Add(exNode)
@@ -385,7 +394,7 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 			vhosts[vhostName] = newVhostNode(vhost)
 		}
 
-		connNode := newConnectionNode(&conn, false)
+		connNode := newConnectionNode(&conn, Valid)
 
 		channels := metadataService.AllChannelsForConnection(vhostName, conn.Name)
 		for _, channel := range channels {
@@ -399,7 +408,7 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 				continue
 			}
 
-			chanNode := newChannelNode(channel, false)
+			chanNode := newChannelNode(channel, Valid)
 
 			consumers := metadataService.AllConsumersForChannel(vhostName, channel.Name)
 			for _, consumer := range consumers {
@@ -416,7 +425,7 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 			// }
 			connNode.Add(chanNode)
 		}
-		if connNode.HasChildren() {
+		if connNode.hasChildren() {
 			vhosts[vhostName].Add(connNode)
 		}
 	}

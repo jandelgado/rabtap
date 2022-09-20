@@ -21,7 +21,7 @@ type BrokerInfoTreeBuilderConfig struct {
 	ShowDefaultExchange bool
 	ShowConsumers       bool
 	ShowStats           bool
-	QueueFilter         Predicate
+	Filter              Predicate
 	OmitEmptyExchanges  bool
 }
 
@@ -184,7 +184,7 @@ func (s defaultBrokerInfoTreeBuilder) shouldDisplayQueue(
 	binding *rabtap.RabbitBinding) bool {
 
 	params := map[string]interface{}{"queue": queue, "binding": binding, "exchange": exchange}
-	if res, err := s.config.QueueFilter.Eval(params); err != nil || !res {
+	if res, err := s.config.Filter.Eval(params); err != nil || !res {
 		if err != nil {
 			log.Warnf("error evaluating queue filter: %s", err)
 		} else {
@@ -401,7 +401,7 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 			channel := channel
 
 			params := map[string]interface{}{"connection": conn, "channel": channel}
-			if res, err := s.config.QueueFilter.Eval(params); err != nil || !res {
+			if res, err := s.config.Filter.Eval(params); err != nil || !res {
 				if err != nil {
 					log.Warnf("error evaluating queue filter: %s", err)
 				}

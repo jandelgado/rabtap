@@ -227,7 +227,12 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}, queueRendered map[stri
 		node = dotNode{name, s.renderVhostAsString(name, children, t.Vhost), ""}
 	case *exchangeNode:
 		name := fmt.Sprintf("exchange_%s_%s", t.Exchange.Vhost, t.Exchange.Name)
-		node = dotNode{name, s.renderExchangeElementAsString(name, children, t.Exchange), ""}
+		binding := t.OptBinding
+		key := ""
+		if binding != nil {
+			key = binding.RoutingKey
+		}
+		node = dotNode{name, s.renderExchangeElementAsString(name, children, t.Exchange), key}
 	case *queueNode:
 		queue := t.Queue
 		name := fmt.Sprintf("queue_%s_%s", queue.Vhost, queue.Name)

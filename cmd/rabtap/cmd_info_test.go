@@ -162,7 +162,7 @@ const expectedResultDotByExchange = `graph broker {
 
 "exchange_/_amq.topic" [shape="record"; label="{ amq.topic |topic | { D  | | } }"];
 
-"exchange_/_amq.topic" -- "exchange_/_test-topic" [fontsize=10; headport=n; label=""];
+"exchange_/_amq.topic" -- "exchange_/_test-topic" [fontsize=10; headport=n; label="test"];
 
 "exchange_/_test-topic" [shape="record"; label="{ test-topic |topic | { D  | | } }"];
 

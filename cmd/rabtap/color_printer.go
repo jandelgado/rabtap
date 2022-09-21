@@ -19,11 +19,13 @@ const (
 	colorExchange   = color.FgHiBlue
 	colorQueue      = color.FgHiYellow
 	colorConnection = color.FgRed
-	colorChannel    = color.FgWhite
+	colorChannel    = color.FgHiMagenta
 	colorConsumer   = color.FgHiGreen
 	colorMessage    = color.FgHiYellow
 	colorKey        = color.FgHiCyan
 )
+
+var colorError = color.New(color.FgHiRed, color.BgWhite)
 
 // ColorPrinterFunc takes fmt.Sprint like arguments and add colors
 type ColorPrinterFunc func(a ...interface{}) string
@@ -39,6 +41,7 @@ type ColorPrinter struct {
 	Consumer   ColorPrinterFunc
 	Message    ColorPrinterFunc
 	Key        ColorPrinterFunc
+	Error      ColorPrinterFunc
 }
 
 // GetFuncMap returns a function map that can be used in a template.
@@ -52,7 +55,8 @@ func (s ColorPrinter) GetFuncMap() template.FuncMap {
 		"VHostColor":      s.VHost,
 		"ConsumerColor":   s.Consumer,
 		"MessageColor":    s.Message,
-		"KeyColor":        s.Key}
+		"KeyColor":        s.Key,
+		"ErrorColor":      s.Error}
 }
 
 // NewColorableWriter returns a colorable writer for the given file (e.g
@@ -74,6 +78,7 @@ func NewColorPrinter(noColor bool) ColorPrinter {
 			nullPrinter,
 			nullPrinter,
 			nullPrinter,
+			nullPrinter,
 			nullPrinter}
 	}
 	return ColorPrinter{
@@ -86,5 +91,6 @@ func NewColorPrinter(noColor bool) ColorPrinter {
 		Consumer:   color.New(colorConsumer).SprintFunc(),
 		Message:    color.New(colorMessage).SprintFunc(),
 		Key:        color.New(colorKey).SprintFunc(),
+		Error:      colorError.SprintFunc(),
 	}
 }

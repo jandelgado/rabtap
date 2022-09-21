@@ -92,9 +92,9 @@ Output of `rabtap info --stats` command, showing additional statistics:
 ### Visualize broker topology with graphviz
 
 Using the `--format=dot` option, the `info` command can generate output in the
-`dot` format, which can be visualized using graphviz, e.g. `rabtap info
---show-default --format dot | dot -T svg > mybroker.svg`. The resulting SVG
-file can be visualized with a web browser.
+[dot format](https://graphviz.org/doc/info/lang.html), which can be visualized
+using graphviz, e.g. `rabtap info --show-default --format dot | dot -T svg >
+mybroker.svg`. The resulting SVG file can be visualized with a web browser.
 
 ![info mode](doc/images/info-dot.png)
 
@@ -664,7 +664,7 @@ $ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672'
 
 #### Exchange commands
 
-The `exchange` command is used to create and remove exchanges:
+The `exchange` command is used to create, remove and bind exchanges:
 
 ```console
 $ rabtap exchange create myexchange --type topic

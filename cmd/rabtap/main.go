@@ -83,7 +83,7 @@ func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) 
 				Mode:                args.InfoMode,
 				ShowConsumers:       args.ShowConsumers,
 				ShowDefaultExchange: args.ShowDefaultExchange,
-				QueueFilter:         queueFilter,
+				Filter:              queueFilter,
 				OmitEmptyExchanges:  args.OmitEmptyExchanges},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    args.Format,

@@ -7,6 +7,7 @@ package testcommon
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -150,7 +151,8 @@ func PublishTestMessages(t *testing.T, ch *amqp.Channel, numMessages int,
 	// in the tap-exchange defined above.
 	for i := 1; i <= numMessages; i++ {
 		// publish the test message
-		err := ch.Publish(
+		err := ch.PublishWithContext(
+			context.TODO(),
 			exchangeName,
 			routingKey,
 			false, // mandatory

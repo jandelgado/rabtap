@@ -31,6 +31,7 @@ func cmdInfo(ctx context.Context, cmd CmdInfoArg) {
 	failOnError(err, "failed instanciating tree builder", os.Exit)
 	renderer := NewBrokerInfoRenderer(cmd.renderConfig)
 
-	tree, _ := treeBuilder.BuildTree(cmd.rootNode, brokerInfo)
-	failOnError(renderer.Render(tree, os.Stdout), "rendering failed", os.Exit)
+	metadataService := rabtap.NewInMemoryMetadataService(brokerInfo)
+	tree, _ := treeBuilder.BuildTree(cmd.rootNode, metadataService)
+	failOnError(renderer.Render(tree, cmd.out), "rendering failed", os.Exit)
 }

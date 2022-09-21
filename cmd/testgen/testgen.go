@@ -12,6 +12,7 @@ package main
 // amqp://guest:guest@127.0.0.1:5672
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -128,7 +129,8 @@ func generateTestMessages(ch *amqp.Channel, exchanges []string, numTestQueues in
 				routingKey, headers := getRoutingKeyForExchange(exchange, i)
 				log.Printf("publishing msg #%d to exchange '%s' with routing key '%s' and headers %#+v",
 					count, exchange, routingKey, headers)
-				err := ch.Publish(
+				err := ch.PublishWithContext(
+					context.TODO(),
 					exchange,
 					routingKey,
 					false, // mandatory

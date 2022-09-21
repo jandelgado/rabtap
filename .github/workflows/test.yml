@@ -1,3 +1,4 @@
+---
 on:
   push:
     branches:
@@ -5,6 +6,9 @@ on:
   pull_request:
     branches:
       - master
+
+env:
+  GO_VERSION: 1.18.x
 
 name: run tests
 jobs:
@@ -14,7 +18,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18.x
+          go-version: ${{ env.GO_VERSION }}
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run linters
@@ -35,7 +39,7 @@ jobs:
         if: success()
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18.x
+          go-version: ${{ env.GO_VERSION }}
       - name: wait for RabbitMQ becoming ready
         run:
           timeout 30 sh -c "while true; do curl -s http://guest:password@localhost:15672/api/exchanges/%2f/amq.topic && break || sleep 3; done"
@@ -48,15 +52,17 @@ jobs:
         with:
           github-token: ${{ secrets.github_token }}
           path-to-lcov: coverage.lcov
-
       - name: Build release artifacts
+        if: env.build_artifacts # currently disabled
         uses: goreleaser/goreleaser-action@v3
         with:
           version: latest
           args: build --rm-dist --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload assets
+        if: env.build_artifacts
         uses: actions/upload-artifact@v3
         with:
           name: rabtap-binaries

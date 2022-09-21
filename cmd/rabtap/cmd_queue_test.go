@@ -1,5 +1,6 @@
 // Copyright (C) 2017 Jan Delgado
 
+//go:build integration
 // +build integration
 
 package main
@@ -7,6 +8,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/url"
 	"os"
 	"testing"
@@ -22,6 +24,20 @@ func TestAmqpHeaderRoutingModeConverts(t *testing.T) {
 	assert.Equal(t, "all", amqpHeaderRoutingMode(HeaderMatchAll))
 	assert.Equal(t, "any", amqpHeaderRoutingMode(HeaderMatchAny))
 	assert.Equal(t, "", amqpHeaderRoutingMode(HeaderNone))
+}
+
+func findQueueByName(apiURL *url.URL, vhost, name string) (*rabtap.RabbitQueue, error) {
+	client := rabtap.NewRabbitHTTPClient(apiURL, &tls.Config{})
+	queues, err := client.Queues(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	for _, q := range queues {
+		if q.Name == name && q.Vhost == vhost {
+			return &q, nil
+		}
+	}
+	return nil, fmt.Errorf("queue not found")
 }
 
 func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
@@ -55,15 +71,11 @@ func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	// TODO add a simple client to testcommon
-	client := rabtap.NewRabbitHTTPClient(apiURL, &tls.Config{})
-	queues, err := client.Queues(context.TODO())
-	assert.Nil(t, err)
-	i := rabtap.FindQueueByName(queues, "/", testQueue)
-	require.True(t, i != -1)
+	// Check that the queue was created using the REST API
+	queue, err := findQueueByName(apiURL, "/", testQueue)
+	require.NoError(t, err)
 
 	// check that queue is empty
-	queue := queues[i]
 	assert.Equal(t, 0, queue.Messages)
 
 	// unbind queue

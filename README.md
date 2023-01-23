@@ -943,7 +943,7 @@ $ go install github.com/jandelgado/rabtap/cmd/rabtap@latest
 
 ### Build using Makefile and tests
 
-To build rabtap from source, you need [go](https://golang.org/) (version >= 1.12)
+To build rabtap from source, you need [go](https://golang.org/) (version >= 1.18)
 and [golangci-lint](https://github.com/golangci/golangci-lint) installed. 
 
 ```

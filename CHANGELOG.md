@@ -1,5 +1,9 @@
 # Changelog for rabtap
 
+## v1.38.2 (2023-02-24)
+
+* update dependencies, use go 1.20
+
 ## v1.38 (2022-09-16)
 
 * new: create exchange-to-exchange bindings with `rabtap exchange bind ...`

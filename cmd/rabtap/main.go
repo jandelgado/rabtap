@@ -8,31 +8,50 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+
+	// log2 "log"
+
 	"net/url"
 	"os"
 	"os/signal"
 	"sort"
 	"time"
 
+	"github.com/fatih/color"
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"
 )
 
+//var log = slog.Default()
+
+// type Logger struct{}
+
+// func (s Logger) Debug(format string, a ...interface{})  { log2.Printf("FATAL "+format, a...) }
+// func (s Logger) Error(err error)                        { log2.Printf("ERROR %v", err) }
+// func (s Logger) Fatal(err error)                        { log2.Fatalf("FATAL %v", err) }
+// func (s Logger) Info(format string, a ...interface{})   { log2.Printf("INFO "+format, a...) }
+// func (s Logger) Warnf(format string, a ...interface{})  { log2.Printf("WARN "+format, a...) }
+// func (s Logger) Debugf(format string, a ...interface{}) { log2.Printf("DEBUG "+format, a...) }
+// func (s Logger) Infof(format string, a ...interface{})  { log2.Printf("INFO "+format, a...) }
+// func (s Logger) Errorf(format string, a ...interface{}) { log2.Printf("ERROR "+format, a...) }
+
+// var log = Logger{}
+
 var log = logrus.New()
 
-func initLogging(verbose bool) {
-	log.Formatter = &logrus.TextFormatter{
-		ForceColors:            true,
-		DisableLevelTruncation: true,
-		FullTimestamp:          false,
-	}
-	log.Out = NewColorableWriter(os.Stderr)
-	if verbose {
-		log.SetLevel(logrus.DebugLevel)
-	} else {
-		log.SetLevel(logrus.WarnLevel)
-	}
-}
+// func initLogging(verbose bool) {
+//     log.Formatter = &logrus.TextFormatter{
+//         ForceColors:            true,
+//         DisableLevelTruncation: true,
+//         FullTimestamp:          false,
+//     }
+//     log.Out = NewColorableWriter(os.Stderr)
+//     if verbose {
+//         log.SetLevel(logrus.DebugLevel)
+//     } else {
+//         log.SetLevel(logrus.WarnLevel)
+//     }
+// }
 
 func failOnError(err error, msg string, exitFunc func(int)) {
 	if err != nil {
@@ -255,18 +274,22 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 }
 
 func main() {
+	color.NoColor = false
+
+	ctx, _ := context.WithCancel(context.Background())
+
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	initLogging(args.Verbose)
+	//	initLogging(args.Verbose)
 	tlsConfig := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
 
 	// translate ^C (Interrput) in ctx.Done()
 	ctx, cancel := context.WithCancel(context.Background())
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	//	signal.Notify(c, os.Interrupt)		// NOT WITH WASM!
 	defer func() {
 		signal.Stop(c)
 		cancel()

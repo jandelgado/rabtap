@@ -7,8 +7,10 @@ TOXICMD:=docker-compose exec toxiproxy /go/bin/toxiproxy-cli
 .PHONY: test-app test-lib build build tags short-test test run-broker clean dist-clean toxiproxy-setup toxiproxy-cmd
 
 build:
-	cd cmd/rabtap && GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
+	cd cmd/rabtap && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
 				"-s -w -X main.version=$(VERSION)" -o ../../bin/rabtap
+wasm-build:
+	cd cmd/rabtap && GOOS=wasip1 GOARCH=wasm gotip build -o ../../bin/rabtap-wasm
 
 tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)

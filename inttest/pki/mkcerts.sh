@@ -6,7 +6,7 @@ set -eou pipefail
 
 CA_CN=${CA_CN:-rabtap testing CA}
 SERVER_CN=${SERVER_CN:-localhost}
-CLIENTS=${CLIENTS:-testuser unknown}
+CLIENTS=${CLIENTS:-testuser unknown guest}
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 

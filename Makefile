@@ -4,28 +4,28 @@ SOURCE=$(shell find . -name "*go" -a -not -path "./vendor/*" -not -path "./cmd/t
 VERSION=$(shell git describe --tags)
 TOXICMD:=docker-compose exec toxiproxy /go/bin/toxiproxy-cli
 
-.PHONY: test-app test-lib build build tags short-test test run-broker clean dist-clean toxiproxy-setup toxiproxy-cmd
+.PHONY: phony
 
-build:
-	cd cmd/rabtap && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
-				"-s -w -X main.version=$(VERSION)" -o ../../bin/rabtap
-wasm-build:
-	cd cmd/rabtap && GOOS=wasip1 GOARCH=wasm gotip build -o ../../bin/rabtap-wasm
+build: phony
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
+				"-s -w -X main.version=$(VERSION)" -o ./bin/rabtap ./cmd/rabtap
+wasm-build: phony
+	CGO_ENABLED=1 GOOS=wasip1 GOARCH=wasm gotip build -o ./bin/rabtap-wasm ./cmd/rabtap
 
 tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)
 
-lint:
+lint: phony
 	golangci-lint run
 
-short-test: 
+short-test:  phony
 	go test -v -race  github.com/jandelgado/rabtap/cmd/rabtap
 	go test -v -race  github.com/jandelgado/rabtap/pkg
 
-test-app:
+test-app: phony
 	go test -race -v -tags "integration" -cover -coverprofile=coverage_app.out github.com/jandelgado/rabtap/cmd/rabtap
 
-test-lib:
+test-lib: phony
 	go test -race -v -tags "integration" -cover -coverprofile=coverage.out github.com/jandelgado/rabtap/pkg
 
 test: test-app test-lib
@@ -34,24 +34,25 @@ test: test-app test-lib
 
 # docker-compose up must be first called. Then create a proxy with
 # this target and connect to to localhost:55672 (amqp).
-toxiproxy-setup:
+toxiproxy-setup: phony
 	$(TOXICMD) c amqp --listen :55672 --upstream rabbitmq:5672 || true
 
 # call with e.g. 
 # make toxiproxy-cmd         -- show help
 # make TOXIARGS="toggle amqp"  -- toggle amqp proxy
-toxiproxy-cmd:
+toxiproxy-cmd: phony
 	$(TOXICMD) $(TOXIARGS)
 
 # run rabbitmq server for integration test using docker container.
-run-broker:
+run-broker: phony
 	cd inttest/pki && ./mkcerts.sh
 	cd inttest/rabbitmq && docker-compose up
 
 dist-clean: clean
 	rm -rf *.out bin/ dist/
 
-clean:
-	cd cmd/rabtap && go clean -r
-	cd cmd/testgen && go clean -r
+clean: phony
+	go clean -r ./cmd/rabtap
+	go clean -r ./cmd/testgen
 
+phony:

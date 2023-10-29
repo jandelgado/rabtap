@@ -43,7 +43,7 @@ type MessageReceiveLoopPred func(rabtap.TapMessage) bool
 
 // createCountingMessageReceivePred returns a (stateful) predicate that will
 // return false after it is called num times, thus limiting the number of
-// messages received. If num is 0, a predicate always returning true is
+// mssages received. If num is 0, a predicate always returning true is
 // returned.
 func createCountingMessageReceivePred(num int64) MessageReceiveLoopPred {
 

@@ -1,5 +1,5 @@
 # This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
+# Make sure to check the documentation at https://goreleaser.com/customization/builds/
 before:
   hooks:
     - go mod tidy
@@ -9,11 +9,13 @@ builds:
     dir: cmd/rabtap
     goos:
       - linux
+      - wasip1
       - darwin
       - windows
       - freebsd
       - openbsd
     goarch:
+      - wasm
       - amd64
       - arm
       - arm64
@@ -21,6 +23,12 @@ builds:
       - 6
       - 7
     ignore:
+      - goos: wasip1
+        goarch: amd64
+      - goos: wasipi
+        goarch: arm
+      - goos: wasipi
+        goarch: arm64
       - goos: darwin
         goarch: "386"
       - goos: darwin
@@ -34,12 +42,6 @@ archives:
       - README.md
       - LICENSE
       - CHANGELOG.md
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
 snapshot:

@@ -1,5 +1,9 @@
 # Changelog for rabtap
 
+## v1.39.0 (2023-10-29)
+
+* experimental WASM support, use go 1.21, simplify code
+
 ## v1.38.2 (2023-02-24)
 
 * update dependencies, use go 1.20

@@ -25,7 +25,6 @@ type AcknowledgeFunc func(rabtap.TapMessage) error
 type MessageReceiveFuncOptions struct {
 	out              io.Writer
 	format           string // currently: raw, json, json-nopp
-	noColor          bool
 	silent           bool
 	optSaveDir       *string
 	filenameProvider FilenameProvider
@@ -180,13 +179,13 @@ func createMessageReceiveFuncPrintJSON(out io.Writer, marshaller marshalFunc) Me
 
 // createMessageReceiveFuncPrintPretty returns a function that pretty prints
 // received messaged to the provided writer
-func createMessageReceiveFuncPrintPretty(out io.Writer, noColor bool) MessageReceiveFunc {
+func createMessageReceiveFuncPrintPretty(out io.Writer) MessageReceiveFunc {
 	return func(message rabtap.TapMessage) error {
-		return PrettyPrintMessage(out, message, noColor)
+		return PrettyPrintMessage(out, message)
 	}
 }
 
-func createMessageReceivePrintFunc(format string, out io.Writer, noColor bool, silent bool) (MessageReceiveFunc, error) {
+func createMessageReceivePrintFunc(format string, out io.Writer, silent bool) (MessageReceiveFunc, error) {
 	if silent {
 		return NullMessageReceiveFunc, nil
 	}
@@ -197,7 +196,7 @@ func createMessageReceivePrintFunc(format string, out io.Writer, noColor bool, s
 	case "json":
 		return createMessageReceiveFuncPrintJSON(out, JSONMarshalIndent), nil
 	case "raw":
-		return createMessageReceiveFuncPrintPretty(out, noColor), nil
+		return createMessageReceiveFuncPrintPretty(out), nil
 	default:
 		return nil, fmt.Errorf("invalid format %s", format)
 	}
@@ -226,7 +225,7 @@ func createMessageReceiveSaveFunc(format string, optSaveDir *string, filenamePro
 // optionally to the provided directory is returned.
 func createMessageReceiveFunc(opts MessageReceiveFuncOptions) (MessageReceiveFunc, error) {
 
-	printFunc, err := createMessageReceivePrintFunc(opts.format, opts.out, opts.noColor, opts.silent)
+	printFunc, err := createMessageReceivePrintFunc(opts.format, opts.out, opts.silent)
 	if err != nil {
 		return printFunc, err
 	}

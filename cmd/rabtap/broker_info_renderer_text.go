@@ -30,7 +30,7 @@ type brokerInfoRendererText struct {
 // NewBrokerInfoRendererText returns a BrokerInfoRenderer that renders for
 // text console.
 func NewBrokerInfoRendererText(config BrokerInfoRendererConfig) BrokerInfoRenderer {
-	colorizer := NewColorPrinter(config.NoColor)
+	colorizer := NewColorPrinter()
 	// TODO inject
 	templateFuncs := MergeTemplateFuncs(colorizer.GetFuncMap(), RabtapTemplateFuncs)
 	return &brokerInfoRendererText{

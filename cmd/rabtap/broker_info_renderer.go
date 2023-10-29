@@ -13,7 +13,6 @@ import (
 type BrokerInfoRendererConfig struct {
 	Format    string // "text", "dot"
 	ShowStats bool
-	NoColor   bool
 }
 
 // BrokerInfoRenderer renders a tree representation represented by a rootNode

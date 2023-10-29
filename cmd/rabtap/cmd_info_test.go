@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fatih/color"
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/stretchr/testify/assert"
@@ -39,6 +40,7 @@ func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
 
 	var actual bytes.Buffer
 	rootURL, _ := url.Parse("http://rabbitmq/api")
+	color.NoColor = true
 	cmdInfo(context.TODO(),
 		CmdInfoArg{
 			rootNode: rootURL,
@@ -51,8 +53,7 @@ func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
 				OmitEmptyExchanges:  false},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    "text",
-				ShowStats: false,
-				NoColor:   true},
+				ShowStats: false},
 			out: &actual})
 
 	expected := `http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
@@ -97,6 +98,7 @@ func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
 	rootURL, _ := url.Parse("http://rabbitmq/api")
 
 	var actual bytes.Buffer
+	color.NoColor = true
 	cmdInfo(context.TODO(),
 		CmdInfoArg{
 			rootNode: rootURL,
@@ -109,8 +111,7 @@ func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
 				OmitEmptyExchanges:  false},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    "text",
-				ShowStats: false,
-				NoColor:   true},
+				ShowStats: false},
 			out: &actual})
 
 	expected := `http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')

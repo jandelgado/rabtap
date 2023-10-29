@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	// log2 "log"
-
 	"net/url"
 	"os"
 	"sort"
@@ -20,21 +18,6 @@ import (
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"
 )
-
-//var log = slog.Default()
-
-// type Logger struct{}
-
-// func (s Logger) Debug(format string, a ...interface{})  { log2.Printf("FATAL "+format, a...) }
-// func (s Logger) Error(err error)                        { log2.Printf("ERROR %v", err) }
-// func (s Logger) Fatal(err error)                        { log2.Fatalf("FATAL %v", err) }
-// func (s Logger) Info(format string, a ...interface{})   { log2.Printf("INFO "+format, a...) }
-// func (s Logger) Warnf(format string, a ...interface{})  { log2.Printf("WARN "+format, a...) }
-// func (s Logger) Debugf(format string, a ...interface{}) { log2.Printf("DEBUG "+format, a...) }
-// func (s Logger) Infof(format string, a ...interface{})  { log2.Printf("INFO "+format, a...) }
-// func (s Logger) Errorf(format string, a ...interface{}) { log2.Printf("ERROR "+format, a...) }
-
-// var log = Logger{}
 
 var log = logrus.New()
 
@@ -103,8 +86,7 @@ func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) 
 				OmitEmptyExchanges:  args.OmitEmptyExchanges},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    args.Format,
-				ShowStats: args.ShowStats,
-				NoColor:   args.NoColor},
+				ShowStats: args.ShowStats},
 			out: NewColorableWriter(os.Stdout)})
 }
 
@@ -169,7 +151,6 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	opts := MessageReceiveFuncOptions{
 		out:              NewColorableWriter(os.Stdout),
-		noColor:          args.NoColor,
 		format:           args.Format,
 		silent:           args.Silent,
 		optSaveDir:       args.SaveDir,
@@ -196,7 +177,6 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	opts := MessageReceiveFuncOptions{
 		out:              NewColorableWriter(os.Stdout),
-		noColor:          args.NoColor,
 		format:           args.Format,
 		silent:           args.Silent,
 		optSaveDir:       args.SaveDir,
@@ -216,6 +196,12 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 }
 
 func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) {
+	if args.commonArgs.NoColor {
+		color.NoColor = true
+	}
+	if args.commonArgs.ForceColor {
+		color.NoColor = false
+	}
 	switch args.Cmd {
 	case InfoCmd:
 		startCmdInfo(ctx, args, args.APIURL)
@@ -266,14 +252,10 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 		failOnError(cmdConnClose(ctx, args.APIURL, args.ConnName,
 			args.CloseReason, tlsConfig),
 			fmt.Sprintf("close connection '%s'", args.ConnName), os.Exit)
-
 	}
 }
 
 func main() {
-	// Test: force color
-	color.NoColor = false
-
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)

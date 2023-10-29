@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fatih/color"
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
@@ -38,8 +39,8 @@ func ExamplePrettyPrintMessage() {
 	}
 
 	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
-	noColor := true
-	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, ts), noColor)
+	color.NoColor = true // disable colors for test
+	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, ts))
 
 	// Output:
 	// ------ message received on 2019-06-06T23:00:00Z ------
@@ -65,9 +66,9 @@ func ExamplePrettyPrintMessage_withFilteredAtributes() {
 		Body:     []byte("simple test message"),
 	}
 
-	noColor := true
+	color.NoColor = true
 	ts := time.Date(2019, time.June, 6, 23, 0, 0, 0, time.UTC)
-	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, ts), noColor)
+	_ = PrettyPrintMessage(os.Stdout, rabtap.NewTapMessage(&message, ts))
 
 	// Output:
 	// ------ message received on 2019-06-06T23:00:00Z ------

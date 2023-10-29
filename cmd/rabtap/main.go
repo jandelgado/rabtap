@@ -13,7 +13,6 @@ import (
 
 	"net/url"
 	"os"
-	"os/signal"
 	"sort"
 	"time"
 
@@ -39,19 +38,19 @@ import (
 
 var log = logrus.New()
 
-// func initLogging(verbose bool) {
-//     log.Formatter = &logrus.TextFormatter{
-//         ForceColors:            true,
-//         DisableLevelTruncation: true,
-//         FullTimestamp:          false,
-//     }
-//     log.Out = NewColorableWriter(os.Stderr)
-//     if verbose {
-//         log.SetLevel(logrus.DebugLevel)
-//     } else {
-//         log.SetLevel(logrus.WarnLevel)
-//     }
-// }
+func initLogging(verbose bool) {
+	log.Formatter = &logrus.TextFormatter{
+		ForceColors:            true,
+		DisableLevelTruncation: true,
+		FullTimestamp:          false,
+	}
+	log.Out = NewColorableWriter(os.Stderr)
+	if verbose {
+		log.SetLevel(logrus.DebugLevel)
+	} else {
+		log.SetLevel(logrus.WarnLevel)
+	}
+}
 
 func failOnError(err error, msg string, exitFunc func(int)) {
 	if err != nil {
@@ -274,33 +273,19 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 }
 
 func main() {
+	// Test: force color
 	color.NoColor = false
-
-	ctx, _ := context.WithCancel(context.Background())
 
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//	initLogging(args.Verbose)
+	initLogging(args.Verbose)
 	tlsConfig := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
 
-	// translate ^C (Interrput) in ctx.Done()
 	ctx, cancel := context.WithCancel(context.Background())
-	c := make(chan os.Signal, 1)
-	//	signal.Notify(c, os.Interrupt)		// NOT WITH WASM!
-	defer func() {
-		signal.Stop(c)
-		cancel()
-	}()
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
+	go SigIntHandler(ctx, cancel)
 
 	dispatchCmd(ctx, args, tlsConfig)
 }

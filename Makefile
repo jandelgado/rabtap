@@ -10,7 +10,7 @@ build: phony
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \
 				"-s -w -X main.version=$(VERSION)" -o ./bin/rabtap ./cmd/rabtap
 wasm-build: phony
-	CGO_ENABLED=1 GOOS=wasip1 GOARCH=wasm gotip build -o ./bin/rabtap-wasm ./cmd/rabtap
+	CGO_ENABLED=1 GOOS=wasip1 GOARCH=wasm go build -o ./bin/rabtap-wasm ./cmd/rabtap
 
 tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)

@@ -8,6 +8,8 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"time"
+
 	"net/http"
 	"net/url"
 	"reflect"
@@ -28,11 +30,13 @@ type RabbitHTTPClient struct {
 
 // NewRabbitHTTPClient returns a new instance of an RabbitHTTPClient. url
 // is the base API URL of the REST server.
-func NewRabbitHTTPClient(url *url.URL,
-	tlsConfig *tls.Config) *RabbitHTTPClient {
+func NewRabbitHTTPClient(url *url.URL, tlsConfig *tls.Config) *RabbitHTTPClient {
 
-	tr := &http.Transport{TLSClientConfig: tlsConfig, DisableCompression: false}
-	client := &http.Client{Transport: tr}
+	tr := &http.Transport{
+		TLSClientConfig:    tlsConfig,
+		DisableCompression: false,
+		Dial:               Dialer}
+	client := &http.Client{Transport: tr, Timeout: time.Duration(2 * time.Second)}
 	return &RabbitHTTPClient{url, client}
 }
 
@@ -43,9 +47,7 @@ type httpRequest struct {
 
 // getResource gets resource constructed from s.url and equest.url and
 // deserialized the resource into an request.t type, which is returned.
-// TODO split function in http and unmarshaling part
-func (s RabbitHTTPClient) getResource(ctx context.Context, request httpRequest) (interface{}, error) {
-
+func (s *RabbitHTTPClient) getResource(ctx context.Context, request httpRequest) (interface{}, error) {
 	r := reflect.New(request.t).Interface()
 	url := s.url.String() + "/" + request.path
 	resp, err := ctxhttp.Get(ctx, s.client, url)
@@ -62,7 +64,7 @@ func (s RabbitHTTPClient) getResource(ctx context.Context, request httpRequest) 
 }
 
 // delResource make DELETE request to given relative path
-func (s RabbitHTTPClient) delResource(ctx context.Context, path string) error {
+func (s *RabbitHTTPClient) delResource(ctx context.Context, path string) error {
 	url := s.url.String() + "/" + path
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
@@ -94,56 +96,57 @@ type BrokerInfo struct {
 }
 
 // Overview returns the /overview resource of the RabbitMQ REST API
-func (s RabbitHTTPClient) Overview(ctx context.Context) (RabbitOverview, error) {
+func (s *RabbitHTTPClient) Overview(ctx context.Context) (RabbitOverview, error) {
 	res, err := s.getResource(ctx, httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
 	return *res.(*RabbitOverview), err
 }
 
 // Connections returns the /connections resource of the RabbitMQ REST API
-func (s RabbitHTTPClient) Connections(ctx context.Context) ([]RabbitConnection, error) {
+func (s *RabbitHTTPClient) Connections(ctx context.Context) ([]RabbitConnection, error) {
 	res, err := s.getResource(ctx, httpRequest{"connections", reflect.TypeOf([]RabbitConnection{})})
 	return *res.(*[]RabbitConnection), err
 }
 
 // Channels returns the /channels resource of the RabbitMQ REST API
-func (s RabbitHTTPClient) Channels(ctx context.Context) ([]RabbitChannel, error) {
+func (s *RabbitHTTPClient) Channels(ctx context.Context) ([]RabbitChannel, error) {
 	res, err := s.getResource(ctx, httpRequest{"channels", reflect.TypeOf([]RabbitChannel{})})
 	return *res.(*[]RabbitChannel), err
 }
 
 // Exchanges returns the /exchanges resource of the RabbitMQ REST API
-func (s RabbitHTTPClient) Exchanges(ctx context.Context) ([]RabbitExchange, error) {
+func (s *RabbitHTTPClient) Exchanges(ctx context.Context) ([]RabbitExchange, error) {
 	res, err := s.getResource(ctx, httpRequest{"exchanges", reflect.TypeOf([]RabbitExchange{})})
 	return *res.(*[]RabbitExchange), err
 }
 
 // Queues returns the /queues resource of the RabbitMQ REST API
-func (s RabbitHTTPClient) Queues(ctx context.Context) ([]RabbitQueue, error) {
+func (s *RabbitHTTPClient) Queues(ctx context.Context) ([]RabbitQueue, error) {
 	res, err := s.getResource(ctx, httpRequest{"queues", reflect.TypeOf([]RabbitQueue{})})
 	return *res.(*[]RabbitQueue), err
 }
 
 // Consumers returns the /consumers resource of the RabbitMQ REST API
-func (s RabbitHTTPClient) Consumers(ctx context.Context) ([]RabbitConsumer, error) {
+func (s *RabbitHTTPClient) Consumers(ctx context.Context) ([]RabbitConsumer, error) {
 	res, err := s.getResource(ctx, httpRequest{"consumers", reflect.TypeOf([]RabbitConsumer{})})
 	return *res.(*[]RabbitConsumer), err
 }
 
 // Bindings returns the /bindings resource of the RabbitMQ REST API
-func (s RabbitHTTPClient) Bindings(ctx context.Context) ([]RabbitBinding, error) {
+func (s *RabbitHTTPClient) Bindings(ctx context.Context) ([]RabbitBinding, error) {
 	res, err := s.getResource(ctx, httpRequest{"bindings", reflect.TypeOf([]RabbitBinding{})})
 	return *res.(*[]RabbitBinding), err
 }
 
 // Vhosts returns the /vhosts resource of the RabbitMQ REST API
-func (s RabbitHTTPClient) Vhosts(ctx context.Context) ([]RabbitVhost, error) {
+func (s *RabbitHTTPClient) Vhosts(ctx context.Context) ([]RabbitVhost, error) {
 	res, err := s.getResource(ctx, httpRequest{"vhosts", reflect.TypeOf([]RabbitVhost{})})
 	return *res.(*[]RabbitVhost), err
 }
 
 // BrokerInfo gets all resources of the broker in parallel
-func (s RabbitHTTPClient) BrokerInfo(ctx context.Context) (BrokerInfo, error) {
+func (s *RabbitHTTPClient) BrokerInfo(ctx context.Context) (BrokerInfo, error) {
 	g, ctx := errgroup.WithContext(ctx)
+
 	var r BrokerInfo
 	g.Go(func() (err error) { r.Overview, err = s.Overview(ctx); return })
 	g.Go(func() (err error) { r.Connections, err = s.Connections(ctx); return })
@@ -157,7 +160,7 @@ func (s RabbitHTTPClient) BrokerInfo(ctx context.Context) (BrokerInfo, error) {
 }
 
 // CloseConnection closes a connection by DELETING the associated resource
-func (s RabbitHTTPClient) CloseConnection(ctx context.Context, conn, reason string) error {
+func (s *RabbitHTTPClient) CloseConnection(ctx context.Context, conn, reason string) error {
 	return s.delResource(ctx, "connections/"+conn)
 }
 

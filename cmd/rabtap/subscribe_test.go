@@ -145,7 +145,6 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 		out:              &b,
 		format:           "raw",
 		optSaveDir:       &testDir,
-		noColor:          false,
 		silent:           false,
 		filenameProvider: func() string { return "tapfilename" },
 	}
@@ -177,7 +176,6 @@ func TestCreateMessageReceiveFuncPrintsNothingWhenSilentOptionIsSet(t *testing.T
 		out:        &b,
 		format:     "raw",
 		optSaveDir: nil,
-		noColor:    false,
 		silent:     true,
 	}
 	rcvFunc, err := createMessageReceiveFunc(opts)

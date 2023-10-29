@@ -60,10 +60,9 @@ func NewMessageFormatter(contentType string) MessageFormatter {
 }
 
 // PrettyPrintMessage formats and prints a tapped message
-func PrettyPrintMessage(out io.Writer, message rabtap.TapMessage,
-	noColor bool) error {
+func PrettyPrintMessage(out io.Writer, message rabtap.TapMessage) error {
 
-	colorizer := NewColorPrinter(noColor)
+	colorizer := NewColorPrinter()
 
 	formatter := NewMessageFormatter(message.AmqpMessage.ContentType)
 

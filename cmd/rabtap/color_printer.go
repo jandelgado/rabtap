@@ -4,7 +4,6 @@ package main
 // print colors on the console, supporting golang templating
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"text/template"
@@ -66,21 +65,8 @@ func NewColorableWriter(file *os.File) io.Writer {
 }
 
 // NewColorPrinter returns a ColorPrinter used to color the console
-// output. If noColor is set to true, a no-op color printer is returned.
-func NewColorPrinter(noColor bool) ColorPrinter {
-	if noColor {
-		nullPrinter := fmt.Sprint
-		return ColorPrinter{nullPrinter,
-			nullPrinter,
-			nullPrinter,
-			nullPrinter,
-			nullPrinter,
-			nullPrinter,
-			nullPrinter,
-			nullPrinter,
-			nullPrinter,
-			nullPrinter}
-	}
+// output. Use color.NoColor = true to disable colors globally.
+func NewColorPrinter() ColorPrinter {
 	return ColorPrinter{
 		URL:        color.New(colorURL).SprintFunc(),
 		VHost:      color.New(colorVHost).SprintFunc(),

@@ -1,5 +1,6 @@
 // Copyright (C) 2022 Jan Delgado
 
+//go:build integration
 // +build integration
 
 package rabtap
@@ -60,12 +61,10 @@ func TestDialTLSConnectsToTLSEndpoint(t *testing.T) {
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
 		tlsConfig.RootCAs = caCertPool
-		tlsConfig.BuildNameToCertificate()
 
 		cert, err := tls.LoadX509KeyPair(certDir+tc.certFile, certDir+tc.keyFile)
 		assert.NoError(t, err)
 		tlsConfig.Certificates = []tls.Certificate{cert}
-		tlsConfig.BuildNameToCertificate()
 
 		// when
 		conn, err := DialTLS(tc.url, tlsConfig)

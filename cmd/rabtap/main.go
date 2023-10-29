@@ -8,12 +8,13 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+
 	"net/url"
 	"os"
-	"os/signal"
 	"sort"
 	"time"
 
+	"github.com/fatih/color"
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"
 )
@@ -57,7 +58,6 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		failOnError(err, "invalid client tls cert/key file", os.Exit)
 		tlsConfig.Certificates = []tls.Certificate{cert}
-		tlsConfig.BuildNameToCertificate()
 	}
 
 	if caFile != "" {
@@ -66,7 +66,6 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
 		tlsConfig.RootCAs = caCertPool
-		tlsConfig.BuildNameToCertificate()
 	}
 	return tlsConfig
 }
@@ -87,8 +86,7 @@ func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) 
 				OmitEmptyExchanges:  args.OmitEmptyExchanges},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    args.Format,
-				ShowStats: args.ShowStats,
-				NoColor:   args.NoColor},
+				ShowStats: args.ShowStats},
 			out: NewColorableWriter(os.Stdout)})
 }
 
@@ -153,7 +151,6 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	opts := MessageReceiveFuncOptions{
 		out:              NewColorableWriter(os.Stdout),
-		noColor:          args.NoColor,
 		format:           args.Format,
 		silent:           args.Silent,
 		optSaveDir:       args.SaveDir,
@@ -180,7 +177,6 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	opts := MessageReceiveFuncOptions{
 		out:              NewColorableWriter(os.Stdout),
-		noColor:          args.NoColor,
 		format:           args.Format,
 		silent:           args.Silent,
 		optSaveDir:       args.SaveDir,
@@ -200,6 +196,12 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 }
 
 func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) {
+	if args.commonArgs.NoColor {
+		color.NoColor = true
+	}
+	if args.commonArgs.ForceColor {
+		color.NoColor = false
+	}
 	switch args.Cmd {
 	case InfoCmd:
 		startCmdInfo(ctx, args, args.APIURL)
@@ -250,7 +252,6 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 		failOnError(cmdConnClose(ctx, args.APIURL, args.ConnName,
 			args.CloseReason, tlsConfig),
 			fmt.Sprintf("close connection '%s'", args.ConnName), os.Exit)
-
 	}
 }
 
@@ -263,21 +264,8 @@ func main() {
 	initLogging(args.Verbose)
 	tlsConfig := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
 
-	// translate ^C (Interrput) in ctx.Done()
 	ctx, cancel := context.WithCancel(context.Background())
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	defer func() {
-		signal.Stop(c)
-		cancel()
-	}()
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
+	go SigIntHandler(ctx, cancel)
 
 	dispatchCmd(ctx, args, tlsConfig)
 }

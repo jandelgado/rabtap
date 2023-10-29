@@ -31,16 +31,16 @@ const (
 Usage:
   rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
-              [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
+              [--show-default] [--mode=MODE] [--format=FORMAT] [-kncv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR]
-              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jknsv]
+              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR]
-              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jknsv]
+              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
-              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jksvn]
+              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jkcsvn]
 			  [--idle-timeout=DURATION]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
@@ -90,6 +90,7 @@ Arguments and options:
                       additional arguments. e.g. '--args=x-queue-type=quorum'
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
+ -c, --color          force colored output
  --confirms           enable publisher confirms and wait for confirmations.
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
@@ -245,6 +246,7 @@ type commonArgs struct {
 	Verbose     bool
 	InsecureTLS bool
 	NoColor     bool
+	ForceColor  bool
 	AMQPURL     *url.URL // pub, queue, exchange: amqp broker to use
 }
 
@@ -351,7 +353,8 @@ func parseCommonArgs(args map[string]interface{}) commonArgs {
 		TLSCaFile:   tlsCaFile,
 		Verbose:     args["--verbose"].(bool),
 		InsecureTLS: args["--insecure"].(bool),
-		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != "")}
+		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != ""),
+		ForceColor:  args["--color"].(bool)}
 }
 
 func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {

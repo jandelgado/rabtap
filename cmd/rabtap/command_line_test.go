@@ -85,8 +85,7 @@ func TestParseAMQPURLFailsIfNotSet(t *testing.T) {
 
 func TestParseAMQPURLTakesURIFromEnvironmentWhenNotSpecified(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
-	os.Setenv(key, "uri")
-	defer os.Unsetenv(key)
+	t.Setenv(key, "uri")
 	args := map[string]interface{}{"--uri": []string{}}
 
 	uri, err := parseAMQPURL(args)
@@ -103,6 +102,7 @@ func TestParseTLSConfig(t *testing.T) {
 		"--verbose":       false,
 		"--insecure":      false,
 		"--no-color":      false,
+		"--color":         false,
 	}
 	commonArgs := parseCommonArgs(args)
 	assert.Equal(t, "/tmp/tls-cert.pem", commonArgs.TLSCertFile)
@@ -114,12 +114,9 @@ func TestParseTLSConfigUseEnvironment(t *testing.T) {
 	const key1 = "RABTAP_TLS_CERTFILE"
 	const key2 = "RABTAP_TLS_KEYFILE"
 	const key3 = "RABTAP_TLS_CAFILE"
-	os.Setenv(key1, "/tmp/tls-cert.pem")
-	os.Setenv(key2, "/tmp/tls-key.pem")
-	os.Setenv(key3, "/tmp/tls-ca.pem")
-	defer os.Unsetenv(key1)
-	defer os.Unsetenv(key2)
-	defer os.Unsetenv(key3)
+	t.Setenv(key1, "/tmp/tls-cert.pem")
+	t.Setenv(key2, "/tmp/tls-key.pem")
+	t.Setenv(key3, "/tmp/tls-ca.pem")
 	args := map[string]interface{}{
 		"--tls-cert-file": nil,
 		"--tls-key-file":  nil,
@@ -127,6 +124,7 @@ func TestParseTLSConfigUseEnvironment(t *testing.T) {
 		"--verbose":       false,
 		"--insecure":      false,
 		"--no-color":      false,
+		"--color":         false,
 	}
 	commonArgs := parseCommonArgs(args)
 	assert.Equal(t, "/tmp/tls-cert.pem", commonArgs.TLSCertFile)
@@ -179,8 +177,7 @@ func TestParsePubSubFormatArgRaisesErrorForInvalidOption(t *testing.T) {
 
 func TestCliTapCmdSingleUriFromEnv(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
-	os.Setenv(key, "uri")
-	defer os.Unsetenv(key)
+	t.Setenv(key, "uri")
 
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "exchange1:binding1", "--silent", "--limit=99"})
@@ -320,8 +317,7 @@ func TestCliInfoCmdMissingApi(t *testing.T) {
 
 func TestCliInfoCmdApiTakesURIFromEnv(t *testing.T) {
 	const key = "RABTAP_APIURI"
-	os.Setenv(key, "APIURI")
-	defer os.Unsetenv(key)
+	t.Setenv(key, "APIURI")
 
 	args, err := ParseCommandLineArgs(
 		[]string{"info"})
@@ -334,6 +330,7 @@ func TestCliInfoCmdApiTakesURIFromEnv(t *testing.T) {
 	assert.False(t, args.ShowConsumers)
 	assert.False(t, args.InsecureTLS)
 	assert.False(t, args.NoColor)
+	assert.False(t, args.ForceColor)
 	assert.Equal(t, "byExchange", args.InfoMode)
 }
 
@@ -341,7 +338,7 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"info", "--api=APIURI", "--stats", "--consumers",
 			"--filter=EXPR", "--omit-empty",
-			"--no-color", "-k", "--show-default"})
+			"--no-color", "--color", "-k", "--show-default"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(args.TapConfig))
@@ -354,6 +351,7 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	assert.True(t, args.ShowConsumers)
 	assert.True(t, args.ShowDefaultExchange)
 	assert.True(t, args.NoColor)
+	assert.True(t, args.ForceColor)
 	assert.True(t, args.InsecureTLS)
 	assert.True(t, args.OmitEmptyExchanges)
 }
@@ -399,8 +397,7 @@ func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 
 func TestCliPubCmdURLFromEnv(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
-	os.Setenv(key, "uri")
-	defer os.Unsetenv(key)
+	t.Setenv(key, "uri")
 	args, err := ParseCommandLineArgs(
 		[]string{"pub"})
 
@@ -666,8 +663,7 @@ func TestCliCloseConnection(t *testing.T) {
 
 func TestParseNoColorFromEnvironment(t *testing.T) {
 	const key = "NO_COLOR"
-	os.Setenv(key, "1")
-	defer os.Unsetenv(key)
+	t.Setenv(key, "1")
 
 	args, err := ParseCommandLineArgs(
 		[]string{"info", "--api=uri"})
@@ -676,4 +672,16 @@ func TestParseNoColorFromEnvironment(t *testing.T) {
 	assert.Equal(t, InfoCmd, args.Cmd)
 	assertEqualURL(t, "uri", args.APIURL)
 	assert.True(t, args.NoColor)
+	assert.False(t, args.ForceColor)
+}
+
+func TestParseForceColort(t *testing.T) {
+	args, err := ParseCommandLineArgs(
+		[]string{"info", "--api=uri", "--color"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, InfoCmd, args.Cmd)
+	assertEqualURL(t, "uri", args.APIURL)
+	assert.False(t, args.NoColor)
+	assert.True(t, args.ForceColor)
 }

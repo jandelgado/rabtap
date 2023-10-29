@@ -30,7 +30,7 @@ and exchanges, inspect broker.
         * [Default RabbitMQ broker](#default-rabbitmq-broker)
         * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
         * [Default RabbitMQ TLS config](#default-rabbitmq-tls-config)
-        * [Disable color output](#disable-color-output)
+        * [Colored output](#colored-output)
     * [Examples](#examples)
         * [Broker info](#broker-info)
         * [Wire-tapping messages](#wire-tapping-messages)
@@ -56,6 +56,7 @@ and exchanges, inspect broker.
 * [Build from source](#build-from-source)
     * [Download and build using go install](#download-and-build-using-go-install)
     * [Build using Makefile and tests](#build-using-makefile-and-tests)
+    * [Experimental WASM/wasip1 port](#experimental-wasmwasip1-port)
 * [Test data generator](#test-data-generator)
 * [Contributing](#contributing)
 * [Author](#author)
@@ -135,21 +136,22 @@ compile from source.
 ## Usage
 
 ```
+
 rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
-              [--show-default] [--mode=MODE] [--format=FORMAT] [-knv]
+              [--show-default] [--mode=MODE] [--format=FORMAT] [-kncv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR]
-              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jknsv]
+              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR]
-              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jknsv]
+              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
-              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jksvn]
+              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jkcsvn]
 			  [--idle-timeout=DURATION]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
@@ -199,6 +201,7 @@ Arguments and options:
                       additional arguments. e.g. '--args=x-queue-type=quorum'
  -b, --bindingkey=KEY binding key to use in bind queue command.
  --by-connection      output of info command starts with connections.
+ -c, --color          force colored output
  --confirms           enable publisher confirms and wait for confirmations.
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
@@ -379,9 +382,12 @@ $ echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
 ...
 ```
 
-#### Disable color output
+#### Colored output
 
-Set environment variable `NO_COLOR` to disable color output.
+Output is colored, when writing to a terminal. This behaviour can be changed:
+* set environment variable `NO_COLOR` to disable color output (or set
+  `--no-color` option)
+* set `--color` option to force colored output
 
 ### Examples
 
@@ -957,6 +963,52 @@ run on localhost. Easiest way to start one is running `make run-broker`, which
 will start a RabbitMQ docker container (i.e.  `docker run -ti --rm -p 5672:5672
 -p 15672:15672 rabbitmq:3-management`).
 
+### Experimental WASM/wasip1 port
+
+Rabtap can be compiled for Web Assembly (WASM) and the new `wasip1` `GOOS` and
+run on the console using, e.g.
+[wasirun](https://github.com/stealthrocket/wasi-go). Example:
+
+```
+$ go version
+go version go1.21.3 linux/amd64
+$ make wasm-build
+CGO_ENABLED=1 GOOS=wasip1 GOARCH=wasm go build -o ./bin/rabtap-wasm ./cmd/rabtap
+$ wasirun --version
+wasirun v0.6.5
+$ wasirun  bin/rabtap-wasm -- --api "http://guest:password@localhost:15672/api" info --no-color
+http://localhost:15672/api (broker ver='3.12.6', mgmt ver='3.12.6', cluster='rabbit@3ea5bf2bac2f')
+└─ Vhost /
+   ├─ amq.direct (exchange(direct), [D])
+   ├─ amq.fanout (exchange(fanout), [D])
+   ├─ amq.headers (exchange(headers), [D])
+   ├─ amq.match (exchange(headers), [D])
+   ├─ amq.rabbitmq.trace (exchange(topic), [D|I])
+   └─ amq.topic (exchange(topic), [D])
+```
+
+Another example using `wasirun` and `wasmedge` to publish and subscribe
+to a queue:
+
+```
+$ URI="amqp://guest:password@localhost/"
+$ rabtap queue create test
+$ rabtap queue bind test to amq.topic --bindingkey=key
+$ echo "hello" | wasmedge  bin/rabtap-wasm  --uri "$URI" pub --exchange amq.topic --routingkey=key
+$ wasirun  bin/rabtap-wasm -- --uri "$URI" sub test --limit=1
+------ message received on 2023-10-29T11:48:56Z ------
+exchange.......: amq.topic
+routingkey.....: key
+hello
+```
+See [my blog](https://jandelgado.github.io/blog/posts/rabtap-wasm) for details.
+
+Limitations:
+* environment variables like `RABTAP_AMQPURI` not supported, must specify
+    all options on the command line
+* depending on the runtime, colors must explicitly set or disabled using `--color` and `--no-color`,
+    since terminal detection not working.
+
 ## Test data generator
 
 A simple [test data generator tool](cmd/testgen/README.md) for manual tests is
@@ -978,6 +1030,6 @@ Jan Delgado (jdelgado at gmx dot net)
 
 ## Copyright and license
 
-Copyright (c) 2017-2021 Jan Delgado.
+Copyright (c) 2017-2023 Jan Delgado.
 rabtap is licensed under the GPLv3 license.
 

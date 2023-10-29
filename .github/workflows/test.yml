@@ -9,7 +9,7 @@ on:
 
 env:
   GO_VERSION: "1.21.3"
-  GO_LANG_CI_LINT_VERSION: "v1.46.2"
+  GO_LANG_CI_LINT_VERSION: "v1.53.3"
 
 name: run tests
 jobs:

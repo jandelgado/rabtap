@@ -2,7 +2,7 @@
 
 SOURCE=$(shell find . -name "*go" -a -not -path "./vendor/*" -not -path "./cmd/testgen/*" )
 VERSION=$(shell git describe --tags)
-TOXICMD:=docker-compose exec toxiproxy /go/bin/toxiproxy-cli
+TOXICMD:=docker compose exec toxiproxy /go/bin/toxiproxy-cli
 
 .PHONY: phony
 
@@ -46,7 +46,7 @@ toxiproxy-cmd: phony
 # run rabbitmq server for integration test using docker container.
 run-broker: phony
 	cd inttest/pki && ./mkcerts.sh
-	cd inttest/rabbitmq && docker-compose up
+	cd inttest/rabbitmq && docker compose up
 
 dist-clean: clean
 	rm -rf *.out bin/ dist/

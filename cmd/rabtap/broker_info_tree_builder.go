@@ -205,6 +205,7 @@ func (s defaultBrokerInfoTreeBuilder) createConnectionNodes(
 
 	vhostName := queue.Vhost
 	for _, consumer := range metadataService.Consumers() { // TODO AllConsumersByQueue
+		consumer := consumer
 		if !(consumer.Queue.Vhost == vhostName && consumer.Queue.Name == queue.Name) {
 			continue
 		}
@@ -336,14 +337,14 @@ func (s defaultBrokerInfoTreeBuilder) createRootNode(rootNodeURL *url.URL,
 }
 
 // buildTree renders given brokerInfo into a tree:
-//  RabbitMQ-Host
-//  +--VHost
-//     +--Exchange
-//        +--Queue bound to exchange
-//           +--Connection (optional)
-//              +--Channel
-//                 +--Consumer
 //
+//	RabbitMQ-Host
+//	+--VHost
+//	   +--Exchange
+//	      +--Queue bound to exchange
+//	         +--Connection (optional)
+//	            +--Channel
+//	               +--Consumer
 func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(
 	rootNodeURL *url.URL,
 	metadataService rabtap.MetadataService) (*rootNode, error) {
@@ -371,12 +372,13 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(
 }
 
 // buildTree renders given brokerInfo into a tree:
-//  RabbitMQ-Host
-//  +--VHost
-//     +--Connection
-//        +--Channel
-//          +--Consumer (opt)
-//             +--Queue
+//
+//	RabbitMQ-Host
+//	+--VHost
+//	   +--Connection
+//	      +--Channel
+//	        +--Consumer (opt)
+//	           +--Queue
 func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 	rootNodeURL *url.URL,
 	metadataService rabtap.MetadataService) (*rootNode, error) {

@@ -1,5 +1,10 @@
 # Changelog for rabtap
 
+## v1.39.1 (2024-06-089
+
+* fix consumer incorrectly displayed in info command
+* update dependencies & go
+
 ## v1.39.0 (2023-10-29)
 
 * experimental WASM support, use go 1.21, simplify code

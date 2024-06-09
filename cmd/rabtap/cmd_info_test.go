@@ -73,7 +73,7 @@ func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
    │  │  │     └─ another_consumer w/ faulty channel (consumer prefetch=0, ack_req=no, active=no, status=)
    │  │  └─ '172.17.0.1:40874 -> 172.17.0.2:5672' (connection guest@172.17.0.2:5672, state='running', client='https://github.com/streadway/amqp', ver='β', peer='172.17.0.1:40874')
    │  │     └─ '172.17.0.1:40874 -> 172.17.0.2:5672 (1)' (channel prefetch=0, state=running, unacked=0, confirms=no)
-   │  │        └─ another_consumer w/ faulty channel (consumer prefetch=0, ack_req=no, active=no, status=)
+   │  │        └─ some_consumer (consumer prefetch=0, ack_req=no, active=no, status=)
    │  └─ direct-q2 (queue(classic), key='direct-q2',  running, [D])
    ├─ test-fanout (exchange(fanout), [D])
    │  ├─ fanout-q1 (queue(classic),  idle since 2017-05-25 19:14:32, [D])

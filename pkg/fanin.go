@@ -6,7 +6,7 @@ import (
 )
 
 func Wrap[T any](c <-chan T) <-chan interface{} {
-	wrapped := make(chan interface{}, 0)
+	wrapped := make(chan interface{})
 	go func() {
 		for m := range c {
 			wrapped <- m

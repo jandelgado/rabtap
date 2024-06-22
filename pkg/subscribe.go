@@ -105,7 +105,7 @@ func (s *AmqpSubscriber) createWorkerFunc(
 
 		// also subscribe to channel close notifications
 		amqpErrorCh := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
-		fanin := Fanin(ctx, []<-chan interface{}{Wrap(ch), Wrap(amqpErrorCh)})
+		fanin := Fanin(ctx, []<-chan interface{}{WrapChan(ch), WrapChan(amqpErrorCh)})
 		return amqpMessageLoop(ctx, outCh, errOutCh, fanin)
 	}
 }

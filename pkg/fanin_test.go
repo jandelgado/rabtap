@@ -24,7 +24,7 @@ func TestFaninReceivesFromMultipleChannels(t *testing.T) {
 	defer close(chan1)
 	chan2 := make(chan string, 1)
 	defer close(chan2)
-	fanin := Fanin(context.TODO(), []<-chan interface{}{Wrap(chan1), Wrap(chan2)})
+	fanin := Fanin(context.TODO(), []<-chan interface{}{WrapChan(chan1), WrapChan(chan2)})
 
 	chan1 <- 99
 	expectOnChan(t, 99, fanin)
@@ -36,7 +36,7 @@ func TestFaninClosesChanWhenAllInputsAreClosed(t *testing.T) {
 
 	chan1 := make(chan int)
 	chan2 := make(chan int)
-	fanin := Fanin(context.TODO(), []<-chan interface{}{Wrap(chan1), Wrap(chan2)})
+	fanin := Fanin(context.TODO(), []<-chan interface{}{WrapChan(chan1), WrapChan(chan2)})
 
 	close(chan1)
 	close(chan2)

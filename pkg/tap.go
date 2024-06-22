@@ -62,9 +62,9 @@ func (s *AmqpTap) createWorkerFunc(
 		// also subscribe to channel close notifications
 		amqpErrorCh := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
 
-		chans := []<-chan interface{}{Wrap(amqpErrorCh)}
+		chans := []<-chan interface{}{WrapChan(amqpErrorCh)}
 		for _, c := range tappedChs {
-			chans = append(chans, Wrap(c))
+			chans = append(chans, WrapChan(c))
 		}
 
 		fanin := Fanin(ctx, chans)

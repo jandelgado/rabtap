@@ -1,6 +1,10 @@
 # Changelog for rabtap
 
-## v1.39.2 (2024-06-089
+## v1.39.3 (2024-06-22)
+
+* simplify code (fanin) and reduce dependencies
+
+## v1.39.2 (2024-06-08)
 
 * fix consumer incorrectly displayed in info command
 * update dependencies & go

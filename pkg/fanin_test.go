@@ -1,75 +1,47 @@
 package rabtap
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func expectIntOnChan(t *testing.T, val int, ch <-chan interface{}) {
+func expectOnChan[T any](t *testing.T, val T, ch <-chan interface{}) {
+	t.Helper()
 	select {
 	case message := <-ch:
-		assert.Equal(t, val, message.(int))
-	case <-time.After(3 * time.Second):
-		assert.Fail(t, "did not receive message in expected time")
-	}
-}
-
-func expectNilOnChan(t *testing.T, ch <-chan interface{}) {
-	select {
-	case message := <-ch:
-		assert.Nil(t, message)
-	case <-time.After(3 * time.Second):
+		assert.Equal(t, val, message.(T))
+	case <-time.After(1 * time.Second):
 		assert.Fail(t, "did not receive message in expected time")
 	}
 }
 
 func TestFaninReceivesFromMultipleChannels(t *testing.T) {
 
-	// create fanin of 3 int channels
-	chan1 := make(chan int)
-	chan2 := make(chan int)
-	chan3 := make(chan int)
-	fanin := NewFanin([]interface{}{chan1, chan2, chan3})
+	chan1 := make(chan int, 1)
+	defer close(chan1)
+	chan2 := make(chan string, 1)
+	defer close(chan2)
+	fanin := Fanin(context.TODO(), []<-chan interface{}{WrapChan(chan1), WrapChan(chan2)})
 
-	assert.True(t, fanin.Alive())
-
-	go func() {
-		chan1 <- 99
-		chan2 <- 100
-		chan3 <- 101
-	}()
-
-	expectIntOnChan(t, 99, fanin.Ch)
-	expectIntOnChan(t, 100, fanin.Ch)
-	expectIntOnChan(t, 101, fanin.Ch)
-
-	// fanin.Stop() closes fanin channel which in turn sends nil message
-	assert.Nil(t, fanin.Stop())
-	expectNilOnChan(t, fanin.Ch)
-
-	assert.False(t, fanin.Alive())
+	chan1 <- 99
+	expectOnChan(t, 99, fanin)
+	chan2 <- "hello"
+	expectOnChan(t, "hello", fanin)
 }
 
 func TestFaninClosesChanWhenAllInputsAreClosed(t *testing.T) {
 
 	chan1 := make(chan int)
 	chan2 := make(chan int)
-	fanin := NewFanin([]interface{}{chan1, chan2})
+	fanin := Fanin(context.TODO(), []<-chan interface{}{WrapChan(chan1), WrapChan(chan2)})
 
-	go func() {
-		chan1 <- 99
-		chan2 <- 100
-		close(chan1)
-		close(chan2)
-	}()
+	close(chan1)
+	close(chan2)
 
-	expectIntOnChan(t, 99, fanin.Ch)
-	expectIntOnChan(t, 100, fanin.Ch)
+	_, ok := <-fanin
 
-	// close of last channel closes fanin channel which in turn sends nil message
-	expectNilOnChan(t, fanin.Ch)
-
-	assert.False(t, fanin.Alive())
+	assert.False(t, ok)
 }

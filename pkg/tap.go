@@ -62,17 +62,21 @@ func (s *AmqpTap) createWorkerFunc(
 		// also subscribe to channel close notifications
 		amqpErrorCh := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
 
-		fanin := NewFanin(append(tappedChs, amqpErrorCh))
-		defer func() { _ = fanin.Stop() }()
-		return amqpMessageLoop(ctx, outCh, errOutCh, fanin.Ch)
+		chans := []<-chan interface{}{WrapChan(amqpErrorCh)}
+		for _, c := range tappedChs {
+			chans = append(chans, WrapChan(c))
+		}
+
+		fanin := Fanin(ctx, chans)
+		return amqpMessageLoop(ctx, outCh, errOutCh, fanin)
 	}
 }
 
 func (s *AmqpTap) setupTapsForExchanges(
 	session Session,
-	exchangeConfigList []ExchangeConfiguration) ([]interface{}, error) {
+	exchangeConfigList []ExchangeConfiguration) ([]<-chan amqp.Delivery, error) {
 
-	var channels []interface{}
+	var channels []<-chan amqp.Delivery
 
 	for _, exchangeConfig := range exchangeConfigList {
 		exchange, queue, err := s.setupTap(session, exchangeConfig)
@@ -134,7 +138,7 @@ func (s *AmqpTap) setupTap(session Session,
 // and must be set to
 // - '#' on topic exchanges
 // - a binding-key on direct exchanges (i.e. no wildcards)
-// - '' on fanout or headers exchanges
+// - ” on fanout or headers exchanges
 // On errors delete prior created exchanges and/or queues to make sure
 // that there are no leftovers lying around on the broker.
 // TODO error handling must be improved - does not work if connection is lost

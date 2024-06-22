@@ -13,7 +13,6 @@ require (
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/net v0.26.0
 	golang.org/x/sync v0.7.0
-	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
 )
 
 require github.com/stealthrocket/net v0.2.1

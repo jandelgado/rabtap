@@ -84,7 +84,6 @@ type TapChannel chan TapMessage
 //
 // queueName is the queue to subscribe to. tapCh is where the consumed messages
 // are sent to. errCh is the channel where errors are sent to.
-//
 func (s *AmqpSubscriber) EstablishSubscription(
 	ctx context.Context,
 	queueName string,
@@ -106,9 +105,8 @@ func (s *AmqpSubscriber) createWorkerFunc(
 
 		// also subscribe to channel close notifications
 		amqpErrorCh := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
-		fanin := NewFanin([]interface{}{ch, amqpErrorCh})
-
-		return amqpMessageLoop(ctx, outCh, errOutCh, fanin.Ch)
+		fanin := Fanin(ctx, []<-chan interface{}{WrapChan(ch), WrapChan(amqpErrorCh)})
+		return amqpMessageLoop(ctx, outCh, errOutCh, fanin)
 	}
 }
 

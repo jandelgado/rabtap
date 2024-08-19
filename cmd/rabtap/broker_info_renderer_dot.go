@@ -262,6 +262,6 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}, queueRendered map[stri
 // https://www.graphviz.org/doc/info/lang.html
 func (s *brokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
 	res := s.renderNode(rootNode, map[string]bool{})
-	fmt.Fprintf(out, res.Text)
+	fmt.Fprint(out, res.Text)
 	return nil
 }

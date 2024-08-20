@@ -38,7 +38,7 @@ jobs:
         run: cd inttest/rabbitmq && docker compose up -d
       - name: Install Go
         if: success()
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: wait for RabbitMQ becoming ready

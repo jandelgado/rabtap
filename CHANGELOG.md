@@ -1,5 +1,13 @@
 # Changelog for rabtap
 
+## v1.40 (2024-08-20)
+
+* govaluate not being maintained since 2017, we switch to
+  [Expr](https://expr-lang.org/) for use as the expression-evaluator of the
+  `--filter <expr>`  option. The syntax of `Expr` is similar, but not the same,
+  so this can be considered a breaking change
+* dependency updates
+
 ## v1.39.3 (2024-06-22)
 
 * simplify code (fanin) and reduce dependencies

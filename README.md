@@ -787,15 +787,18 @@ a *predicate*). Rabtap allows the specification of predicates to be applied
 when printing queues using the `info` command. The output will only proceed
 if the predicate evaluates to `true`.
 
-Rabtap uses the [govalute](https://github.com/Knetic/govaluate) to evaluate the
-predicate. This allows or complex expressions.
+Rabtap uses [Expr](https://expr-lang.org/) to evaluate predicates. This
+allows for complex expressions.
 
-See [official govaluate
-documentation](https://github.com/Knetic/govaluate/blob/master/MANUAL.md) for
-further information.
+See the [official expr-lang
+documentation](https://expr-lang.org/docs/language-definition) for further
+information.
 
-Note: currently the filter is ignored when used in conjunction with
-`--by-connection`.
+> Note: prior to version 1.40, rabtap used
+> [govaluate](https://github.com/Knetic/govaluate) to evaluate expressions.
+> With the switch to [Expr](https://expr-lang.org/), the syntax has changed in
+> some aspects (e.g. `=~` vs `matches`  in regular expression matches). Consult
+> the documentation for details.
 
 #### Evaluation context
 
@@ -813,9 +816,9 @@ broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
 
 * `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty` - print
   only queues bound to exchange `amq.direct` and skip all empty exchanges.
-* `rabtap info --filter "queue.Name =~ '.*test.*'" --omit-empty` - print all
+* `rabtap info --filter "queue.Name matches '.*test.*'" --omit-empty` - print all
   queues with `test` in their name.
-* `rabtap info --filter "queue.Name =~ '.*test.*' && exchange.Type == 'topic'" --omit-empty` - like
+* `rabtap info --filter "queue.Name matches '.*test.*' && exchange.Type == 'topic'" --omit-empty` - like
   before, but consider only exchanges of type `topic`.
 * `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print 
   all queues with at least one consumer

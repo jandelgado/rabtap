@@ -54,7 +54,7 @@ jobs:
           format: golang
       - name: Build release artifacts
         if: env.build_artifacts # currently disabled
-        uses: goreleaser/goreleaser-action@v3
+        uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
           args: build --rm-dist --snapshot

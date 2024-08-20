@@ -3,7 +3,7 @@ module github.com/jandelgado/rabtap
 go 1.18
 
 require (
-	github.com/Knetic/govaluate v0.0.0-20171022003610-9aa49832a739 //v0.0.0-20171022003610-9aa49832a739
+	github.com/Knetic/govaluate v3.0.0+incompatible //v0.0.0-20171022003610-9aa49832a739
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/fatih/color v1.17.0
 	github.com/google/uuid v1.6.0

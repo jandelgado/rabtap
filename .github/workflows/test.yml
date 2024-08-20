@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload assets
         if: env.build_artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rabtap-binaries
           path: dist/*

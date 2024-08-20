@@ -26,9 +26,9 @@ builds:
     ignore:
       - goos: wasip1
         goarch: amd64
-      - goos: wasipi
+      - goos: wasip1
         goarch: arm
-      - goos: wasipi
+      - goos: wasip1
         goarch: arm64
       - goos: darwin
         goarch: "386"

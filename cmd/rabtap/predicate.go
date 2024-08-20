@@ -5,7 +5,8 @@ package main
 import (
 	"errors"
 
-	"github.com/Knetic/govaluate"
+	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 )
 
 // Predicate evaluates an expression to a boolean value
@@ -25,23 +26,21 @@ func (s truePredicate) Eval(params map[string]interface{}) (bool, error) {
 // PredicateExpression implements an predicate expression evaluator using
 // the govaluate package
 type PredicateExpression struct {
-	expression *govaluate.EvaluableExpression
+	prog *vm.Program
 }
 
 // NewPredicateExpression creates a new predicate expression
 func NewPredicateExpression(exprstr string) (Predicate, error) {
-	expression, err := govaluate.NewEvaluableExpression(exprstr)
+	prog, err := expr.Compile(exprstr)
 	if err != nil {
 		return nil, err
 	}
-	return &PredicateExpression{
-		expression: expression,
-	}, nil
+	return &PredicateExpression{prog: prog}, nil
 }
 
 // Eval evaluates the expression with a given set of parameters
-func (s PredicateExpression) Eval(params map[string]interface{}) (bool, error) {
-	result, err := s.expression.Evaluate(params)
+func (s PredicateExpression) Eval(env map[string]interface{}) (bool, error) {
+	result, err := expr.Run(s.prog, env)
 	if err != nil {
 		return false, err
 	}

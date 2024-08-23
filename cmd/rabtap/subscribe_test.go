@@ -298,7 +298,36 @@ func TestMessageReceiveLoopExitsWhenLoopPredReturnsFalse(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestMessageReceiveLoopExitsWitErrorWhenIdle(t *testing.T) {
+func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	messageChan := make(rabtap.TapChannel, 3)
+	errorChan := make(rabtap.SubscribeErrorChannel)
+	received := 0
+
+	receiveFunc := func(rabtap.TapMessage) error {
+		received++
+		return nil
+	}
+	termPred := func(rabtap.TapMessage) (bool, error) { return false, nil }
+	// create a message predicate that lets only pass message with content-type set to "test"
+	pred, err := NewPredicateExpression("msg.ContentType=='test'")
+	require.NoError(t, err)
+	filterPred := createMessagePred(pred)
+
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+
+	// when we send 3 messages
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{ContentType: ""}}
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{ContentType: "test"}}
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{ContentType: ""}}
+	_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, filterPred, termPred, acknowledger, time.Second*1)
+
+	// we expect 2 of them to be filtered out
+	cancel()
+	assert.Equal(t, 1, received)
+}
+
+func TestMessageReceiveLoopExitsWithErrorWhenIdle(t *testing.T) {
 	// given
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)

@@ -240,7 +240,7 @@ func TestCliAllOptsInTapCommandiAreRecognized(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"tap", "--uri=uri", "exchange:binding", "--silent", "--verbose",
 			"--format=json-nopp", "--insecure", "--saveto", "savedir", "--limit", "123",
-			"--idle-timeout=10s"})
+			"--idle-timeout=10s", "--filter=filter"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(args.TapConfig))
@@ -253,6 +253,7 @@ func TestCliAllOptsInTapCommandiAreRecognized(t *testing.T) {
 	assert.Equal(t, time.Duration(time.Second*10), args.IdleTimeout)
 	assert.Equal(t, "savedir", *args.SaveDir)
 	assert.Equal(t, "json-nopp", args.Format)
+	assert.Equal(t, "filter", args.Filter)
 	assert.True(t, args.Verbose)
 	assert.True(t, args.Silent)
 	assert.True(t, args.InsecureTLS)
@@ -266,7 +267,7 @@ func TestCliInfoCmdIsParsed(t *testing.T) {
 	assert.Equal(t, 0, len(args.TapConfig))
 	assert.Equal(t, InfoCmd, args.Cmd)
 	assertEqualURL(t, "APIURI", args.APIURL)
-	assert.Equal(t, "true", args.QueueFilter)
+	assert.Equal(t, "true", args.Filter)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.ShowStats)
 	assert.False(t, args.ShowConsumers)
@@ -346,7 +347,7 @@ func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	assertEqualURL(t, "APIURI", args.APIURL)
 	assert.Nil(t, args.SaveDir)
 	assert.False(t, args.Verbose)
-	assert.Equal(t, "EXPR", args.QueueFilter)
+	assert.Equal(t, "EXPR", args.Filter)
 	assert.True(t, args.ShowStats)
 	assert.True(t, args.ShowConsumers)
 	assert.True(t, args.ShowDefaultExchange)
@@ -483,7 +484,7 @@ func TestCliSubCmdInvalidNumReturnsError(t *testing.T) {
 func TestCliSubCmdAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir",
-			"--limit=99", "--offset=123", "--idle-timeout=10s"})
+			"--limit=99", "--offset=123", "--idle-timeout=10s", "--filter=filter"})
 
 	assert.Nil(t, err)
 	assert.Equal(t, SubCmd, args.Cmd)
@@ -492,6 +493,7 @@ func TestCliSubCmdAllOptsSet(t *testing.T) {
 	assert.Equal(t, "dir", *args.SaveDir)
 	assert.Equal(t, int64(99), args.Limit)
 	assert.Equal(t, time.Duration(time.Second*10), args.IdleTimeout)
+	assert.Equal(t, "filter", args.Filter)
 	assert.False(t, args.Reject)
 	assert.False(t, args.Requeue)
 }

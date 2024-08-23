@@ -14,15 +14,6 @@ type Predicate interface {
 	Eval(map[string]interface{}) (bool, error)
 }
 
-// TruePredicate always evaluates to true
-var TruePredicate = truePredicate{}
-
-type truePredicate struct{}
-
-func (s truePredicate) Eval(params map[string]interface{}) (bool, error) {
-	return true, nil
-}
-
 // PredicateExpression implements an predicate expression evaluator using
 // the govaluate package
 type PredicateExpression struct {
@@ -30,7 +21,7 @@ type PredicateExpression struct {
 }
 
 // NewPredicateExpression creates a new predicate expression
-func NewPredicateExpression(exprstr string) (Predicate, error) {
+func NewPredicateExpression(exprstr string) (*PredicateExpression, error) {
 	prog, err := expr.Compile(exprstr)
 	if err != nil {
 		return nil, err

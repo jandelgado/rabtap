@@ -45,13 +45,15 @@ func TestCmdTap(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	pred := func(rabtap.TapMessage) bool { return true }
+	filterPred := func(rabtap.TapMessage) (bool, error) { return true, nil }
+	termPred := func(rabtap.TapMessage) (bool, error) { return true, nil }
 
 	// when
 	go cmdTap(ctx, CmdTapArg{tapConfig: tapConfig,
 		tlsConfig:          &tls.Config{},
 		messageReceiveFunc: receiveFunc,
-		pred:               pred,
+		filterPred:         filterPred,
+		termPred:           termPred,
 		timeout:            time.Second * 10})
 
 	time.Sleep(time.Second * 1)

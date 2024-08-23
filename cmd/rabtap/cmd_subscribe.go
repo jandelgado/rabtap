@@ -20,7 +20,8 @@ type CmdSubscribeArg struct {
 	queue                  string
 	tlsConfig              *tls.Config
 	messageReceiveFunc     MessageReceiveFunc
-	messageReceiveLoopPred MessageReceiveLoopPred
+	messageReceiveLoopPred MessagePred
+	filterPred             MessagePred
 	reject                 bool
 	requeue                bool
 	args                   rabtap.KeyValueMap
@@ -43,11 +44,13 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 	errorChannel := make(rabtap.SubscribeErrorChannel)
 	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel, errorChannel) })
 	g.Go(func() error {
+
 		acknowledger := createAcknowledgeFunc(cmd.reject, cmd.requeue)
 		err := messageReceiveLoop(ctx,
 			messageChannel,
 			errorChannel,
 			cmd.messageReceiveFunc,
+			cmd.filterPred,
 			cmd.messageReceiveLoopPred,
 			acknowledger,
 			cmd.timeout)

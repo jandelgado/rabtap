@@ -7,12 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTruePredicate(t *testing.T) {
-	res, err := TruePredicate.Eval(nil)
-	require.NoError(t, err)
-	assert.True(t, res)
-}
-
 func TestPredicateTrue(t *testing.T) {
 	f, err := NewPredicateExpression("1 == 1")
 	require.NoError(t, err)

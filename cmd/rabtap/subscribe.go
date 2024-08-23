@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -35,27 +36,42 @@ type MessageReceiveFunc func(rabtap.TapMessage) error
 
 // var ErrMessageLoopEnded = errors.New("message loop ended")
 
-// messageReceiveLoopPred is called once for each a message that was received.
-// If it returns true, the subscriber loop continues, otherwise the loop
-// terminates.
-type MessageReceiveLoopPred func(rabtap.TapMessage) bool
+// MessagePred is a predicate function on a message
+type MessagePred func(rabtap.TapMessage) (bool, error)
+
+// createMessagePred creates a MessagePred predicate function that uses a
+// PredicateExpression
+func createMessagePred(expr Predicate) MessagePred {
+	return func(m rabtap.TapMessage) (bool, error) {
+		// expose the message and some helper function
+		env := map[string]interface{}{
+			"msg":   m.AmqpMessage,
+			"toStr": func(b []byte) string { return string(b) },
+			"gunzip": func(b []byte) ([]byte, error) {
+				return gunzip(bytes.NewReader(b))
+			},
+		}
+		return expr.Eval(env)
+	}
+}
 
 // createCountingMessageReceivePred returns a (stateful) predicate that will
-// return false after it is called num times, thus limiting the number of
-// mssages received. If num is 0, a predicate always returning true is
+// return true after it is called num times, thus limiting the number of
+// messages received. If num is 0, a predicate always returning false is
 // returned.
-func createCountingMessageReceivePred(num int64) MessageReceiveLoopPred {
+func createCountingMessageReceivePred(num int64) MessagePred {
 
 	if num == 0 {
-		return func(_ rabtap.TapMessage) bool {
-			return true
+		return func(_ rabtap.TapMessage) (bool, error) {
+			return false, nil
 		}
 	}
 
 	counter := int64(1)
-	return func(_ rabtap.TapMessage) bool {
+	return func(_ rabtap.TapMessage) (bool, error) {
 		counter++
-		return counter <= num
+		return counter > num, nil
+
 	}
 }
 
@@ -77,18 +93,19 @@ func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
 	}
 }
 
-// messageReceiveLoop passes received AMQP messages to messageReceiveFunc
-// and handles errors received on the errorChan. AMQP messages are ascknowledged
-// by the provides acknowleder function. Each message is passed to the predicate
-// pred function. If false is returned, processing is ended. Timeout specifies
-// an idle timeout, which will end processing when for the given duration no
-// new messages are received on messageChan.
+// messageReceiveLoop passes received AMQP messages to messageReceiveFunc and
+// handles errors received on the errorChan. AMQP messages are ascknowledged by
+// the provides acknowleder function. Each message is passed to the predicate
+// termPred function. If true is returned, processing is ended. Timeout
+// specifies an idle timeout, which will end processing when for the given
+// duration no new messages are received on messageChan.
 // TODO pass in struct, limit number of arguments
 func messageReceiveLoop(ctx context.Context,
 	messageChan rabtap.TapChannel,
 	errorChan rabtap.SubscribeErrorChannel,
 	messageReceiveFunc MessageReceiveFunc,
-	pred MessageReceiveLoopPred,
+	filterPred MessagePred,
+	termPred MessagePred,
 	acknowledger AcknowledgeFunc,
 	timeout time.Duration) error {
 
@@ -108,6 +125,7 @@ func messageReceiveLoop(ctx context.Context,
 			}
 
 		case message, more := <-messageChan:
+			timeoutTicker.Reset(timeout)
 			if !more {
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
 				return nil // ErrMessageLoopEnded
@@ -119,14 +137,22 @@ func messageReceiveLoop(ctx context.Context,
 				log.Error(err)
 			}
 
+			passed, err := filterPred(message)
+			if err != nil {
+				log.Errorf("filter evaluation: %s", err.Error())
+			}
+			if !passed {
+				continue
+			}
+
 			if err := messageReceiveFunc(message); err != nil {
 				log.Error(err)
 			}
 
-			if !pred(message) {
+			// TODO ok to count only on not-filtered out messages?
+			if terminate, _ := termPred(message); terminate {
 				return nil
 			}
-			timeoutTicker.Reset(timeout)
 
 		case <-timeoutTicker.C:
 			return ErrIdleTimeout

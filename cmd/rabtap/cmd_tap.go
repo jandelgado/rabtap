@@ -17,7 +17,8 @@ type CmdTapArg struct {
 	tapConfig          []rabtap.TapConfiguration
 	tlsConfig          *tls.Config
 	messageReceiveFunc MessageReceiveFunc
-	pred               MessageReceiveLoopPred
+	termPred           MessagePred
+	filterPred         MessagePred
 	timeout            time.Duration
 }
 
@@ -47,7 +48,8 @@ func cmdTap(
 			tapMessageChannel,
 			errorChannel,
 			cmd.messageReceiveFunc,
-			cmd.pred,
+			cmd.filterPred,
+			cmd.termPred,
 			acknowledger,
 			cmd.timeout)
 		cancel()

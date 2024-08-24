@@ -19,14 +19,14 @@ lint: phony
 	golangci-lint run
 
 short-test:  phony
-	go test -v -race  github.com/jandelgado/rabtap/cmd/rabtap
-	go test -v -race  github.com/jandelgado/rabtap/pkg
+	go test -v $(TESTOPTS) -race  github.com/jandelgado/rabtap/cmd/rabtap
+	go test -v $(TESTOPTS) -race  github.com/jandelgado/rabtap/pkg
 
 test-app: phony
-	go test -race -v -tags "integration" -cover -coverprofile=coverage_app.out github.com/jandelgado/rabtap/cmd/rabtap
+	go test -race -v -tags "integration" $(TESTOPTS) -cover -coverprofile=coverage_app.out github.com/jandelgado/rabtap/cmd/rabtap
 
 test-lib: phony
-	go test -race -v -tags "integration" -cover -coverprofile=coverage.out github.com/jandelgado/rabtap/pkg
+	go test -race -v -tags "integration" $(TESTOPTS) -cover -coverprofile=coverage.out github.com/jandelgado/rabtap/pkg
 
 test: test-app test-lib
 	grep -v "^mode:" coverage_app.out >> coverage.out

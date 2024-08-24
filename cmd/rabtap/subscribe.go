@@ -12,6 +12,7 @@ import (
 	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // ErrIdleTimeout is returned by the message loop when the loop was terminated
@@ -44,19 +45,33 @@ func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interfa
 		"rt_gunzip": func(b []byte) ([]byte, error) {
 			return gunzip(bytes.NewReader(b))
 		},
+		"rt_body": func(m *amqp.Delivery) ([]byte, error) {
+			return body(m)
+		},
 	}
 }
 
-// createCountingMessageReceivePred creates the default message loop termination
-// predicate (loop terminates when predicate is true). When limit is 0, loop
-// will never terminate. Expectes a variable "rt_count" in the context, that
-// holds the current number of messages received. The limit is provided by configuration.
-// To unify predicate handling (see filter predicate), we use the same mechanism
-// here. In later versions, the termination predicate may be defined by the
-// user, so that rabtap quits if a certain condition is met.
-func createCountingMessageReceivePred(limit int64) (Predicate, error) {
-	env := map[string]interface{}{"rt_limit": limit}
-	return NewExprPredicateWithEnv("(rt_limit > 0) && (rt_count >= rt_limit)", env)
+// loopCountPred creates is the default message loop
+// termination predicate (loop terminates when predicate is true). When limit
+// is 0, loop will never terminate. Expectes a variable "rt_count" in the
+// context, that holds the current number of messages received. The limit is
+// provided by configuration. To unify predicate handling (see filter
+// predicate), we use the same mechanism here. In later versions, the
+// termination predicate may be defined by the user, so that rabtap quits if a
+// certain condition is met.
+type LoopCountPred struct {
+	limit int64
+}
+
+func (s *LoopCountPred) Eval(env map[string]interface{}) (bool, error) {
+	count := env["rt_count"].(int64) // TODO error check
+	return (s.limit > 0) && (count >= s.limit), nil
+}
+
+func NewLoopCountPred(limit int64) (*LoopCountPred, error) {
+	// env := map[string]interface{}{"rt_limit": limit}
+	// return NewExprPredicateWithEnv("(rt_limit > 0) && (rt_count >= rt_limit)", env)
+	return &LoopCountPred{limit}, nil
 }
 
 // createAcknowledgeFunc returns the function used to acknowledge received

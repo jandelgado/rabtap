@@ -159,7 +159,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 
-	termPred, err := createCountingMessageReceivePred(args.Limit)
+	termPred, err := NewLoopCountPred(args.Limit)
 	failOnError(err, "invalid message limit predicate", os.Exit)
 	filterPred, err := NewExprPredicate(args.Filter)
 	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
@@ -189,7 +189,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	}
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
-	termPred, err := createCountingMessageReceivePred(args.Limit)
+	termPred, err := NewLoopCountPred(args.Limit)
 	failOnError(err, "invalid message limit predicate", os.Exit)
 	filterPred, err := NewExprPredicate(args.Filter)
 	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)

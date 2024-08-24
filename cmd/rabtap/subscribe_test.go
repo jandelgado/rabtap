@@ -112,7 +112,7 @@ func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *test
 }
 
 func TestCreateCountingMessageReceivePredReturnsFalseIfLimitIsZero(t *testing.T) {
-	pred, err := createCountingMessageReceivePred(0)
+	pred, err := NewLoopCountPred(0)
 	require.NoError(t, err)
 
 	for _, tc := range []int64{0, 1, 2, 100} {
@@ -125,7 +125,7 @@ func TestCreateCountingMessageReceivePredReturnsFalseIfLimitIsZero(t *testing.T)
 }
 
 func TestCreateCountingMessageReceivePredReturnsTrueOnWhenLimitIsReached(t *testing.T) {
-	pred, err := createCountingMessageReceivePred(3)
+	pred, err := NewLoopCountPred(3)
 	require.NoError(t, err)
 
 	testcases := map[int64]bool{0: false, 1: false, 2: false, 3: true, 4: true}

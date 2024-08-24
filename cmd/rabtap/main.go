@@ -71,7 +71,7 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 }
 
 func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) {
-	filter, err := NewPredicateExpression(args.Filter)
+	filter, err := NewExprPredicate(args.Filter)
 	failOnError(err, fmt.Sprintf("invalid queue filter predicate '%s'", args.Filter), os.Exit)
 
 	cmdInfo(ctx,
@@ -160,7 +160,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	failOnError(err, "options", os.Exit)
 
 	termPred := createCountingMessageReceivePred(args.Limit)
-	filterPred, err := NewPredicateExpression(args.Filter)
+	filterPred, err := NewExprPredicate(args.Filter)
 	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
 
 	err = cmdSubscribe(ctx, CmdSubscribeArg{
@@ -189,7 +189,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 	termPred := createCountingMessageReceivePred(args.Limit)
-	filterPred, err := NewPredicateExpression(args.Filter)
+	filterPred, err := NewExprPredicate(args.Filter)
 	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
 
 	cmdTap(ctx,

@@ -54,6 +54,26 @@ func (s MockAcknowledger) Reject(tag uint64, requeue bool) error {
 	return nil
 }
 
+func TestCreateMessagePredicateProvidesMessageContext(t *testing.T) {
+
+	// given a predicate that accesses message attributes
+	pred, err := NewExprPredicate("msg.MessageId=='match123'")
+	require.NoError(t, err)
+	filterPred := createMessagePred(pred)
+
+	// when we evalute the predicate for the test Messages
+	expectedMatch := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "match123"}}
+	res, err := filterPred(expectedMatch)
+	require.NoError(t, err)
+	// then we expect the expression evaluated in the given context
+	assert.True(t, res)
+
+	expectedNoMatch := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "no match"}}
+	res, err = filterPred(expectedNoMatch)
+	require.NoError(t, err)
+	assert.False(t, res)
+}
+
 func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *testing.T) {
 
 	testcases := []struct {
@@ -309,18 +329,17 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 		return nil
 	}
 	termPred := func(rabtap.TapMessage) (bool, error) { return false, nil }
-	// create a message predicate that lets only pass message with content-type set to "test"
-	pred, err := NewPredicateExpression("msg.ContentType=='test'")
-	require.NoError(t, err)
-	filterPred := createMessagePred(pred)
-
+	// create a message predicate that lets only pass message with MessageID set to "test"
+	filterPred := func(m rabtap.TapMessage) (bool, error) { return m.AmqpMessage.MessageId == "test", nil }
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 
 	// when we send 3 messages
-	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{ContentType: ""}}
-	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{ContentType: "test"}}
-	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{ContentType: ""}}
-	_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, filterPred, termPred, acknowledger, time.Second*1)
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: ""}}
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "test"}}
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: ""}}
+
+	_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc,
+		filterPred, termPred, acknowledger, time.Second*1)
 
 	// we expect 2 of them to be filtered out
 	cancel()

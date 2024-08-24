@@ -73,6 +73,7 @@ and exchanges, inspect broker.
 * save messages and meta data for later analysis and replay
 * publish messages to exchanges
 * consume messages from queues and streams (subscribe)
+* filter output using flexible expressions
 * supports TLS
 * no runtime dependencies (statically linked golang single file binary)
 * simple to use command line tool

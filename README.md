@@ -53,6 +53,7 @@ and exchanges, inspect broker.
       * [Exchange type](#exchange-type)
       * [Queue type](#queue-type)
       * [Binding type](#binding-type)
+      * [Message type](#message-type)
 * [Build from source](#build-from-source)
   * [Download and build using go install](#download-and-build-using-go-install)
   * [Build using Makefile and tests](#build-using-makefile-and-tests)
@@ -855,8 +856,11 @@ In the `sub` and `tap` commands, the following bindings are available:
 * Helper function are provided for accessing the message body:
   * the `rt_toStr` function converts a byte buffer into a string, e.g. `let
   b=toJSON(rt_toStr(rt_msg.Body))`
-  * the `rt_gunzip` function decompresses the given byte buffer `let
+  * the `rt_gunzip` function decompresses the given byte buffer, e.g. `let
   b=toJSON(rt_toStr(rt_gunzip(rt_msg.Body)))`, allowing to inspect a compressed body
+  * the `rt_body` returns the message body, decompressing if necessary (i.e.
+    if `ContentType` is `gzip`), e.g.
+    `let b=toJSON(rt_toStr(rt_body(rt_msg))`
 
 ##### Examples
 
@@ -992,6 +996,52 @@ type Binding struct {
     RoutingKey      string
     PropertiesKey string
 }
+```
+
+</details>
+
+##### Message type
+
+<details>
+  <summary>Definition of the Message type</summary>
+
+The currently received messages in the `sub` and `pub` commands is exposed to
+the filter predicate under the name `rt_msg`. The `Message` type is more or
+less the same as the `amqp.Delivery` type from the [golang amqp
+package](https://github.com/rabbitmq/amqp091-go):
+
+```go
+type Message struct {
+    Headers Table
+
+    // Properties
+    ContentType     string    // MIME content type
+    ContentEncoding string    // MIME content encoding
+    DeliveryMode    uint8     // queue implementation use - non-persistent (1) or persistent (2)
+    Priority        uint8     // queue implementation use - 0 to 9
+    CorrelationId   string    // application use - correlation identifier
+    ReplyTo         string    // application use - address to reply to (ex: RPC)
+    Expiration      string    // implementation use - message expiration spec
+    MessageId       string    // application use - message identifier
+    Timestamp       time.Time // application use - message timestamp
+    Type            string    // application use - message type name
+    UserId          string    // application use - creating user - should be authenticated user
+    AppId           string    // application use - creating application id
+
+    // Valid only with Channel.Consume
+    ConsumerTag string
+
+    // Valid only with Channel.Get
+    MessageCount uint32
+
+    DeliveryTag uint64
+    Redelivered bool
+    Exchange    string // basic.publish exchange
+    RoutingKey  string // basic.publish routing key
+
+    Body []byte
+}
+
 ```
 
 </details>

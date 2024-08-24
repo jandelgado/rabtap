@@ -17,8 +17,8 @@ type CmdTapArg struct {
 	tapConfig          []rabtap.TapConfiguration
 	tlsConfig          *tls.Config
 	messageReceiveFunc MessageReceiveFunc
-	termPred           MessagePred
-	filterPred         MessagePred
+	termPred           Predicate
+	filterPred         Predicate
 	timeout            time.Duration
 }
 

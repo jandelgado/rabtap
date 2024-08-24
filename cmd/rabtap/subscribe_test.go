@@ -23,6 +23,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// a Predicate returning a constant value
+type constantPred struct{ val bool }
+
+func (s *constantPred) Eval(_ map[string]interface{}) (bool, error) {
+	return s.val, nil
+}
+
+// a predicate that lets only pass message with MessageID set to a given value
+type testPred struct{ match string }
+
+func (s *testPred) Eval(env map[string]interface{}) (bool, error) {
+	return env["rt_msg"].(*amqp.Delivery).MessageId == s.match, nil
+}
+
 // a mocked amqp.Acknowldger to test our AcknowledgeFunc
 type MockAcknowledger struct {
 	// store values in a map so being able to manipulate in a value receiver
@@ -56,22 +70,14 @@ func (s MockAcknowledger) Reject(tag uint64, requeue bool) error {
 
 func TestCreateMessagePredicateProvidesMessageContext(t *testing.T) {
 
-	// given a predicate that accesses message attributes
-	pred, err := NewExprPredicate("msg.MessageId=='match123'")
-	require.NoError(t, err)
-	filterPred := createMessagePred(pred)
-
 	// when we evalute the predicate for the test Messages
-	expectedMatch := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "match123"}}
-	res, err := filterPred(expectedMatch)
-	require.NoError(t, err)
-	// then we expect the expression evaluated in the given context
-	assert.True(t, res)
+	msg := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "match123"}}
+	env := createMessagePredEnv(msg, 123)
 
-	expectedNoMatch := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "no match"}}
-	res, err = filterPred(expectedNoMatch)
-	require.NoError(t, err)
-	assert.False(t, res)
+	assert.Equal(t, msg.AmqpMessage, env["rt_msg"])
+	assert.Equal(t, int64(123), env["rt_count"])
+	assert.NotNil(t, env["rt_gunzip"])
+	assert.NotNil(t, env["rt_toStr"])
 }
 
 func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *testing.T) {
@@ -105,22 +111,33 @@ func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *test
 	}
 }
 
-func TestCreateCountingMessageReceivePredReturnsTrueIfNumIsZero(t *testing.T) {
-	pred := createCountingMessageReceivePred(0)
-	res, err := pred(rabtap.TapMessage{})
-	assert.NoError(t, err)
-	assert.False(t, res)
+func TestCreateCountingMessageReceivePredReturnsFalseIfLimitIsZero(t *testing.T) {
+	pred, err := createCountingMessageReceivePred(0)
+	require.NoError(t, err)
+
+	for _, tc := range []int64{0, 1, 2, 100} {
+		env := map[string]interface{}{"rt_count": tc}
+		res, err := pred.Eval(env)
+
+		require.NoError(t, err)
+		assert.False(t, res)
+	}
 }
 
-func TestCreateCountingMessageReceivePredReturnsTrueOnNthCall(t *testing.T) {
-	pred := createCountingMessageReceivePred(2)
+func TestCreateCountingMessageReceivePredReturnsTrueOnWhenLimitIsReached(t *testing.T) {
+	pred, err := createCountingMessageReceivePred(3)
+	require.NoError(t, err)
 
-	res, err := pred(rabtap.TapMessage{})
-	assert.NoError(t, err)
-	assert.False(t, res)
-	res, err = pred(rabtap.TapMessage{})
-	assert.NoError(t, err)
-	assert.True(t, res)
+	testcases := map[int64]bool{0: false, 1: false, 2: false, 3: true, 4: true}
+	for probe, expected := range testcases {
+		t.Run(fmt.Sprintf("term_predicate(%v, %v)", probe, expected), func(t *testing.T) {
+			env := map[string]interface{}{"rt_count": probe}
+			actual, err := pred.Eval(env)
+
+			require.NoError(t, err)
+			assert.Equal(t, expected, actual)
+		})
+	}
 }
 
 func TestChainMessageReceiveFuncCallsBothFunctions(t *testing.T) {
@@ -230,7 +247,6 @@ func TestCreateMessageReceiveFuncJSON(t *testing.T) {
 
 	assert.True(t, strings.Count(b.String(), "\n") > 1)
 	assert.True(t, strings.Contains(b.String(), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))
-
 }
 
 func TestCreateMessageReceiveFuncJSONNoPPToFile(t *testing.T) {
@@ -277,8 +293,8 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 		done <- true
 		return nil
 	}
-	termPred := func(rabtap.TapMessage) (bool, error) { return false, nil }
-	passPred := func(rabtap.TapMessage) (bool, error) { return true, nil }
+	termPred := &constantPred{val: false}
+	passPred := &constantPred{val: true}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 	go func() {
 		_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, passPred, termPred, acknowledger, time.Second*10)
@@ -294,8 +310,8 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	termPred := func(rabtap.TapMessage) (bool, error) { return false, nil }
-	passPred := func(rabtap.TapMessage) (bool, error) { return true, nil }
+	termPred := &constantPred{val: false}
+	passPred := &constantPred{val: true}
 
 	close(messageChan)
 	acknowledger := func(rabtap.TapMessage) error { return nil }
@@ -308,8 +324,8 @@ func TestMessageReceiveLoopExitsWhenTermPredReturnsTrue(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel, 1)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	termPred := func(rabtap.TapMessage) (bool, error) { return true, nil }
-	passPred := func(rabtap.TapMessage) (bool, error) { return true, nil }
+	termPred := &constantPred{val: true}
+	passPred := &constantPred{val: true}
 
 	messageChan <- rabtap.TapMessage{}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
@@ -328,9 +344,8 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 		received++
 		return nil
 	}
-	termPred := func(rabtap.TapMessage) (bool, error) { return false, nil }
-	// create a message predicate that lets only pass message with MessageID set to "test"
-	filterPred := func(m rabtap.TapMessage) (bool, error) { return m.AmqpMessage.MessageId == "test", nil }
+	termPred := &constantPred{val: false}
+	filterPred := &testPred{match: "test"}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 
 	// when we send 3 messages
@@ -351,8 +366,8 @@ func TestMessageReceiveLoopExitsWithErrorWhenIdle(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	termPred := func(rabtap.TapMessage) (bool, error) { return false, nil }
-	passPred := func(rabtap.TapMessage) (bool, error) { return true, nil }
+	termPred := &constantPred{val: false}
+	passPred := &constantPred{val: true}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 
 	// when

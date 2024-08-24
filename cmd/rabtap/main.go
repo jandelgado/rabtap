@@ -159,7 +159,8 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
 
-	termPred := createCountingMessageReceivePred(args.Limit)
+	termPred, err := createCountingMessageReceivePred(args.Limit)
+	failOnError(err, "invalid message limit predicate", os.Exit)
 	filterPred, err := NewExprPredicate(args.Filter)
 	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
 
@@ -170,7 +171,7 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 		reject:                 args.Reject,
 		tlsConfig:              getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		messageReceiveFunc:     messageReceiveFunc,
-		filterPred:             createMessagePred(filterPred),
+		filterPred:             filterPred,
 		messageReceiveLoopPred: termPred,
 		args:                   args.Args,
 		timeout:                args.IdleTimeout,
@@ -188,7 +189,8 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 	}
 	messageReceiveFunc, err := createMessageReceiveFunc(opts)
 	failOnError(err, "options", os.Exit)
-	termPred := createCountingMessageReceivePred(args.Limit)
+	termPred, err := createCountingMessageReceivePred(args.Limit)
+	failOnError(err, "invalid message limit predicate", os.Exit)
 	filterPred, err := NewExprPredicate(args.Filter)
 	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
 
@@ -197,7 +199,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 			tapConfig:          args.TapConfig,
 			tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 			messageReceiveFunc: messageReceiveFunc,
-			filterPred:         createMessagePred(filterPred),
+			filterPred:         filterPred,
 			termPred:           termPred,
 			timeout:            args.IdleTimeout,
 		})

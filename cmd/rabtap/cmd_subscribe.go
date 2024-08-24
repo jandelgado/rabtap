@@ -20,8 +20,8 @@ type CmdSubscribeArg struct {
 	queue                  string
 	tlsConfig              *tls.Config
 	messageReceiveFunc     MessageReceiveFunc
-	messageReceiveLoopPred MessagePred
-	filterPred             MessagePred
+	messageReceiveLoopPred Predicate
+	filterPred             Predicate
 	reject                 bool
 	requeue                bool
 	args                   rabtap.KeyValueMap

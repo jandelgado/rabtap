@@ -25,14 +25,28 @@ func TestExprPredicateFalse(t *testing.T) {
 	assert.False(t, res)
 }
 
-func TestExprPredicateWithEnv(t *testing.T) {
+func TestExprPredicateWithInitalEnv(t *testing.T) {
+	initEnv := map[string]interface{}{"a": 1337}
+	f, err := NewExprPredicateWithEnv(`b < a`, initEnv)
+	require.NoError(t, err)
+
+	env := map[string]interface{}{"b": 100}
+	res, err := f.Eval(env)
+
+	require.NoError(t, err)
+	assert.True(t, res)
+}
+func TestExprPredicateWithEvalEnv(t *testing.T) {
 	f, err := NewExprPredicate(`a == 1337 && b.X == 42 && c == "JD"`)
 	require.NoError(t, err)
-	params := make(map[string]interface{}, 1)
-	params["a"] = 1337
-	params["b"] = struct{ X int }{X: 42}
-	params["c"] = "JD"
-	res, err := f.Eval(params)
+	env := map[string]interface{}{
+		"a": 1337,
+		"b": struct{ X int }{X: 42},
+		"c": "JD",
+	}
+
+	res, err := f.Eval(env)
+
 	require.NoError(t, err)
 	assert.True(t, res)
 }
@@ -45,13 +59,16 @@ func TestExprPredicateReturnsErrorOnInvalidSyntax(t *testing.T) {
 func TestExprPredicateReturnsErrorOnEvalError(t *testing.T) {
 	f, err := NewExprPredicate("(1/a) == 1")
 	require.NoError(t, err)
+
 	_, err = f.Eval(nil)
 	assert.ErrorContains(t, err, "invalid operation")
 }
 func TestExprPredicateReturnsErrorOnNonBoolReturnValue(t *testing.T) {
 	f, err := NewExprPredicate("1+1")
 	require.NoError(t, err)
+
 	params := map[string]interface{}{}
 	_, err = f.Eval(params)
+
 	assert.ErrorContains(t, err, "expression does not evaluate to bool")
 }

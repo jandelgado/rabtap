@@ -14,7 +14,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"syscall"
 	"testing"
 	"time"
 
@@ -37,7 +36,7 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 			queue:                  "queue",
 			tlsConfig:              &tls.Config{},
 			messageReceiveFunc:     func(rabtap.TapMessage) error { return nil },
-			messageReceiveLoopPred: func(rabtap.TapMessage) (bool, error) { return false, nil },
+			messageReceiveLoopPred: &constantPred{false},
 			timeout:                time.Second * 10,
 		})
 		done <- true
@@ -83,8 +82,8 @@ func TestCmdSub(t *testing.T) {
 		queue:                  testQueue,
 		tlsConfig:              tlsConfig,
 		messageReceiveFunc:     receiveFunc,
-		filterPred:             func(rabtap.TapMessage) (bool, error) { return true, nil },
-		messageReceiveLoopPred: func(rabtap.TapMessage) (bool, error) { return false, nil },
+		filterPred:             &constantPred{true},
+		messageReceiveLoopPred: &constantPred{false},
 		timeout:                time.Second * 10,
 	})
 
@@ -150,16 +149,12 @@ func TestCmdSubIntegration(t *testing.T) {
 		})
 	require.Nil(t, err)
 
-	go func() {
-		time.Sleep(time.Second * 2)
-		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	}()
-
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 	os.Args = []string{"rabtap", "sub",
 		"--uri", amqpURL.String(),
 		testQueue,
+		"--limit=1",
 		"--format=raw",
 		"--no-color"}
 	output := testcommon.CaptureOutput(main)

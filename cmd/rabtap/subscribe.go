@@ -12,6 +12,7 @@ import (
 	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // ErrIdleTimeout is returned by the message loop when the loop was terminated
@@ -39,9 +40,42 @@ type MessageReceiveFunc func(rabtap.TapMessage) error
 // MessagePred is a predicate function on a message
 type MessagePred func(rabtap.TapMessage) (bool, error)
 
+type MessagePredEnv struct {
+	msg    *amqp.Delivery
+	count  int64
+	toStr  func([]byte) string
+	gunzip func([]byte) ([]byte, error)
+}
+
+func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interface{} {
+	return map[string]interface{}{
+		"rt_msg":   msg.AmqpMessage,
+		"rt_count": count,
+		"rt_toStr": func(b []byte) string { return string(b) },
+		"rt_gunzip": func(b []byte) ([]byte, error) {
+			return gunzip(bytes.NewReader(b))
+		},
+	}
+}
+
+// cerateMessagePredEnv returns an environment to evaluate predicates in the
+// context of received messages
+// func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interface{} {
+/* func createMessagePredEnv(msg rabtap.TapMessage, count int64) MessagePredEnv {
+	// expose the message and some helper function
+	return MessagePredEnv{
+		msg:   msg.AmqpMessage,
+		count: count,
+		toStr: func(b []byte) string { return string(b) },
+		gunzip: func(b []byte) ([]byte, error) {
+			return gunzip(bytes.NewReader(b))
+		},
+	}
+} */
+
 // createMessagePred creates a MessagePred predicate function that uses a
 // PredicateExpression
-func createMessagePred(expr Predicate) MessagePred {
+/* func createMessagePred(expr Predicate) MessagePred {
 	return func(m rabtap.TapMessage) (bool, error) {
 		// expose the message and some helper function
 		env := map[string]interface{}{
@@ -53,13 +87,21 @@ func createMessagePred(expr Predicate) MessagePred {
 		}
 		return expr.Eval(env)
 	}
+} */
+
+// createCountingMessageReceivePred creates the default message loop termination
+// predicate (loop terminates when predicate is true). When limit is 0, loop
+// will never terminate. Expectes a variable "rt_count" in the context, that
+// holds the current number of messages received. The limit is provided by configuration.
+// To unify predicate handling (see filter predicate), we use the same mechanism
+// here. In later versions, the termination predicate may be defined by the
+// user, so that rabtap quits if a certain condition is met.
+func createCountingMessageReceivePred(limit int64) (Predicate, error) {
+	env := map[string]interface{}{"rt_limit": limit}
+	return NewExprPredicateWithEnv("(rt_limit > 0) && (rt_count >= rt_limit)", env)
 }
 
-// createCountingMessageReceivePred returns a (stateful) predicate that will
-// return true after it is called num times, thus limiting the number of
-// messages received. If num is 0, a predicate always returning false is
-// returned.
-func createCountingMessageReceivePred(num int64) MessagePred {
+/* func createCountingMessageReceivePred(num int64) MessagePred {
 
 	if num == 0 {
 		return func(_ rabtap.TapMessage) (bool, error) {
@@ -73,7 +115,7 @@ func createCountingMessageReceivePred(num int64) MessagePred {
 		return counter > num, nil
 
 	}
-}
+} */
 
 // createAcknowledgeFunc returns the function used to acknowledge received
 // functions, wich will either be ACKed or REJECTED with optional REQUEUE
@@ -104,20 +146,21 @@ func messageReceiveLoop(ctx context.Context,
 	messageChan rabtap.TapChannel,
 	errorChan rabtap.SubscribeErrorChannel,
 	messageReceiveFunc MessageReceiveFunc,
-	filterPred MessagePred,
-	termPred MessagePred,
+	filterPred Predicate,
+	termPred Predicate,
 	acknowledger AcknowledgeFunc,
 	timeout time.Duration) error {
 
 	timeoutTicker := time.NewTicker(timeout)
 	defer timeoutTicker.Stop()
 
+	count := int64(0) // counts not filtered messages
 	for {
 		select {
 
 		case <-ctx.Done():
 			log.Debugf("subscribe: cancel")
-			return nil
+			return ctx.Err()
 
 		case err, more := <-errorChan:
 			if more {
@@ -137,20 +180,28 @@ func messageReceiveLoop(ctx context.Context,
 				log.Error(err)
 			}
 
-			passed, err := filterPred(message)
+			env := createMessagePredEnv(message, count)
+			passed, err := filterPred.Eval(env)
 			if err != nil {
-				log.Errorf("filter evaluation: %s", err.Error())
+				log.Errorf("filter expression evaluation: %s", err.Error())
 			}
+
 			if !passed {
+				log.Debugf("message with MessageId=%s was filtered out", message.AmqpMessage.MessageId)
 				continue
 			}
+			count += 1
 
 			if err := messageReceiveFunc(message); err != nil {
 				log.Error(err)
 			}
 
-			// TODO ok to count only on not-filtered out messages?
-			if terminate, _ := termPred(message); terminate {
+			env = createMessagePredEnv(message, count)
+			terminate, err := termPred.Eval(env)
+			if err != nil {
+				log.Errorf("terminate expression evaluation: %s", err.Error())
+			}
+			if terminate {
 				return nil
 			}
 

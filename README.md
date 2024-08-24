@@ -848,13 +848,15 @@ command, the following context is set:
 
 In the `sub` and `tap` commands, the following bindings are available:
 
-* the current received message is bound to the variable [msg](#message-type),
+* the current received message is bound to the variable [rt_msg](#message-type),
   which allows access to the message-metadata and the body
+* the current count of messages received that passed the filter is bound to
+ `rt_count`
 * Helper function are provided for accessing the message body:
-  * the `toStr` function converts a byte buffer into a string, e.g. `let
-  b=toJSON(toStr(msg.Body))`
-  * the `gunzip` function decompresses the given byte buffer `let
-  b=toJSON(toStr(gunzip(msg.Body)))`, allowing to inspect a compressed body
+  * the `rt_toStr` function converts a byte buffer into a string, e.g. `let
+  b=toJSON(rt_toStr(rt_msg.Body))`
+  * the `rt_gunzip` function decompresses the given byte buffer `let
+  b=toJSON(rt_toStr(rt_gunzip(rt_msg.Body)))`, allowing to inspect a compressed body
 
 ##### Examples
 
@@ -869,9 +871,9 @@ broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
   before, but consider only exchanges of type `topic`.
 * `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print
   all queues with at least one consume
-* `rabtap sub JDQ --filter="msg.RoutingKey == 'test'"` - print only messages that
+* `rabtap sub JDQ --filter="rt_msg.RoutingKey == 'test'"` - print only messages that
   were sent with the routing key `test`.
-* `rabtap sub JDQ --filter="let b=fromJSON(toStr(gunzip(msg.Body))); b.Name == 'JAN'"` -
+* `rabtap sub JDQ --filter="let b=fromJSON(rt_toStr(rt_gunzip(rt_msg.Body))); b.Name == 'JAN'"` -
   print only messages that have `.Name == "JAN"` in their gzipped payload,
   interpreted as `JSON`
 

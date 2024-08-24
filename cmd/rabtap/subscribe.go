@@ -12,7 +12,6 @@ import (
 	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // ErrIdleTimeout is returned by the message loop when the loop was terminated
@@ -37,16 +36,6 @@ type MessageReceiveFunc func(rabtap.TapMessage) error
 
 // var ErrMessageLoopEnded = errors.New("message loop ended")
 
-// MessagePred is a predicate function on a message
-type MessagePred func(rabtap.TapMessage) (bool, error)
-
-type MessagePredEnv struct {
-	msg    *amqp.Delivery
-	count  int64
-	toStr  func([]byte) string
-	gunzip func([]byte) ([]byte, error)
-}
-
 func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interface{} {
 	return map[string]interface{}{
 		"rt_msg":   msg.AmqpMessage,
@@ -57,37 +46,6 @@ func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interfa
 		},
 	}
 }
-
-// cerateMessagePredEnv returns an environment to evaluate predicates in the
-// context of received messages
-// func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interface{} {
-/* func createMessagePredEnv(msg rabtap.TapMessage, count int64) MessagePredEnv {
-	// expose the message and some helper function
-	return MessagePredEnv{
-		msg:   msg.AmqpMessage,
-		count: count,
-		toStr: func(b []byte) string { return string(b) },
-		gunzip: func(b []byte) ([]byte, error) {
-			return gunzip(bytes.NewReader(b))
-		},
-	}
-} */
-
-// createMessagePred creates a MessagePred predicate function that uses a
-// PredicateExpression
-/* func createMessagePred(expr Predicate) MessagePred {
-	return func(m rabtap.TapMessage) (bool, error) {
-		// expose the message and some helper function
-		env := map[string]interface{}{
-			"msg":   m.AmqpMessage,
-			"toStr": func(b []byte) string { return string(b) },
-			"gunzip": func(b []byte) ([]byte, error) {
-				return gunzip(bytes.NewReader(b))
-			},
-		}
-		return expr.Eval(env)
-	}
-} */
 
 // createCountingMessageReceivePred creates the default message loop termination
 // predicate (loop terminates when predicate is true). When limit is 0, loop
@@ -100,22 +58,6 @@ func createCountingMessageReceivePred(limit int64) (Predicate, error) {
 	env := map[string]interface{}{"rt_limit": limit}
 	return NewExprPredicateWithEnv("(rt_limit > 0) && (rt_count >= rt_limit)", env)
 }
-
-/* func createCountingMessageReceivePred(num int64) MessagePred {
-
-	if num == 0 {
-		return func(_ rabtap.TapMessage) (bool, error) {
-			return false, nil
-		}
-	}
-
-	counter := int64(1)
-	return func(_ rabtap.TapMessage) (bool, error) {
-		counter++
-		return counter > num, nil
-
-	}
-} */
 
 // createAcknowledgeFunc returns the function used to acknowledge received
 // functions, wich will either be ACKed or REJECTED with optional REQUEUE

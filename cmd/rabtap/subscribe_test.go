@@ -23,20 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// a Predicate returning a constant value
-type constantPred struct{ val bool }
-
-func (s *constantPred) Eval(_ map[string]interface{}) (bool, error) {
-	return s.val, nil
-}
-
-// a predicate that lets only pass message with MessageID set to a given value
-type testPred struct{ match string }
-
-func (s *testPred) Eval(env map[string]interface{}) (bool, error) {
-	return env["rt_msg"].(*amqp.Delivery).MessageId == s.match, nil
-}
-
 // a mocked amqp.Acknowldger to test our AcknowledgeFunc
 type MockAcknowledger struct {
 	// store values in a map so being able to manipulate in a value receiver
@@ -293,8 +279,8 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 		done <- true
 		return nil
 	}
-	termPred := &constantPred{val: false}
-	passPred := &constantPred{val: true}
+	termPred := constantPred{val: false}
+	passPred := constantPred{val: true}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 	go func() {
 		_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, passPred, termPred, acknowledger, time.Second*10)
@@ -310,8 +296,8 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	termPred := &constantPred{val: false}
-	passPred := &constantPred{val: true}
+	termPred := constantPred{val: false}
+	passPred := constantPred{val: true}
 
 	close(messageChan)
 	acknowledger := func(rabtap.TapMessage) error { return nil }
@@ -324,8 +310,8 @@ func TestMessageReceiveLoopExitsWhenTermPredReturnsTrue(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel, 1)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	termPred := &constantPred{val: true}
-	passPred := &constantPred{val: true}
+	termPred := constantPred{val: true}
+	passPred := constantPred{val: true}
 
 	messageChan <- rabtap.TapMessage{}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
@@ -344,8 +330,14 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 		received++
 		return nil
 	}
-	termPred := &constantPred{val: false}
-	filterPred := &testPred{match: "test"}
+
+	termPred := constantPred{val: false}
+
+	matcher := func(env map[string]interface{}) (bool, error) {
+		return env["rt_msg"].(*amqp.Delivery).MessageId == "test", nil
+	}
+	filterPred := funcPred{f: matcher}
+
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 
 	// when we send 3 messages
@@ -366,8 +358,8 @@ func TestMessageReceiveLoopExitsWithErrorWhenIdle(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	termPred := &constantPred{val: false}
-	passPred := &constantPred{val: true}
+	termPred := constantPred{val: false}
+	passPred := constantPred{val: true}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 
 	// when

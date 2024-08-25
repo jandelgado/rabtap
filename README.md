@@ -446,16 +446,16 @@ directory. The `--formate=FORMAT` option controls the format of output both on
 the console as well as in the written files (see
 [below](#format-specification-for-tap-and-sub-command) for details).
 
+The `--filter EXPR` allows filtering of messages using an expression language.
+See [Filtering](#filtering-output) for details and examples.
+
 Use the `--limit=NUM` option to limit the number of received messages. If
-specified, rabtap will terminate, after `NUM` messages were successfully
-read.
+specified, rabtap will terminate, after `NUM` messages were read and passed
+the filter (if set).
 
 When `--idle-timeout=DURATION` is set, the subscribe command will terminate
 when no new messages were received in the given time period. Look for the
 description of the `--delay` option for the format of the `DURATION` parameter.
-
-The `--filter EXPR` allows flexible filtering of messages using an expression
-language. See [Filtering](#filtering-output) for details and examples.
 
 Examples for binding keys used in `tap` command:
 
@@ -553,10 +553,6 @@ rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
        [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
 ```
 
-Use the `--limit=NUM` option to limit the number of received messages. If
-specified, rabtap will terminate, after `NUM` messages were successfully
-read.
-
 Use the `--reject` option to 'nack' messages, which in turn will be discarded
 by the broker or routed to a configured dead letter exchange (DLX). if
 `--requeue` is also set, the message will be returned to the queue.
@@ -568,29 +564,29 @@ stream and must be any of: `first`, `last`, `next`, a numerical offset, a
 RFC3339-Timestamp or a duration specification like `10m`. Consult the RabbitMQ
 documentation for more information on [streams](https://www.rabbitmq.com/streams.html).
 
-When `--idle-timeout=DURATION` is set, the subscribe command will terminate when no new
-messages were received in the given time period. Look for the description of the
-`--delay` option for the format of the `DURATION` parameter.
+When `--idle-timeout=DURATION` is set, the subscribe command will terminate
+when no new messages were received in the given time period. Look for the
+description of the `--delay` option for the format of the `DURATION` parameter.
 
-The `--filter EXPR` allows flexible filtering of messages using an expression
-language. See [Filtering](#filtering-output) for details and examples.
+Refer to the `tap` command for a description of the `--filter=EXPR`,
+`--limit=NUM`, `--saveto=DIR` and `--format=FORMAT`  options.
 
 Examples:
 
-* `$ rabtap sub somequeue --format=json` - will consume messages from queue
+* `rabtap sub somequeue --format=json` - will consume messages from queue
   `somequeue` and print out messages in JSON format. The Example assumes that
   `RABTAP_AMQPURI` environment variable is set, as the `--uri=AMQPURI`
-  parameter is omitted.
+  parameter is omitted
 * `rabtap sub somequeue --limit=1 --reject --requeue` - consume one message
-  from the queue `somequeue` and let the broker requeue the message.
-* `rabtap sub mystream --offset=first` - read all messages from stream
-  `mystream`.
+  from the queue `somequeue`, then exit, and let the broker requeue the message
+* `rabtap sub mystream --offset=first` - read all messages from the stream
+  `mystream`
 * `rabtap sub mystream --offset=50` - read messages from stream `mystream`
-  starting with the 50th message.
+  starting with the 50th message
 * `rabtap sub mystream --offset=10m` - read messages from stream `mystream`
-  which are aged 10 minutes or less.
+  which are aged 10 minutes or less
 * `rabtap sub somequeue --idle-timeout=5s` - read messages from queue `somequeue`
-  and exit when there is no new message received for 5 seconds.
+  and exit when there is no new message received for 5 seconds
 
 #### Publish messages
 
@@ -637,21 +633,21 @@ Examples:
 * `$ echo hello | rabtap pub --exchange amq.fanout` - publish "hello" to
   exchange amqp.fanout
 * `echo "hello" | rabtap pub --exchange amq.header --header KEY=VAL --header X=Y` -
-  publish hello to exchange amq.header use set message headers.
+  publish `hello` to exchange `amq.header` and set given message headers
 * `$ rabtap pub messages.json --format=json`  - messages are read from file
   `messages.json` in [rabtap JSON format](#json-message-format). Target
   exchange and routing keys are read from the messages meta data.  The
   `messages.json` file can contain multiple JSON documents as it is treated as
   a JSON stream.  Rabtap will honor the `XRabtapReceived` timestamps of the
   messages and by default will delay the messages as they were recorded. This
-  behaviour can be overridden by the `--delay` and `--speed` options.
+  behaviour can be overridden by the `--delay` and `--speed` options
 * `$ rabtap pub --exchange amq.direct -r myKey --format=json messages.json --delay=0s` - as
   before, but publish messages always to exchange `amq.direct` with routing key
-  `myKey` and without any delays.
+  `myKey` and without any delays
 * `$ rabtap pub --exchange amq.direct -r myKey --format=raw somedir --delay=0s` - as
   before, but assuming that `somedir` is a directory, the messages are read
   from message files previously recorded to this directory and replayed in the
-  order they were recorded.
+  order they were recorded
 
 #### Poor mans shovel
 
@@ -762,7 +758,7 @@ the queue type or mode:
 * `rabtap queue create mystream --queue-type=stream --durable` - create a stream
 * `rabtap queue create lazy_queue --lazy` - create a classic queue in lazy
   mode that is named `lazy_queue`. `--lazy` is an alias for setting the arg
-  `x-queue-mode`.
+  `x-queue-mode`
 
 ### Format specification for tap and sub command
 
@@ -816,15 +812,14 @@ Note that in JSON mode, the `Body` is base64 encoded.
 
 When your brokers topology is complex, the output of the `info` command can
 become very bloated. The `--filter` helps you to narrow output to the desired
-information. The same filtering can be applied to the `tap` and `sub` commands
-to filter only wanted messages.
+information. The same filtering mechanism can be applied to the `tap` and `sub`
+commands to filter only messages of interest.
 
 #### Filtering expressions
 
 A filtering expression is a function that evaluates to `true` or `false` (i.e.
-a *predicate*). Rabtap allows the specification of predicates to be applied
-when printing queues using the `info` command. The output will only proceed
-if the predicate evaluates to `true`.
+a _predicate_). When a filter is used, output will be supressed, if the predicate
+evalautes to `false`.
 
 Rabtap uses [Expr](https://expr-lang.org/) to evaluate predicates. This allows
 for complex expressions. See the [official expr-lang
@@ -840,20 +835,20 @@ information.
 ##### Evaluation context
 
 During evaluation, the context (i.e. the current exchange, queue, binding or
-message) is made available in the filter expression as variables. In the `info`
+message) is made available to the filter expression as variables. In the `info`
 command, the following context is set:
 
 * the current exchange is bound to the variable [exchange](#exchange-type)
 * the current queue is bound to the variable [queue](#queue-type)
 * the current binding is bound to the variable [binding](#binding-type)
 
-In the `sub` and `tap` commands, the following bindings are available:
+In the `sub` and `tap` commands, the following context is set:
 
 * the current received message is bound to the variable [rt_msg](#message-type),
   which allows access to the message-metadata and the body
 * the current count of messages received that passed the filter is bound to
  `rt_count`
-* Helper function are provided for accessing the message body:
+* Helper functions are provided to access the message body:
   * the `rt_toStr` function converts a byte buffer into a string, e.g. `let
   b=toJSON(rt_toStr(rt_msg.Body))`
   * the `rt_gunzip` function decompresses the given byte buffer, e.g. `let
@@ -870,13 +865,13 @@ broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
 * `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty` - print
   only queues bound to exchange `amq.direct` and skip all empty exchanges.
 * `rabtap info --filter "queue.Name matches '.*test.*'" --omit-empty` - print all
-  queues with `test` in their name.
+  queues with `test` in their name
 * `rabtap info --filter "queue.Name matches '.*test.*' && exchange.Type == 'topic'" --omit-empty` - like
   before, but consider only exchanges of type `topic`.
 * `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print
   all queues with at least one consume
 * `rabtap sub JDQ --filter="rt_msg.RoutingKey == 'test'"` - print only messages that
-  were sent with the routing key `test`.
+  were sent with the routing key `test`
 * `rabtap sub JDQ --filter="let b=fromJSON(rt_toStr(rt_gunzip(rt_msg.Body))); b.Name == 'JAN'"` -
   print only messages that have `.Name == "JAN"` in their gzipped payload,
   interpreted as `JSON`
@@ -1041,7 +1036,6 @@ type Message struct {
 
     Body []byte
 }
-
 ```
 
 </details>

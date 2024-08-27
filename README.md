@@ -53,6 +53,8 @@ and exchanges, inspect broker.
       * [Exchange type](#exchange-type)
       * [Queue type](#queue-type)
       * [Binding type](#binding-type)
+      * [Connection type](#connection-type)
+      * [Channel type](#channel-type)
       * [Message type](#message-type)
 * [Build from source](#build-from-source)
   * [Download and build using go install](#download-and-build-using-go-install)
@@ -146,10 +148,10 @@ Usage:
               [--show-default] [--mode=MODE] [--format=FORMAT] [-kncv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
-	      [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
-	      [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+          [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
+          [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
-	      [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
+          [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
               [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jkcsvn]
@@ -207,7 +209,7 @@ Arguments and options:
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
                       If not set then messages will be delayed as recorded.
-					  The value must be suffixed with a time unit, e.g. ms, s etc.
+                      The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
@@ -222,7 +224,7 @@ Arguments and options:
                       routing- or binding-key. Can occur multiple times.
  --idle-timeout=DURATION end reading messages when no new message was received
                       for the given duration.  The value must be suffixed with
-					  a time unit, e.g. ms, s etc.
+                      a time unit, e.g. ms, s etc.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --lazy               create a lazy queue.
@@ -235,21 +237,21 @@ Arguments and options:
  --omit-empty         don't show echanges without bindings in info command.
  --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last',
                       'next', a duration like '10m', a RFC3339-Timestamp or
-					  an integer index value. Basically it is an alias for
-					  '--args=x-stream-offset=OFFSET'.
+                      an integer index value. Basically it is an alias for
+                      '--args=x-stream-offset=OFFSET'.
  --queue-type=TYPE    type of queue [default: classic].
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  --reject             Reject messages. Default behaviour is to acknowledge messages.
  --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON
-					  message format).
+                      message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
- -t, --type=TYPE		  type of exchange [default: fanout].
+ -t, --type=TYPE          type of exchange [default: fanout].
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
@@ -317,7 +319,7 @@ parsing of the URI may fail with an error.
 
 Authentication is either by the username and password provided in the broker
 URI as desribed above (RabbitMQ `PLAIN` method), or by mTLS providing a client
-certificate and key using the `--tls-key`, `--tls-cert` options (RabbitMQ
+certificate and key using the `--tls-key-file`, `--tls-cert-file` options (RabbitMQ
 `EXTERNAL` method). If both mTLS and a username and password is provided, then
 rabtap will use mTLS and `PLAIN` authentication with the given username and
 password.
@@ -834,28 +836,36 @@ information.
 
 ##### Evaluation context
 
-During evaluation, the context (i.e. the current exchange, queue, binding or
-message) is made available to the filter expression as variables. In the `info`
+During evaluation, the context (i.e. the current exchange, queue, etc.)
+is made available to the filter expression as variables. In the `info`
 command, the following context is set:
 
-* the current exchange is bound to the variable [exchange](#exchange-type)
-* the current queue is bound to the variable [queue](#queue-type)
-* the current binding is bound to the variable [binding](#binding-type)
+When using `rabtap --info --mode=byExchange` (which is the default), the
+following variables are bound:
+
+* the current exchange is bound to the variable [r.exchange](#exchange-type)
+* the current queue is bound to the variable [r.queue](#queue-type)
+* the current binding is bound to the variable [r.binding](#binding-type)
+
+When using `rabtap --info --mode=byConnection` , the following variables are bound:
+
+* the current connection is bound to the variable [r.connection](#connection-type)
+* the current channel is bound to the variable [r.connection](#channel-type)
 
 In the `sub` and `tap` commands, the following context is set:
 
-* the current received message is bound to the variable [rt_msg](#message-type),
+* the current received message is bound to the variable [r.msg](#message-type),
   which allows access to the message-metadata and the body
 * the current count of messages received that passed the filter is bound to
- `rt_count`
+ `r.count`
 * Helper functions are provided to access the message body:
-  * the `rt_toStr` function converts a byte buffer into a string, e.g. `let
-  b=toJSON(rt_toStr(rt_msg.Body))`
-  * the `rt_gunzip` function decompresses the given byte buffer, e.g. `let
-  b=toJSON(rt_toStr(rt_gunzip(rt_msg.Body)))`, allowing to inspect a compressed body
-  * the `rt_body` returns the message body, decompressing if necessary (i.e.
+  * the `r.toStr` function converts a byte buffer into a string, e.g. `let
+  b=toJSON(r.toStr(r.msg.Body))`
+  * the `r.gunzip` function decompresses the given byte buffer, e.g. `let
+  b=toJSON(r.toStr(r.gunzip(r.msg.Body)))`, allowing to inspect a compressed body
+  * the `r.body` function returns the message body, decompressing if necessary (i.e.
     if `ContentType` is `gzip`), e.g.
-    `let b=toJSON(rt_toStr(rt_body(rt_msg))`
+    `let b=toJSON(r.toStr(r.body(r.msg))`
 
 ##### Examples
 
@@ -869,10 +879,15 @@ broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
 * `rabtap info --filter "queue.Name matches '.*test.*' && exchange.Type == 'topic'" --omit-empty` - like
   before, but consider only exchanges of type `topic`.
 * `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print
-  all queues with at least one consume
-* `rabtap sub JDQ --filter="rt_msg.RoutingKey == 'test'"` - print only messages that
+  all queues with at least one consumer
+* `rabtap info --mode=byConnection --filter="r.channel.PrefetchCount > 1` - list
+  all connection with channel that have a prefetch-count > 1
+* `rabtap info --mode=byConnection --filter="r.connection.PeerCertSubject matches '.*CN=guest.*'"` - 
+  list all connection that were authenticated using mTLS and which certificates
+  subject contains `CN=guest`
+* `rabtap sub JDQ --filter="r.msg.RoutingKey == 'test'"` - print only messages that
   were sent with the routing key `test`
-* `rabtap sub JDQ --filter="let b=fromJSON(rt_toStr(rt_gunzip(rt_msg.Body))); b.Name == 'JAN'"` -
+* `rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.gunzip(r.msg.Body))); b.Name == 'JAN'"` -
   print only messages that have `.Name == "JAN"` in their gzipped payload,
   interpreted as `JSON`
 
@@ -990,6 +1005,164 @@ type Binding struct {
     DestinationType string
     RoutingKey      string
     PropertiesKey string
+}
+```
+
+##### Connection type
+
+<details>
+  <summary>Definition of the Connection type</summary>
+
+```go
+type Connection struct {
+    ReductionsDetails struct {
+        Rate float64
+    }
+    Reductions     int
+    RecvOctDetails struct {
+        Rate float64
+    }
+    RecvOct        int
+    SendOctDetails struct {
+        Rate float64
+    }
+    SendOct          int
+    ConnectedAt      int64
+    ClientProperties struct {
+        Product        string
+        Version        string
+        ConnectionName string
+        Capabilities   struct {
+            ConnectionBlocked    bool
+            ConsumerCancelNotify bool
+        }
+    }
+    ChannelMax        int
+    FrameMax          int
+    Timeout           int
+    Vhost             string
+    User              string
+    Protocol          string
+    SslHash           string
+    SslCipher         string
+    SslKeyExchange    string
+    SslProtocol       string
+    AuthMechanism     string
+    PeerCertValidity  string
+    PeerCertIssuer    string
+    PeerCertSubject   string
+    Ssl               bool
+    PeerHost          string
+    Host              string
+    PeerPort          int
+    Port              int
+    Name              string
+    Node              string
+    Type              string
+    GarbageCollection struct {
+        MinorGcs        int
+        FullsweepAfter  int
+        MinHeapSize     int
+        MinBinVheapSize int
+        MaxHeapSize     int
+    }
+    Channels int
+    State    string
+    SendPend int
+    SendCnt  int
+    RecvCnt  int
+}
+```
+
+</details>
+
+##### Channel type
+
+<details>
+  <summary>Definition of the Channel type</summary>
+
+```go
+type Channel struct {
+    ReductionsDetails struct {
+        Rate float64
+    }
+    Reductions   int
+    MessageStats struct {
+        ReturnUnroutableDetails struct {
+            Rate float64
+        }
+        ReturnUnroutable int
+        ConfirmDetails   struct {
+            Rate float64
+        }
+        Confirm        int
+        PublishDetails struct {
+            Rate float64
+        }
+        Publish    int
+        Ack        int
+        AckDetails struct {
+            Rate float64
+        }
+        Deliver        int
+        DeliverDetails struct {
+            Rate float64
+        }
+        DeliverGet        int
+        DeliverGetDetails struct {
+            Rate float64
+        }
+        DeliverNoAck        int
+        DeliverNoAckDetails struct {
+            Rate float64
+        }
+        Get        int
+        GetDetails struct {
+            Rate float64
+        }
+        GetEmpty        int
+        GetEmptyDetails struct {
+            Rate float64
+        }
+        GetNoAck        int
+        GetNoAckDetails struct {
+            Rate float64
+        }
+        Redeliver        int
+        RedeliverDetails struct {
+            Rate float64
+        }
+    }
+    Vhost             string
+    User              string
+    Number            int
+    Name              string
+    Node              string
+    ConnectionDetails ConnectionDetails // see below
+    GarbageCollection struct {
+        MinorGcs        int
+        FullsweepAfter  int
+        MinHeapSize     int
+        MinBinVheapSize int
+        MaxHeapSize     int
+    }
+    State                  string
+    GlobalPrefetchCount    int
+    PrefetchCount          int
+    AcksUncommitted        int
+    MessagesUncommitted    int
+    MessagesUnconfirmed    int
+    MessagesUnacknowledged int
+    ConsumerCount          int
+    Confirm                bool
+    Transactional          bool
+    IdleSince              string
+}
+
+type ConnectionDetails struct {
+    PeerHost string
+    PeerPort int
+    Name     string
 }
 ```
 

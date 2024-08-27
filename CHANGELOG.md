@@ -1,5 +1,14 @@
 # Changelog for rabtap
 
+## v1.41 (2024-08-27)
+
+* new: `--filter=FILTER` option for `tap` and `sub` commands to filter output
+  of received messages, e.g. `rabtap sub JDQ --filter="r.msg.RoutingKey == 'test'"`
+* breaking change: the `binding`, `queue`, `exchange`, `connection` and
+  `channel` variables available in expressions of `rabtap info --filter=FILTER`
+  are now all prefixed with `r.`  and are thus now to be referenced as `r.binding`,
+  `r.queue` etc.
+
 ## v1.40 (2024-08-20)
 
 * govaluate not being maintained since 2017, we switch to

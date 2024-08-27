@@ -43,6 +43,8 @@ func (s ExprPredicate) Eval(env map[string]interface{}) (bool, error) {
 	for k, v := range s.initialEnv {
 		env[k] = v
 	}
+	// wrap the env in a own rabtap "namespace"
+	env = map[string]interface{}{"r": env}
 	result, err := expr.Run(s.prog, env)
 	if err != nil {
 		return false, err

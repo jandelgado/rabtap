@@ -27,7 +27,8 @@ func TestExprPredicateFalse(t *testing.T) {
 
 func TestExprPredicateWithInitalEnv(t *testing.T) {
 	initEnv := map[string]interface{}{"a": 1337}
-	f, err := NewExprPredicateWithEnv(`b < a`, initEnv)
+	// note that all variables are prefixed with "r" in the Eval() method
+	f, err := NewExprPredicateWithEnv(`r.b < r.a`, initEnv)
 	require.NoError(t, err)
 
 	env := map[string]interface{}{"b": 100}
@@ -37,7 +38,7 @@ func TestExprPredicateWithInitalEnv(t *testing.T) {
 	assert.True(t, res)
 }
 func TestExprPredicateWithEvalEnv(t *testing.T) {
-	f, err := NewExprPredicate(`a == 1337 && b.X == 42 && c == "JD"`)
+	f, err := NewExprPredicate(`r.a == 1337 && r.b.X == 42 && r.c == "JD"`)
 	require.NoError(t, err)
 	env := map[string]interface{}{
 		"a": 1337,
@@ -57,7 +58,7 @@ func TestExprPredicateReturnsErrorOnInvalidSyntax(t *testing.T) {
 }
 
 func TestExprPredicateReturnsErrorOnEvalError(t *testing.T) {
-	f, err := NewExprPredicate("(1/a) == 1")
+	f, err := NewExprPredicate("(1/r.a) == 1")
 	require.NoError(t, err)
 
 	_, err = f.Eval(nil)

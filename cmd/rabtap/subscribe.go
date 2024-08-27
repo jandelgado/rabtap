@@ -39,13 +39,13 @@ type MessageReceiveFunc func(rabtap.TapMessage) error
 
 func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interface{} {
 	return map[string]interface{}{
-		"rt_msg":   msg.AmqpMessage,
-		"rt_count": count,
-		"rt_toStr": func(b []byte) string { return string(b) },
-		"rt_gunzip": func(b []byte) ([]byte, error) {
+		"msg":   msg.AmqpMessage,
+		"count": count,
+		"toStr": func(b []byte) string { return string(b) },
+		"gunzip": func(b []byte) ([]byte, error) {
 			return gunzip(bytes.NewReader(b))
 		},
-		"rt_body": func(m *amqp.Delivery) ([]byte, error) {
+		"body": func(m *amqp.Delivery) ([]byte, error) {
 			return body(m)
 		},
 	}
@@ -53,7 +53,7 @@ func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interfa
 
 // loopCountPred creates is the default message loop
 // termination predicate (loop terminates when predicate is true). When limit
-// is 0, loop will never terminate. Expectes a variable "rt_count" in the
+// is 0, loop will never terminate. Expectes a variable "count" in the
 // context, that holds the current number of messages received. The limit is
 // provided by configuration. To unify predicate handling (see filter
 // predicate), we use the same mechanism here. In later versions, the
@@ -64,13 +64,11 @@ type LoopCountPred struct {
 }
 
 func (s *LoopCountPred) Eval(env map[string]interface{}) (bool, error) {
-	count := env["rt_count"].(int64) // TODO error check
+	count := env["count"].(int64)
 	return (s.limit > 0) && (count >= s.limit), nil
 }
 
 func NewLoopCountPred(limit int64) (*LoopCountPred, error) {
-	// env := map[string]interface{}{"rt_limit": limit}
-	// return NewExprPredicateWithEnv("(rt_limit > 0) && (rt_count >= rt_limit)", env)
 	return &LoopCountPred{limit}, nil
 }
 

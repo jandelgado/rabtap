@@ -60,10 +60,10 @@ func TestCreateMessagePredicateProvidesMessageContext(t *testing.T) {
 	msg := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "match123"}}
 	env := createMessagePredEnv(msg, 123)
 
-	assert.Equal(t, msg.AmqpMessage, env["rt_msg"])
-	assert.Equal(t, int64(123), env["rt_count"])
-	assert.NotNil(t, env["rt_gunzip"])
-	assert.NotNil(t, env["rt_toStr"])
+	assert.Contains(t, env, "msg")
+	assert.Equal(t, int64(123), env["count"])
+	assert.Contains(t, env, "gunzip")
+	assert.Contains(t, env, "toStr")
 }
 
 func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *testing.T) {
@@ -102,7 +102,7 @@ func TestCreateCountingMessageReceivePredReturnsFalseIfLimitIsZero(t *testing.T)
 	require.NoError(t, err)
 
 	for _, tc := range []int64{0, 1, 2, 100} {
-		env := map[string]interface{}{"rt_count": tc}
+		env := map[string]interface{}{"count": tc}
 		res, err := pred.Eval(env)
 
 		require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestCreateCountingMessageReceivePredReturnsTrueOnWhenLimitIsReached(t *test
 	testcases := map[int64]bool{0: false, 1: false, 2: false, 3: true, 4: true}
 	for probe, expected := range testcases {
 		t.Run(fmt.Sprintf("term_predicate(%v, %v)", probe, expected), func(t *testing.T) {
-			env := map[string]interface{}{"rt_count": probe}
+			env := map[string]interface{}{"count": probe}
 			actual, err := pred.Eval(env)
 
 			require.NoError(t, err)
@@ -334,7 +334,7 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 	termPred := constantPred{val: false}
 
 	matcher := func(env map[string]interface{}) (bool, error) {
-		return env["rt_msg"].(*amqp.Delivery).MessageId == "test", nil
+		return env["msg"].(*amqp.Delivery).MessageId == "test", nil
 	}
 	filterPred := funcPred{f: matcher}
 

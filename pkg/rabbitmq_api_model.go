@@ -74,8 +74,8 @@ type RabbitVhost struct {
 		Rate float64 `json:"rate"`
 	} `json:"messages_unacknowledged_details"`
 	Metadata struct {
-		Description string        `json:"description"`
-		Tags        []interface{} `json:"tags"`
+		Description string   `json:"description"`
+		Tags        []string `json:"tags"`
 	} `json:"metadata"`
 	Name           string `json:"name"`
 	RecvOct        int    `json:"recv_oct"`
@@ -86,8 +86,8 @@ type RabbitVhost struct {
 	SendOctDetails struct {
 		Rate float64 `json:"rate"`
 	} `json:"send_oct_details"`
-	Tags    []interface{} `json:"tags"`
-	Tracing bool          `json:"tracing"`
+	Tags    []string `json:"tags"`
+	Tracing bool     `json:"tracing"`
 }
 
 // RabbitConnection models the /connections resource of the rabbitmq http api
@@ -114,28 +114,28 @@ type RabbitConnection struct {
 			ConsumerCancelNotify bool `json:"consumer_cancel_notify"`
 		} `json:"capabilities"`
 	} `json:"client_properties"`
-	ChannelMax        int         `json:"channel_max"`
-	FrameMax          int         `json:"frame_max"`
-	Timeout           int         `json:"timeout"`
-	Vhost             string      `json:"vhost"`
-	User              string      `json:"user"`
-	Protocol          string      `json:"protocol"`
-	SslHash           interface{} `json:"ssl_hash"`
-	SslCipher         interface{} `json:"ssl_cipher"`
-	SslKeyExchange    interface{} `json:"ssl_key_exchange"`
-	SslProtocol       interface{} `json:"ssl_protocol"`
-	AuthMechanism     string      `json:"auth_mechanism"`
-	PeerCertValidity  interface{} `json:"peer_cert_validity"`
-	PeerCertIssuer    interface{} `json:"peer_cert_issuer"`
-	PeerCertSubject   interface{} `json:"peer_cert_subject"`
-	Ssl               bool        `json:"ssl"`
-	PeerHost          string      `json:"peer_host"`
-	Host              string      `json:"host"`
-	PeerPort          int         `json:"peer_port"`
-	Port              int         `json:"port"`
-	Name              string      `json:"name"`
-	Node              string      `json:"node"`
-	Type              string      `json:"type"`
+	ChannelMax        int    `json:"channel_max"`
+	FrameMax          int    `json:"frame_max"`
+	Timeout           int    `json:"timeout"`
+	Vhost             string `json:"vhost"`
+	User              string `json:"user"`
+	Protocol          string `json:"protocol"`
+	SslHash           string `json:"ssl_hash"`
+	SslCipher         string `json:"ssl_cipher"`
+	SslKeyExchange    string `json:"ssl_key_exchange"`
+	SslProtocol       string `json:"ssl_protocol"`
+	AuthMechanism     string `json:"auth_mechanism"`
+	PeerCertValidity  string `json:"peer_cert_validity"`
+	PeerCertIssuer    string `json:"peer_cert_issuer"`
+	PeerCertSubject   string `json:"peer_cert_subject"`
+	Ssl               bool   `json:"ssl"`
+	PeerHost          string `json:"peer_host"`
+	Host              string `json:"host"`
+	PeerPort          int    `json:"peer_port"`
+	Port              int    `json:"port"`
+	Name              string `json:"name"`
+	Node              string `json:"node"`
+	Type              string `json:"type"`
 	GarbageCollection struct {
 		MinorGcs        int `json:"minor_gcs"`
 		FullsweepAfter  int `json:"fullsweep_after"`

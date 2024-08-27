@@ -165,16 +165,16 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
 
 	err = cmdSubscribe(ctx, CmdSubscribeArg{
-		amqpURL:                args.AMQPURL,
-		queue:                  args.QueueName,
-		requeue:                args.Requeue,
-		reject:                 args.Reject,
-		tlsConfig:              getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
-		messageReceiveFunc:     messageReceiveFunc,
-		filterPred:             filterPred,
-		messageReceiveLoopPred: termPred,
-		args:                   args.Args,
-		timeout:                args.IdleTimeout,
+		amqpURL:            args.AMQPURL,
+		queue:              args.QueueName,
+		requeue:            args.Requeue,
+		reject:             args.Reject,
+		tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+		messageReceiveFunc: messageReceiveFunc,
+		filterPred:         filterPred,
+		termPred:           termPred,
+		args:               args.Args,
+		timeout:            args.IdleTimeout,
 	})
 	failOnError(err, "error subscribing messages", os.Exit)
 }

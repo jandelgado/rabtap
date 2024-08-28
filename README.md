@@ -1175,7 +1175,7 @@ type ConnectionDetails struct {
   <summary>Definition of the Message type</summary>
 
 The currently received messages in the `sub` and `pub` commands is exposed to
-the filter predicate under the name `rt_msg`. The `Message` type is more or
+the filter predicate under the name `r.msg`. The `Message` type is more or
 less the same as the `amqp.Delivery` type from the [golang amqp
 package](https://github.com/rabbitmq/amqp091-go):
 

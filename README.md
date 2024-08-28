@@ -1007,6 +1007,7 @@ type Binding struct {
     PropertiesKey string
 }
 ```
+</details>
 
 ##### Connection type
 

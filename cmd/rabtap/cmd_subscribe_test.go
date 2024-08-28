@@ -82,8 +82,8 @@ func TestCmdSub(t *testing.T) {
 		queue:              testQueue,
 		tlsConfig:          tlsConfig,
 		messageReceiveFunc: receiveFunc,
-		filterPred:         &constantPred{true},
-		termPred:           &constantPred{false},
+		filterPred:         constantPred{true},
+		termPred:           constantPred{false},
 		timeout:            time.Second * 10,
 	})
 

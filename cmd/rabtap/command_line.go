@@ -158,12 +158,14 @@ Examples:
   rabtap queue bind JDQ to amq.topic --bindingkey=key
   echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
   rabtap sub JDQ
+  # print only messages that have ".Name == 'JAN'" in their JSON payload
+  rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.body(r.msg))); b.Name == 'JAN'" 
   rabtap queue rm JDQ
 
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
-  rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
+  rabtap info --filter "r.binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 
   # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables

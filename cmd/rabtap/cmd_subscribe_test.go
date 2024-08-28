@@ -14,7 +14,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"syscall"
 	"testing"
 	"time"
 
@@ -33,12 +32,12 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 	go func() {
 		// we expect cmdSubscribe to return
 		cmdSubscribe(ctx, CmdSubscribeArg{
-			amqpURL:                amqpURL,
-			queue:                  "queue",
-			tlsConfig:              &tls.Config{},
-			messageReceiveFunc:     func(rabtap.TapMessage) error { return nil },
-			messageReceiveLoopPred: func(rabtap.TapMessage) bool { return true },
-			timeout:                time.Second * 10,
+			amqpURL:            amqpURL,
+			queue:              "queue",
+			tlsConfig:          &tls.Config{},
+			messageReceiveFunc: func(rabtap.TapMessage) error { return nil },
+			termPred:           &constantPred{false},
+			timeout:            time.Second * 10,
 		})
 		done <- true
 	}()
@@ -79,12 +78,13 @@ func TestCmdSub(t *testing.T) {
 
 	// subscribe to testQueue
 	go cmdSubscribe(ctx, CmdSubscribeArg{
-		amqpURL:                amqpURL,
-		queue:                  testQueue,
-		tlsConfig:              tlsConfig,
-		messageReceiveFunc:     receiveFunc,
-		messageReceiveLoopPred: func(rabtap.TapMessage) bool { return true },
-		timeout:                time.Second * 10,
+		amqpURL:            amqpURL,
+		queue:              testQueue,
+		tlsConfig:          tlsConfig,
+		messageReceiveFunc: receiveFunc,
+		filterPred:         constantPred{true},
+		termPred:           constantPred{false},
+		timeout:            time.Second * 10,
 	})
 
 	time.Sleep(time.Second * 1)
@@ -149,16 +149,12 @@ func TestCmdSubIntegration(t *testing.T) {
 		})
 	require.Nil(t, err)
 
-	go func() {
-		time.Sleep(time.Second * 2)
-		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	}()
-
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 	os.Args = []string{"rabtap", "sub",
 		"--uri", amqpURL.String(),
 		testQueue,
+		"--limit=1",
 		"--format=raw",
 		"--no-color"}
 	output := testcommon.CaptureOutput(main)

@@ -49,7 +49,7 @@ func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
 				Mode:                "byExchange",
 				ShowConsumers:       true,
 				ShowDefaultExchange: false,
-				Filter:              TruePredicate,
+				Filter:              constantPred{true},
 				OmitEmptyExchanges:  false},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    "text",
@@ -107,7 +107,7 @@ func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
 				Mode:                "byConnection",
 				ShowConsumers:       true,
 				ShowDefaultExchange: false,
-				Filter:              TruePredicate,
+				Filter:              constantPred{true},
 				OmitEmptyExchanges:  false},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    "text",
@@ -231,7 +231,7 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 				Mode:                "byExchange",
 				ShowConsumers:       false,
 				ShowDefaultExchange: false,
-				Filter:              TruePredicate,
+				Filter:              constantPred{true},
 				OmitEmptyExchanges:  false},
 			renderConfig: BrokerInfoRendererConfig{Format: "dot"},
 			out:          &actual})
@@ -258,7 +258,7 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 				Mode:                "byConnection",
 				ShowConsumers:       false,
 				ShowDefaultExchange: false,
-				Filter:              TruePredicate,
+				Filter:              constantPred{true},
 				OmitEmptyExchanges:  false},
 			renderConfig: BrokerInfoRendererConfig{Format: "dot"},
 			out:          &actual})

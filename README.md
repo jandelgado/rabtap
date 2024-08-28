@@ -13,50 +13,53 @@ and exchanges, inspect broker.
 
 * [Features](#features)
 * [Screenshots](#screenshots)
-    * [Show broker topology](#show-broker-topology)
-    * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
-    * [Tap messages](#tap-messages)
+  * [Show broker topology](#show-broker-topology)
+  * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
+  * [Tap messages](#tap-messages)
 * [Installation](#installation)
-    * [Docker image](#docker-image)
-    * [Pre-compiled binaries](#pre-compiled-binaries)
-    * [Arch Linux](#arch-linux)
-    * [Installation from source](#installation-from-source)
+  * [Docker image](#docker-image)
+  * [Pre-compiled binaries](#pre-compiled-binaries)
+  * [Arch Linux](#arch-linux)
+  * [Installation from source](#installation-from-source)
 * [Usage](#usage)
-    * [Basic commands](#basic-commands)
-    * [Broker URI specification](#broker-uri-specification)
-        * [Authentication](#authentication)
-    * [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
-    * [Environment variables](#environment-variables)
-        * [Default RabbitMQ broker](#default-rabbitmq-broker)
-        * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
-        * [Default RabbitMQ TLS config](#default-rabbitmq-tls-config)
-        * [Colored output](#colored-output)
-    * [Examples](#examples)
-        * [Broker info](#broker-info)
-        * [Wire-tapping messages](#wire-tapping-messages)
-            * [Tap all messages published or delivered (RabbitMQ FireHose)](#tap-all-messages-published-or-delivered-rabbitmq-firehose)
-                * [Replaying messages from the FireHose exchange](#replaying-messages-from-the-firehose-exchange)
-            * [Connect to multiple brokers](#connect-to-multiple-brokers)
-            * [Message recorder](#message-recorder)
-        * [Consume Messages (subscribe)](#consume-messages-subscribe)
-        * [Publish messages](#publish-messages)
-        * [Poor mans shovel](#poor-mans-shovel)
-        * [Close connection](#close-connection)
-        * [Exchange commands](#exchange-commands)
-        * [Queue commands](#queue-commands)
-* [JSON message format](#json-message-format)
-* [Filtering output of info command](#filtering-output-of-info-command)
+  * [Command overview](#command-overview)
+  * [Broker URI specification](#broker-uri-specification)
+    * [Authentication](#authentication)
+  * [Environment variables](#environment-variables)
+    * [Default RabbitMQ broker](#default-rabbitmq-broker)
+    * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
+    * [Default RabbitMQ TLS config](#default-rabbitmq-tls-config)
+    * [Colored output](#colored-output)
+  * [Command reference and examples](#command-reference-and-examples)
+    * [Broker info](#broker-info)
+    * [Wire-tapping messages](#wire-tapping-messages)
+      * [Tap all messages published or delivered (RabbitMQ FireHose)](#tap-all-messages-published-or-delivered-rabbitmq-firehose)
+        * [Replaying messages from the FireHose exchange](#replaying-messages-from-the-firehose-exchange)
+      * [Connect to multiple brokers](#connect-to-multiple-brokers)
+      * [Message recorder](#message-recorder)
+    * [Subscribe messages](#subscribe-messages)
+    * [Publish messages](#publish-messages)
+    * [Poor mans shovel](#poor-mans-shovel)
+    * [Close connection](#close-connection)
+    * [Exchange commands](#exchange-commands)
+    * [Queue commands](#queue-commands)
+  * [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
+  * [JSON message format](#json-message-format)
+  * [Filtering output](#filtering-output)
     * [Filtering expressions](#filtering-expressions)
-        * [Evaluation context](#evaluation-context)
-        * [Examples](#examples-1)
+      * [Evaluation context](#evaluation-context)
+      * [Examples](#examples)
     * [Type reference](#type-reference)
-        * [Exchange type](#exchange-type)
-        * [Queue type](#queue-type)
-        * [Binding type](#binding-type)
+      * [Exchange type](#exchange-type)
+      * [Queue type](#queue-type)
+      * [Binding type](#binding-type)
+      * [Connection type](#connection-type)
+      * [Channel type](#channel-type)
+      * [Message type](#message-type)
 * [Build from source](#build-from-source)
-    * [Download and build using go install](#download-and-build-using-go-install)
-    * [Build using Makefile and tests](#build-using-makefile-and-tests)
-    * [Experimental WASM/wasip1 port](#experimental-wasmwasip1-port)
+  * [Download and build using go install](#download-and-build-using-go-install)
+  * [Build using Makefile and tests](#build-using-makefile-and-tests)
+  * [Experimental WASM/wasip1 port](#experimental-wasmwasip1-port)
 * [Test data generator](#test-data-generator)
 * [Contributing](#contributing)
 * [Author](#author)
@@ -73,6 +76,7 @@ and exchanges, inspect broker.
 * save messages and meta data for later analysis and replay
 * publish messages to exchanges
 * consume messages from queues and streams (subscribe)
+* filter output using flexible expressions
 * supports TLS
 * no runtime dependencies (statically linked golang single file binary)
 * simple to use command line tool
@@ -112,7 +116,7 @@ Output of rabtap in `tap` mode, showing message meta data and the message body:
 A docker image is provided so rabtap can be used as a docker container, e.g.
 
 ```console
-$ docker run --rm -ti ghcr.io/jandelgado/rabtap:latest 
+$ docker run --rm -ti ghcr.io/jandelgado/rabtap:latest
 ```
 
 ### Pre-compiled binaries
@@ -136,7 +140,6 @@ compile from source.
 ## Usage
 
 ```
-
 rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
@@ -144,15 +147,15 @@ Usage:
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
               [--show-default] [--mode=MODE] [--format=FORMAT] [-kncv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR]
-              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jkncsv]
-              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR]
-              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jkncsv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
+          [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
+          [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
+          [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
               [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jkcsvn]
-			  [--idle-timeout=DURATION]
+              [--filter=EXPR] [--idle-timeout=DURATION]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
               [--routingkey=KEY | (--header=KV)...]
@@ -206,11 +209,11 @@ Arguments and options:
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
                       If not set then messages will be delayed as recorded.
-					  The value must be suffixed with a time unit, e.g. ms, s etc.
+                      The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
- --filter=EXPR        Predicate for info command to filter queues [default: true]
+ --filter=EXPR        Predicate for sub, tap, info command to filter the output [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
                         and optionally to file (when --saveto DIR is given).
                         Valid options are: "raw", "json", "json-nopp". Default: raw
@@ -220,8 +223,8 @@ Arguments and options:
  --header=KV          A key value pair in the form of "key=value" used as a
                       routing- or binding-key. Can occur multiple times.
  --idle-timeout=DURATION end reading messages when no new message was received
-                      for the given duration.  The value must be suffixed with 
-					  a time unit, e.g. ms, s etc.
+                      for the given duration.  The value must be suffixed with
+                      a time unit, e.g. ms, s etc.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --lazy               create a lazy queue.
@@ -234,21 +237,21 @@ Arguments and options:
  --omit-empty         don't show echanges without bindings in info command.
  --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last',
                       'next', a duration like '10m', a RFC3339-Timestamp or
-					  an integer index value. Basically it is an alias for
-					  '--args=x-stream-offset=OFFSET'.
+                      an integer index value. Basically it is an alias for
+                      '--args=x-stream-offset=OFFSET'.
  --queue-type=TYPE    type of queue [default: classic].
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  --reject             Reject messages. Default behaviour is to acknowledge messages.
  --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON
-					  message format).
+                      message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
- -t, --type=TYPE		  type of exchange [default: fanout].
+ -t, --type=TYPE          type of exchange [default: fanout].
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
@@ -281,22 +284,21 @@ Examples:
   # instead of specifying --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
 ```
 
-### Basic commands
+### Command overview
 
 Rabtap understands the following commands:
 
 * `tap` - taps to an exchange and receives messages sent to the exchange,
    without affecting actual message delivery (using an exchange-to-exchange
    binding).
-* `sub` - subscribes to a queue and consumes messages sent to the queue (acts
-   like a RabbitMQ consumer)
-* `pub` - publish messages to an exchange, optionally with the timing as recorded.
-* `info` - show broker related info (exchanges, queues, bindings, stats). 
-* `queue` - create/bind/unbind/remove/purge queue
-* `exchange` - create/remove exchange
+* `sub` - subscribes to a queue and consumes from the queue
+* `pub` - publish messages to an exchange, optionally with the timing as recorded
+* `info` - show broker related info (exchanges, queues, bindings, stats).
+* `queue` - create,bind,unbind,remove or purge queues
+* `exchange` - create or remove exchanges
 * `conn` - close connections
 
-See the examples section for further information.
+See the below for detailed information.
 
 ### Broker URI specification
 
@@ -309,36 +311,18 @@ Examples:
 * `amqps://guest:guest@my-broker.dev:5671/`
 * `amqps://guest:guest@my-broker.dev:5671/vhost`
 
-Note that according to [RFC3986](https://tools.ietf.org/html/rfc3986) it might be 
-necessary to escape certain characters like e.g. `?` (%3F) or `#` (%23) as otherwise 
+Note that according to [RFC3986](https://tools.ietf.org/html/rfc3986) it might be
+necessary to escape certain characters like e.g. `?` (%3F) or `#` (%23) as otherwise
 parsing of the URI may fail with an error.
 
 #### Authentication
 
 Authentication is either by the username and password provided in the broker
 URI as desribed above (RabbitMQ `PLAIN` method), or by mTLS providing a client
-certificate and key using the `--tls-key`, `--tls-cert` options (RabbitMQ
+certificate and key using the `--tls-key-file`, `--tls-cert-file` options (RabbitMQ
 `EXTERNAL` method). If both mTLS and a username and password is provided, then
 rabtap will use mTLS and `PLAIN` authentication with the given username and
 password.
-
-### Format specification for tap and sub command
-
-The `--format=FORMAT` option controls the format of the `tap` and `sub`
-commands when writing messages to the console and optionally to the filesystem
-(i.e.  when `--saveto` is set).
-
-The `FORMAT` parameter has the following effect on the output:
-
-| `FORMAT`        | Format on console                            | Format of saved messages (`--saveto DIR`)    |
-|-----------------|----------------------------------------------|----------------------------------------------|
-| `raw` (default) | Pretty-printed metadata + raw Message body   | Metadata as JSON-File + Body as-is           |
-| `json`          | Pretty-printed JSON wiht base64 encoded body | Pretty-printed JSON with base64 encoded body |
-| `json-nopp`     | Single line JSON wiht base64 encoded body    | Pretty-printed JSON with base64 encoded body |
-
-Notes: 
-* the `--json` option is now deprecated. Use `--format=json` instead
-* `nopp` stands for `no pretty-print`
 
 ### Environment variables
 
@@ -371,7 +355,7 @@ $ rabtap info
 
 The default TLS certificates path can be set using the
 `RABTAP_TLS_CERTFILE` and `RABTAP_TLS_KEYFILE` and `RABTAP_TLS_CAFILE`
-environments variables. All certificate and key files are expected in PEM 
+environments variables. All certificate and key files are expected in PEM
 format. Example:
 
 ```console
@@ -385,15 +369,16 @@ $ echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
 #### Colored output
 
 Output is colored, when writing to a terminal. This behaviour can be changed:
+
 * set environment variable `NO_COLOR` to disable color output (or set
   `--no-color` option)
 * set `--color` option to force colored output
 
-### Examples
+### Command reference and examples
 
-The following examples assume a RabbitMQ broker running on localhost:5672 and
-the management API available on port 15672. Easiest way to start such an
-instance is by running `docker run -ti --rm -p 5672:5672 -p 15672:15672
+The following examples assume a RabbitMQ broker running on `localhost:5672` and
+the management API available on port `localhost:15672`. Easiest way to start
+such an instance is by running `docker run -ti --rm -p 5672:5672 -p 15672:15672
 rabbitmq:3-management` or similar command to start a RabbitMQ container.
 
 #### Broker info
@@ -411,13 +396,13 @@ tree structure in dot format for visualization with graphviz.
 The features of an exchange are displayed in square brackets with `D`
 (durable), `AD` (auto delete) and `I` (internal). The features of a queue are
 displayed in square brackets with `D` (durable), `AD` (auto delete) and `EX`
-(exclusive). 
+(exclusive).
 
 If the `--statistics` option is enabled, basic statistics are included
-in the output. 
+in the output.
 
 The `--filter` option allows to filter output. See
-[filtering](#filtering-output-of-info-command) section for details. Use the
+[filtering](#filtering-output) section for details. Use the
 `--by-connection` to sort output by connection (implies `--consumers`)
 
 Examples (assume that `RABTAP_APIURI` environment variable is set):
@@ -432,10 +417,24 @@ Examples (assume that `RABTAP_APIURI` environment variable is set):
 
 #### Wire-tapping messages
 
-The `tap` command allows to tap exchanges and transparently receives messages
-sent to the exchanges.  Rabtap automatically reconnects on connections
-failures. The syntax of the `tap` command is `rabtap tap [--uri URI] EXCHANGES`
-where the `EXCHANGES` argument specifies the exchanges and binding keys to use.
+The `tap` command allows to tap to exchanges and transparently receive the messages
+sent to the exchanges.  The general form of the tap command is either
+
+```text
+rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
+       [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
+       [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+```
+
+or, to connect to multiple brokers simultanously,
+
+```text
+rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
+       [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
+       [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+```
+
+The `EXCHANGES` argument specifies the exchanges and binding keys to use.
 The `EXCHANGES` argument is of the form `EXCHANGE:[KEY][,EXCHANGE:[KEY]]*`. If
 the exchange name contains a colon, use `\\:` to escape it, e.g.
 `myexchange\\:with\\:colons:KEY`.
@@ -443,6 +442,22 @@ the exchange name contains a colon, use `\\:` to escape it, e.g.
 The acutal format of the binding key depends on the exchange type (e.g.
 direct, topic, headers) and is described in the [RabbitMQ
 documentation](https://www.rabbitmq.com/tutorials/amqp-concepts.html).
+
+When `--saveto=DIR` is set, received messages will be written to the specified
+directory. The `--formate=FORMAT` option controls the format of output both on
+the console as well as in the written files (see
+[below](#format-specification-for-tap-and-sub-command) for details).
+
+The `--filter EXPR` allows filtering of messages using an expression language.
+See [Filtering](#filtering-output) for details and examples.
+
+Use the `--limit=NUM` option to limit the number of received messages. If
+specified, rabtap will terminate, after `NUM` messages were read and passed
+the filter (if set).
+
+When `--idle-timeout=DURATION` is set, the subscribe command will terminate
+when no new messages were received in the given time period. Look for the
+description of the `--delay` option for the format of the `DURATION` parameter.
 
 Examples for binding keys used in `tap` command:
 
@@ -475,23 +490,23 @@ The [RabbitMQ Firehose Tracer](https://www.rabbitmq.com/firehose.html) allows
 to "see" every message that is published or delivered. To use it, the FireHose
 tracer has to be enabled first:
 
-```console
-$ rabbitmqctl trace_on 
+```text
+$ rabbitmqctl trace_on
 ```
 
 Afterwards, every message published or delivered will be CC'd to the topic
 exhange `amq.rabbitmq.trace`.  The messages can now be tapped with rabtap:
 
-```console
+```text
 $ rabtap --uri amqp://guest:guest@localhost:5672/ tap amq.rabbitmq.trace:published.#
 ```
 
-RabbitMQ sends all messages published or delivered to the FireHose exchange. 
+RabbitMQ sends all messages published or delivered to the FireHose exchange.
 Published messages are sent with the routing key `publish.{exchangename}`, while
-delivered messages are sent with the routing key `deliver.{queuename}`. 
+delivered messages are sent with the routing key `deliver.{queuename}`.
 Depending on what you want to record, specify your binding accordingly.
 
-###### Replaying messages from the FireHose exchange 
+###### Replaying messages from the FireHose exchange
 
 When messages are tapped or subscribed from the FireHose tracer exchange, these
 messages have the original meta data stored in the headers section of the
@@ -505,7 +520,9 @@ message so that the originally published messages are replayed again.
 Rabtap allows you also to connect simultaneously to multiple brokers and
 exchanges:
 
-* `$ rabtap tap --uri amqp://broker1 amq.topic:# tap --uri amqp://broker2 amq.fanout:`
+```text
+$ rabtap tap --uri amqp://broker1 amq.topic:# tap --uri amqp://broker2 amq.fanout:
+```
 
 The example connects to `broker1` and taps to the `amq.topic` exchange and to
 the `amq.fanout` exchange on `broker2`.
@@ -520,26 +537,23 @@ message the body base64 encode. Examples:
 * `$ rabtap tap amq.topic:# --saveto /tmp` - saves messages as pair of
   files consisting of raw message body and JSON meta data file to `/tmp`
   directory.
-* `$ rabtap tap amq.topic:# --saveto /tmp --format json` - saves messages as 
+* `$ rabtap tap amq.topic:# --saveto /tmp --format json` - saves messages as
   JSON files to `/tmp` directory.
 
 Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` +
-`<extension>`. 
+`<extension>`.
 
-#### Consume Messages (subscribe)
+#### Subscribe messages
 
 The `sub` command reads messages from a queue or a stream. The general form
 of the `sub` command is:
 
+```text
+rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
+       [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jkcsvn]
+       [--filter=EXPR] [--idle-timeout=DURATION]
+       [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
 ```
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
-              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jksvn]
-			  [--idle-timeout=DURATION]
-```
-
-Use the `--limit=NUM` option to limit the number of received messages. If 
-specified, rabtap will terminate, after `NUM` messages were successfully
-read.
 
 Use the `--reject` option to 'nack' messages, which in turn will be discarded
 by the broker or routed to a configured dead letter exchange (DLX). if
@@ -552,26 +566,29 @@ stream and must be any of: `first`, `last`, `next`, a numerical offset, a
 RFC3339-Timestamp or a duration specification like `10m`. Consult the RabbitMQ
 documentation for more information on [streams](https://www.rabbitmq.com/streams.html).
 
-When `--idle-timeout=DURATION` is set, the subscribe command will terminate when no new
-messages were received in the given time period. Look for the description of the 
-`--delay` option for the format of the `DURATION` parameter.
+When `--idle-timeout=DURATION` is set, the subscribe command will terminate
+when no new messages were received in the given time period. Look for the
+description of the `--delay` option for the format of the `DURATION` parameter.
+
+Refer to the `tap` command for a description of the `--filter=EXPR`,
+`--limit=NUM`, `--saveto=DIR` and `--format=FORMAT`  options.
 
 Examples:
 
-* `$ rabtap sub somequeue --format=json` - will consume messages from queue
+* `rabtap sub somequeue --format=json` - will consume messages from queue
   `somequeue` and print out messages in JSON format. The Example assumes that
   `RABTAP_AMQPURI` environment variable is set, as the `--uri=AMQPURI`
-  parameter is omitted.
+  parameter is omitted
 * `rabtap sub somequeue --limit=1 --reject --requeue` - consume one message
-  from the queue `somequeue` and let the broker requeue the message.
-* `rabtap sub mystream --offset=first` - read all messages from stream
-  `mystream`.
+  from the queue `somequeue`, then exit, and let the broker requeue the message
+* `rabtap sub mystream --offset=first` - read all messages from the stream
+  `mystream`
 * `rabtap sub mystream --offset=50` - read messages from stream `mystream`
-  starting with the 50th message.
+  starting with the 50th message
 * `rabtap sub mystream --offset=10m` - read messages from stream `mystream`
-  which are aged 10 minutes or less.
+  which are aged 10 minutes or less
 * `rabtap sub somequeue --idle-timeout=5s` - read messages from queue `somequeue`
-  and exit when there is no new message received for 5 seconds.
+  and exit when there is no new message received for 5 seconds
 
 #### Publish messages
 
@@ -580,15 +597,15 @@ be published are either read from a file, or from a directory which contains
 previously recorded messages (e.g. using the `--saveto` option of the `tap`
 command).  The general form of the `pub` command is:
 
-```
-rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT] 
-            [--routingkey=KEY | (--header=HEADERKV)...]
-            [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
+```text
+rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
+       [--routingkey=KEY | (--header=HEADERKV)...] [--confirms] [--mandatory]
+       [--delay=DELAY | --speed=FACTOR] [-jkv]
 ```
 
 Message routing is either specified with a routing key and the `--routingkey`
 option or, when header based routing should be used, by specifying the headers
-with the `--header` option. Each header is specified in the form `KEY=VALUE`. 
+with the `--header` option. Each header is specified in the form `KEY=VALUE`.
 Multiple headers can be specified by specifying multiple `--header` options.
 
 Messages can be published either in raw format, in which they are sent as-is,
@@ -596,17 +613,19 @@ or in [JSON-format, as described here](#json-message-format), which includes
 message metadata and the body in a single JSON document. When multiple messages
 are published with metadata, rabtap will calculate the time elapsed of
 consecutive recorded messages using the metadata, and delay publishing
-accordingly. To set the publishing delay to a fix value, use the `--delay`
-option. To publish without delays, use `--delay=0s`. To modify publishing speed
-use the `--speed` option, which allows to set a factor to apply to the delays.
-A delay is a sequence of decimal numbers, each with optional fraction and a
-unit suffix, such as "300ms", "-1.5h" 0or "2h45m". Valid time units are "ns",
-"us" (or "µs"), "ms", "s", "m", "h". 
+accordingly.
+
+To set the publishing delay to a fix value, use the `--delay` option. To
+publish without delays, use `--delay=0s`. To modify publishing speed use the
+`--speed` option, which allows to set a factor to apply to the delays. A delay
+is a sequence of decimal numbers, each with optional fraction and a unit
+suffix, such as `300ms`, `-1.5h` or `2h45m`. Valid time units are `ns`, `us`
+(or `µs`), `ms`, `s`, `m`, `h`.
 
 When the `--confirms` option is set, rabtap waits for publisher confirmations
 from the server and logs an error if a confirmation is negative or not received
 (slows down throughput),
-  
+
 When the `--mandatory` option is set, rabtap publishes message in mandatory
 mode. If set and a message can not be delivered to a queue, the server returns
 the message and rabtap will log an error.
@@ -615,26 +634,26 @@ Examples:
 
 * `$ echo hello | rabtap pub --exchange amq.fanout` - publish "hello" to
   exchange amqp.fanout
-* `echo "hello" | rabtap pub --exchange amq.header --header KEY=VAL --header X=Y` - 
-  publish hello to exchange amq.header use set message headers.
+* `echo "hello" | rabtap pub --exchange amq.header --header KEY=VAL --header X=Y` -
+  publish `hello` to exchange `amq.header` and set given message headers
 * `$ rabtap pub messages.json --format=json`  - messages are read from file
   `messages.json` in [rabtap JSON format](#json-message-format). Target
   exchange and routing keys are read from the messages meta data.  The
   `messages.json` file can contain multiple JSON documents as it is treated as
   a JSON stream.  Rabtap will honor the `XRabtapReceived` timestamps of the
   messages and by default will delay the messages as they were recorded. This
-  behaviour can be overridden by the `--delay` and `--speed` options.
+  behaviour can be overridden by the `--delay` and `--speed` options
 * `$ rabtap pub --exchange amq.direct -r myKey --format=json messages.json --delay=0s` - as
   before, but publish messages always to exchange `amq.direct` with routing key
-  `myKey` and without any delays.
+  `myKey` and without any delays
 * `$ rabtap pub --exchange amq.direct -r myKey --format=raw somedir --delay=0s` - as
   before, but assuming that `somedir` is a directory, the messages are read
   from message files previously recorded to this directory and replayed in the
-  order they were recorded.
+  order they were recorded
 
 #### Poor mans shovel
 
-Rabtap instances can be connected through a pipe and messages will be read on
+Rabtap instances can be linked through a pipe and messages will be read on
 one side and published to the other. Note that for publish to work in streaming
 mode, the JSON mode (`--format json`) must be used on both sides, so that
 messages are encapsulated in JSON messages.
@@ -672,7 +691,7 @@ $ rabtap conn close '172.17.0.1:59228 -> 172.17.0.2:5672'
 
 The `exchange` command is used to create, remove and bind exchanges:
 
-```console
+```text
 $ rabtap exchange create myexchange --type topic
 $ rabtap exchange rm myexchange
 ```
@@ -680,14 +699,14 @@ $ rabtap exchange rm myexchange
 The `create` commands allows to specify additional arguments to be passed to
 RabbitMQ using the `--args=key=value` syntax:
 
-```console
+```text
 $ rabtap exchange create myexchange --type topic --args=alternate-exchange=myae
 ```
 
-The `bind` command creates an exchange-to-exchange binding (similar to a 
+The `bind` command creates an exchange-to-exchange binding (similar to a
 queue-to-exchange binding):
 
-```console
+```text
 $ rabtap exchange bind myechange to destexchange --bindingkey=KEY
 ```
 
@@ -695,7 +714,7 @@ $ rabtap exchange bind myechange to destexchange --bindingkey=KEY
 
 The `queue` command is used to create, remove, bind or unbind queues:
 
-```console
+```text
 $ rabtap queue create myqueue
 $ rabtap info --show-default
 http://localhost:15672/api (broker ver='3.7.8', mgmt ver='3.7.8', cluster='rabbit@b2fe3b3b6826')
@@ -734,22 +753,39 @@ The `create` commands allows to specify additional arguments to be passed to
 RabbitMQ using the `--args=key=value` syntax. This allows for example to specify
 the queue type or mode:
 
-* `rabtap queue create quorum_queue --args=x-queue-type=quorum --durable` - 
+* `rabtap queue create quorum_queue --args=x-queue-type=quorum --durable` -
   create a quorum queue named `quorum_queue`. The same can be achieved by using
   the `--queue-type` option, which is an alias for setting the arg `x-queue-type`:
   `rabtap queue create quorum --queue-type=quorum --durable`
 * `rabtap queue create mystream --queue-type=stream --durable` - create a stream
-* `rabtap queue create lazy_queue --lazy` - create a classic queue in lazy 
+* `rabtap queue create lazy_queue --lazy` - create a classic queue in lazy
   mode that is named `lazy_queue`. `--lazy` is an alias for setting the arg
-  `x-queue-mode`.
+  `x-queue-mode`
 
-## JSON message format
+### Format specification for tap and sub command
+
+The `--format=FORMAT` option controls the format of the `tap` and `sub`
+commands when writing messages to the console and optionally to the filesystem
+(i.e.  when `--saveto=DIR` is set). The `FORMAT` parameter has the following
+effect on the output:
+
+| `FORMAT`        | Format on console                            | Format of saved messages (`--saveto DIR`)    |
+|-----------------|----------------------------------------------|----------------------------------------------|
+| `raw` (default) | Pretty-printed metadata + raw Message body   | Metadata as JSON-File + Body as-is           |
+| `json`          | Pretty-printed JSON wiht base64 encoded body | Pretty-printed JSON with base64 encoded body |
+| `json-nopp`     | Single line JSON wiht base64 encoded body    | Pretty-printed JSON with base64 encoded body |
+
+Notes:
+
+* the `--json` option is now deprecated. Use `--format=json` instead
+* `nopp` stands for `no pretty-print`
+
+### JSON message format
 
 When using the `--format json` option, messages are print/read as a stream of JSON
 messages in the following format:
 
 ```json
-...
 {
   "ContentType": "text/plain",
   "ContentEncoding": "",
@@ -770,27 +806,25 @@ messages in the following format:
   "XRabtapReceivedTimestamp": "2019-06-13T19:33:51.920711583+02:00",
   "Body": "dGhpcyB0ZXN0IG1lc3NhZ2U .... IGFuZCBoZWFkZXJzIGFtcXAuVGFibGV7fQ=="
 }
-...
 ```
-Note that in JSON mode, the `Body` is base64 encoded. 
 
-## Filtering output of info command
+Note that in JSON mode, the `Body` is base64 encoded.
+
+### Filtering output
 
 When your brokers topology is complex, the output of the `info` command can
 become very bloated. The `--filter` helps you to narrow output to the desired
-information.
+information. The same filtering mechanism can be applied to the `tap` and `sub`
+commands to filter only messages of interest.
 
-### Filtering expressions
+#### Filtering expressions
 
 A filtering expression is a function that evaluates to `true` or `false` (i.e.
-a *predicate*). Rabtap allows the specification of predicates to be applied
-when printing queues using the `info` command. The output will only proceed
-if the predicate evaluates to `true`.
+a _predicate_). When a filter is used, output will be supressed, if the predicate
+evalautes to `false`.
 
-Rabtap uses [Expr](https://expr-lang.org/) to evaluate predicates. This
-allows for complex expressions.
-
-See the [official expr-lang
+Rabtap uses [Expr](https://expr-lang.org/) to evaluate predicates. This allows
+for complex expressions. See the [official expr-lang
 documentation](https://expr-lang.org/docs/language-definition) for further
 information.
 
@@ -800,36 +834,70 @@ information.
 > some aspects (e.g. `=~` vs `matches`  in regular expression matches). Consult
 > the documentation for details.
 
-#### Evaluation context
+##### Evaluation context
 
-During evaluation the context (i.e. the current exchange, queue and binding) is
-available in the expression as variables:
+During evaluation, the context (i.e. the current exchange, queue, etc.)
+is made available to the filter expression as variables. In the `info`
+command, the following context is set:
 
-* the current exchange is bound to the variable [exchange](#exchange-type)
-* the current queue is bound to the variable [queue](#queue-type)
-* the curren binding is bound to the variable [binding](#binding-type)
+When using `rabtap --info --mode=byExchange` (which is the default), the
+following variables are bound:
 
-#### Examples
+* the current exchange is bound to the variable [r.exchange](#exchange-type)
+* the current queue is bound to the variable [r.queue](#queue-type)
+* the current binding is bound to the variable [r.binding](#binding-type)
 
-The examples assume that `RABTAP_APIURI` environment variable points to the
+When using `rabtap --info --mode=byConnection` , the following variables are bound:
+
+* the current connection is bound to the variable [r.connection](#connection-type)
+* the current channel is bound to the variable [r.connection](#channel-type)
+
+In the `sub` and `tap` commands, the following context is set:
+
+* the current received message is bound to the variable [r.msg](#message-type),
+  which allows access to the message-metadata and the body
+* the current count of messages received that passed the filter is bound to
+ `r.count`
+* Helper functions are provided to access the message body:
+  * the `r.toStr` function converts a byte buffer into a string, e.g. `let
+  b=toJSON(r.toStr(r.msg.Body))`
+  * the `r.gunzip` function decompresses the given byte buffer, e.g. `let
+  b=toJSON(r.toStr(r.gunzip(r.msg.Body)))`, allowing to inspect a compressed body
+  * the `r.body` function returns the message body, decompressing if necessary (i.e.
+    if `ContentType` is `gzip`), e.g.
+    `let b=toJSON(r.toStr(r.body(r.msg))`
+
+##### Examples
+
+The examples assume that the `RABTAP_APIURI` environment variable points to the
 broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
 
 * `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty` - print
   only queues bound to exchange `amq.direct` and skip all empty exchanges.
 * `rabtap info --filter "queue.Name matches '.*test.*'" --omit-empty` - print all
-  queues with `test` in their name.
+  queues with `test` in their name
 * `rabtap info --filter "queue.Name matches '.*test.*' && exchange.Type == 'topic'" --omit-empty` - like
   before, but consider only exchanges of type `topic`.
-* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print 
+* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print
   all queues with at least one consumer
+* `rabtap info --mode=byConnection --filter="r.channel.PrefetchCount > 1` - list
+  all connection with channel that have a prefetch-count > 1
+* `rabtap info --mode=byConnection --filter="r.connection.PeerCertSubject matches '.*CN=guest.*'"` - 
+  list all connection that were authenticated using mTLS and which certificates
+  subject contains `CN=guest`
+* `rabtap sub JDQ --filter="r.msg.RoutingKey == 'test'"` - print only messages that
+  were sent with the routing key `test`
+* `rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.gunzip(r.msg.Body))); b.Name == 'JAN'"` -
+  print only messages that have `.Name == "JAN"` in their gzipped payload,
+  interpreted as `JSON`
 
-### Type reference
+#### Type reference
 
 The types reflect more or less the JSON API objects of the [REST API of
 RabbitMQ](https://rawcdn.githack.com/rabbitmq/rabbitmq-management/v3.7.7/priv/www/api/index.html)
 transformed to golang types.
 
-#### Exchange type
+##### Exchange type
 
 <details>
   <summary>Definition of the Exchange type</summary>
@@ -856,7 +924,7 @@ type Exchange struct {
 ```
 </details>
 
-#### Queue type
+##### Queue type
 
 <details>
   <summary>Definition of the Queue type</summary>
@@ -924,7 +992,7 @@ type Queue struct {
 ```
 </details>
 
-#### Binding type
+##### Binding type
 
 <details>
   <summary>Definition of the Binding type</summary>
@@ -940,22 +1008,225 @@ type Binding struct {
 }
 ```
 
+##### Connection type
+
+<details>
+  <summary>Definition of the Connection type</summary>
+
+```go
+type Connection struct {
+    ReductionsDetails struct {
+        Rate float64
+    }
+    Reductions     int
+    RecvOctDetails struct {
+        Rate float64
+    }
+    RecvOct        int
+    SendOctDetails struct {
+        Rate float64
+    }
+    SendOct          int
+    ConnectedAt      int64
+    ClientProperties struct {
+        Product        string
+        Version        string
+        ConnectionName string
+        Capabilities   struct {
+            ConnectionBlocked    bool
+            ConsumerCancelNotify bool
+        }
+    }
+    ChannelMax        int
+    FrameMax          int
+    Timeout           int
+    Vhost             string
+    User              string
+    Protocol          string
+    SslHash           string
+    SslCipher         string
+    SslKeyExchange    string
+    SslProtocol       string
+    AuthMechanism     string
+    PeerCertValidity  string
+    PeerCertIssuer    string
+    PeerCertSubject   string
+    Ssl               bool
+    PeerHost          string
+    Host              string
+    PeerPort          int
+    Port              int
+    Name              string
+    Node              string
+    Type              string
+    GarbageCollection struct {
+        MinorGcs        int
+        FullsweepAfter  int
+        MinHeapSize     int
+        MinBinVheapSize int
+        MaxHeapSize     int
+    }
+    Channels int
+    State    string
+    SendPend int
+    SendCnt  int
+    RecvCnt  int
+}
+```
+
+</details>
+
+##### Channel type
+
+<details>
+  <summary>Definition of the Channel type</summary>
+
+```go
+type Channel struct {
+    ReductionsDetails struct {
+        Rate float64
+    }
+    Reductions   int
+    MessageStats struct {
+        ReturnUnroutableDetails struct {
+            Rate float64
+        }
+        ReturnUnroutable int
+        ConfirmDetails   struct {
+            Rate float64
+        }
+        Confirm        int
+        PublishDetails struct {
+            Rate float64
+        }
+        Publish    int
+        Ack        int
+        AckDetails struct {
+            Rate float64
+        }
+        Deliver        int
+        DeliverDetails struct {
+            Rate float64
+        }
+        DeliverGet        int
+        DeliverGetDetails struct {
+            Rate float64
+        }
+        DeliverNoAck        int
+        DeliverNoAckDetails struct {
+            Rate float64
+        }
+        Get        int
+        GetDetails struct {
+            Rate float64
+        }
+        GetEmpty        int
+        GetEmptyDetails struct {
+            Rate float64
+        }
+        GetNoAck        int
+        GetNoAckDetails struct {
+            Rate float64
+        }
+        Redeliver        int
+        RedeliverDetails struct {
+            Rate float64
+        }
+    }
+    Vhost             string
+    User              string
+    Number            int
+    Name              string
+    Node              string
+    ConnectionDetails ConnectionDetails // see below
+    GarbageCollection struct {
+        MinorGcs        int
+        FullsweepAfter  int
+        MinHeapSize     int
+        MinBinVheapSize int
+        MaxHeapSize     int
+    }
+    State                  string
+    GlobalPrefetchCount    int
+    PrefetchCount          int
+    AcksUncommitted        int
+    MessagesUncommitted    int
+    MessagesUnconfirmed    int
+    MessagesUnacknowledged int
+    ConsumerCount          int
+    Confirm                bool
+    Transactional          bool
+    IdleSince              string
+}
+
+type ConnectionDetails struct {
+    PeerHost string
+    PeerPort int
+    Name     string
+}
+```
+
+</details>
+
+##### Message type
+
+<details>
+  <summary>Definition of the Message type</summary>
+
+The currently received messages in the `sub` and `pub` commands is exposed to
+the filter predicate under the name `rt_msg`. The `Message` type is more or
+less the same as the `amqp.Delivery` type from the [golang amqp
+package](https://github.com/rabbitmq/amqp091-go):
+
+```go
+type Message struct {
+    Headers Table
+
+    // Properties
+    ContentType     string    // MIME content type
+    ContentEncoding string    // MIME content encoding
+    DeliveryMode    uint8     // queue implementation use - non-persistent (1) or persistent (2)
+    Priority        uint8     // queue implementation use - 0 to 9
+    CorrelationId   string    // application use - correlation identifier
+    ReplyTo         string    // application use - address to reply to (ex: RPC)
+    Expiration      string    // implementation use - message expiration spec
+    MessageId       string    // application use - message identifier
+    Timestamp       time.Time // application use - message timestamp
+    Type            string    // application use - message type name
+    UserId          string    // application use - creating user - should be authenticated user
+    AppId           string    // application use - creating application id
+
+    // Valid only with Channel.Consume
+    ConsumerTag string
+
+    // Valid only with Channel.Get
+    MessageCount uint32
+
+    DeliveryTag uint64
+    Redelivered bool
+    Exchange    string // basic.publish exchange
+    RoutingKey  string // basic.publish routing key
+
+    Body []byte
+}
+```
+
 </details>
 
 ## Build from source
 
 ### Download and build using go install
 
-```
+```text
 $ go install github.com/jandelgado/rabtap/cmd/rabtap@latest
 ```
 
 ### Build using Makefile and tests
 
 To build rabtap from source, you need [go](https://golang.org/) (version >= 1.18)
-and [golangci-lint](https://github.com/golangci/golangci-lint) installed. 
+and [golangci-lint](https://github.com/golangci/golangci-lint) installed.
 
-```
+```text
 $ git clone https://github.com/jandelgado/rabtap && cd rabtap
 $ make test  -or- make short-test
 $ make
@@ -964,7 +1235,8 @@ $ make
 In order to run all tests (`make test`) an instance of RabbitMQ is expected to
 run on localhost. Easiest way to start one is running `make run-broker`, which
 will start a RabbitMQ docker container (i.e.  `docker run -ti --rm -p 5672:5672
--p 15672:15672 rabbitmq:3-management`).
+-p 15672:15672 rabbitmq:3-management`). Another target, `short-tests`  runs
+only unit-tests that down reach out to RabbitMQ.
 
 ### Experimental WASM/wasip1 port
 
@@ -972,7 +1244,7 @@ Rabtap can be compiled for Web Assembly (WASM) and the new `wasip1` `GOOS` and
 run on the console using, e.g.
 [wasirun](https://github.com/stealthrocket/wasi-go). Example:
 
-```
+```console
 $ go version
 go version go1.21.3 linux/amd64
 $ make wasm-build
@@ -993,7 +1265,7 @@ http://localhost:15672/api (broker ver='3.12.6', mgmt ver='3.12.6', cluster='rab
 Another example using `wasirun` and `wasmedge` to publish and subscribe
 to a queue:
 
-```
+```console
 $ URI="amqp://guest:password@localhost/"
 $ rabtap queue create test
 $ rabtap queue bind test to amq.topic --bindingkey=key
@@ -1004,13 +1276,15 @@ exchange.......: amq.topic
 routingkey.....: key
 hello
 ```
+
 See [my blog](https://jandelgado.github.io/blog/posts/rabtap-wasm) for details.
 
 Limitations:
+
 * environment variables like `RABTAP_AMQPURI` not supported, must specify
-    all options on the command line
-* depending on the runtime, colors must explicitly set or disabled using `--color` and `--no-color`,
-    since terminal detection not working.
+  all options on the command line
+* depending on the runtime, colors must explicitly set or disabled using
+  `--color` and `--no-color`, since terminal detection not working.
 
 ## Test data generator
 
@@ -1033,6 +1307,5 @@ Jan Delgado (jdelgado at gmx dot net)
 
 ## Copyright and license
 
-Copyright (c) 2017-2023 Jan Delgado.
+Copyright (c) 2017-2024 Jan Delgado.
 rabtap is licensed under the GPLv3 license.
-

@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/tls"
 	"os"
-	"syscall"
 	"testing"
 	"time"
 
@@ -45,13 +44,12 @@ func TestCmdTap(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	pred := func(rabtap.TapMessage) bool { return true }
-
 	// when
 	go cmdTap(ctx, CmdTapArg{tapConfig: tapConfig,
 		tlsConfig:          &tls.Config{},
 		messageReceiveFunc: receiveFunc,
-		pred:               pred,
+		filterPred:         constantPred{true},
+		termPred:           constantPred{false},
 		timeout:            time.Second * 10})
 
 	time.Sleep(time.Second * 1)
@@ -82,8 +80,9 @@ func TestCmdTapIntegration(t *testing.T) {
 	testKey := testQueue
 	testExchange := "amq.topic"
 
+	// message must be published, after rabtap tap command is started
 	go func() {
-		time.Sleep(time.Second * 1)
+		time.Sleep(3 * time.Second)
 		_, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
 		err := ch.Publish(
 			testExchange,
@@ -97,8 +96,6 @@ func TestCmdTapIntegration(t *testing.T) {
 				Headers:      amqp.Table{},
 			})
 		require.Nil(t, err)
-		time.Sleep(time.Second * 1)
-		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 	}()
 
 	oldArgs := os.Args
@@ -106,6 +103,7 @@ func TestCmdTapIntegration(t *testing.T) {
 	os.Args = []string{"rabtap", "tap",
 		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		"amq.topic:" + testKey,
+		"--limit=1",
 		"--format=raw",
 		"--no-color"}
 	output := testcommon.CaptureOutput(main)

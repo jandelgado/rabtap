@@ -16,15 +16,16 @@ import (
 
 // CmdSubscribeArg contains arguments for the subscribe command
 type CmdSubscribeArg struct {
-	amqpURL                *url.URL
-	queue                  string
-	tlsConfig              *tls.Config
-	messageReceiveFunc     MessageReceiveFunc
-	messageReceiveLoopPred MessageReceiveLoopPred
-	reject                 bool
-	requeue                bool
-	args                   rabtap.KeyValueMap
-	timeout                time.Duration
+	amqpURL            *url.URL
+	queue              string
+	tlsConfig          *tls.Config
+	messageReceiveFunc MessageReceiveFunc
+	termPred           Predicate
+	filterPred         Predicate
+	reject             bool
+	requeue            bool
+	args               rabtap.KeyValueMap
+	timeout            time.Duration
 }
 
 // cmdSub subscribes to messages from the given queue
@@ -43,12 +44,14 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 	errorChannel := make(rabtap.SubscribeErrorChannel)
 	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel, errorChannel) })
 	g.Go(func() error {
+
 		acknowledger := createAcknowledgeFunc(cmd.reject, cmd.requeue)
 		err := messageReceiveLoop(ctx,
 			messageChannel,
 			errorChannel,
 			cmd.messageReceiveFunc,
-			cmd.messageReceiveLoopPred,
+			cmd.filterPred,
+			cmd.termPred,
 			acknowledger,
 			cmd.timeout)
 		cancel()

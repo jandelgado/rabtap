@@ -54,6 +54,18 @@ func (s MockAcknowledger) Reject(tag uint64, requeue bool) error {
 	return nil
 }
 
+func TestCreateMessagePredicateProvidesMessageContext(t *testing.T) {
+
+	// when we evalute the predicate for the test Messages
+	msg := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "match123"}}
+	env := createMessagePredEnv(msg, 123)
+
+	assert.Contains(t, env, "msg")
+	assert.Equal(t, int64(123), env["count"])
+	assert.Contains(t, env, "gunzip")
+	assert.Contains(t, env, "toStr")
+}
+
 func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *testing.T) {
 
 	testcases := []struct {
@@ -85,17 +97,33 @@ func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *test
 	}
 }
 
-func TestCreateCountingMessageReceivePredReturnsTrueIfNumIsZero(t *testing.T) {
-	pred := createCountingMessageReceivePred(0)
+func TestCreateCountingMessageReceivePredReturnsFalseIfLimitIsZero(t *testing.T) {
+	pred, err := NewLoopCountPred(0)
+	require.NoError(t, err)
 
-	assert.True(t, pred(rabtap.TapMessage{}))
+	for _, tc := range []int64{0, 1, 2, 100} {
+		env := map[string]interface{}{"count": tc}
+		res, err := pred.Eval(env)
+
+		require.NoError(t, err)
+		assert.False(t, res)
+	}
 }
 
-func TestCreateCountingMessageReceivePredReturnsFalseOnNthCall(t *testing.T) {
-	pred := createCountingMessageReceivePred(2)
+func TestCreateCountingMessageReceivePredReturnsTrueOnWhenLimitIsReached(t *testing.T) {
+	pred, err := NewLoopCountPred(3)
+	require.NoError(t, err)
 
-	assert.True(t, pred(rabtap.TapMessage{}))
-	assert.False(t, pred(rabtap.TapMessage{}))
+	testcases := map[int64]bool{0: false, 1: false, 2: false, 3: true, 4: true}
+	for probe, expected := range testcases {
+		t.Run(fmt.Sprintf("term_predicate(%v, %v)", probe, expected), func(t *testing.T) {
+			env := map[string]interface{}{"count": probe}
+			actual, err := pred.Eval(env)
+
+			require.NoError(t, err)
+			assert.Equal(t, expected, actual)
+		})
+	}
 }
 
 func TestChainMessageReceiveFuncCallsBothFunctions(t *testing.T) {
@@ -205,7 +233,6 @@ func TestCreateMessageReceiveFuncJSON(t *testing.T) {
 
 	assert.True(t, strings.Count(b.String(), "\n") > 1)
 	assert.True(t, strings.Contains(b.String(), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))
-
 }
 
 func TestCreateMessageReceiveFuncJSONNoPPToFile(t *testing.T) {
@@ -252,10 +279,11 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 		done <- true
 		return nil
 	}
-	continuePred := func(rabtap.TapMessage) bool { return true }
+	termPred := constantPred{val: false}
+	passPred := constantPred{val: true}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 	go func() {
-		_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, continuePred, acknowledger, time.Second*10)
+		_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, passPred, termPred, acknowledger, time.Second*10)
 	}()
 
 	messageChan <- rabtap.TapMessage{}
@@ -268,38 +296,74 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	continuePred := func(rabtap.TapMessage) bool { return true }
+	termPred := constantPred{val: false}
+	passPred := constantPred{val: true}
 
 	close(messageChan)
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, continuePred, acknowledger, time.Second*10)
+	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, passPred, termPred, acknowledger, time.Second*10)
 
 	assert.Nil(t, err)
 }
 
-func TestMessageReceiveLoopExitsWhenLoopPredReturnsFalse(t *testing.T) {
+func TestMessageReceiveLoopExitsWhenTermPredReturnsTrue(t *testing.T) {
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel, 1)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	stopPred := func(rabtap.TapMessage) bool { return false }
+	termPred := constantPred{val: true}
+	passPred := constantPred{val: true}
 
 	messageChan <- rabtap.TapMessage{}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, stopPred, acknowledger, time.Second*10)
+	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, passPred, termPred, acknowledger, time.Second*10)
 
 	assert.Nil(t, err)
 }
 
-func TestMessageReceiveLoopExitsWitErrorWhenIdle(t *testing.T) {
+func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	messageChan := make(rabtap.TapChannel, 3)
+	errorChan := make(rabtap.SubscribeErrorChannel)
+	received := 0
+
+	receiveFunc := func(rabtap.TapMessage) error {
+		received++
+		return nil
+	}
+
+	termPred := constantPred{val: false}
+
+	matcher := func(env map[string]interface{}) (bool, error) {
+		return env["msg"].(*amqp.Delivery).MessageId == "test", nil
+	}
+	filterPred := funcPred{f: matcher}
+
+	acknowledger := func(rabtap.TapMessage) error { return nil }
+
+	// when we send 3 messages
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: ""}}
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "test"}}
+	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: ""}}
+
+	_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc,
+		filterPred, termPred, acknowledger, time.Second*1)
+
+	// we expect 2 of them to be filtered out
+	cancel()
+	assert.Equal(t, 1, received)
+}
+
+func TestMessageReceiveLoopExitsWithErrorWhenIdle(t *testing.T) {
 	// given
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
-	continuePred := func(rabtap.TapMessage) bool { return true }
+	termPred := constantPred{val: false}
+	passPred := constantPred{val: true}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 
 	// when
-	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, continuePred, acknowledger, time.Second*1)
+	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, passPred, termPred, acknowledger, time.Second*1)
 
 	// Then
 	assert.Equal(t, ErrIdleTimeout, err)

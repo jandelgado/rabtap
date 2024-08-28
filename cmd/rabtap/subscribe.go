@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // ErrIdleTimeout is returned by the message loop when the loop was terminated
@@ -35,28 +37,39 @@ type MessageReceiveFunc func(rabtap.TapMessage) error
 
 // var ErrMessageLoopEnded = errors.New("message loop ended")
 
-// messageReceiveLoopPred is called once for each a message that was received.
-// If it returns true, the subscriber loop continues, otherwise the loop
-// terminates.
-type MessageReceiveLoopPred func(rabtap.TapMessage) bool
-
-// createCountingMessageReceivePred returns a (stateful) predicate that will
-// return false after it is called num times, thus limiting the number of
-// mssages received. If num is 0, a predicate always returning true is
-// returned.
-func createCountingMessageReceivePred(num int64) MessageReceiveLoopPred {
-
-	if num == 0 {
-		return func(_ rabtap.TapMessage) bool {
-			return true
-		}
+func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interface{} {
+	return map[string]interface{}{
+		"msg":   msg.AmqpMessage,
+		"count": count,
+		"toStr": func(b []byte) string { return string(b) },
+		"gunzip": func(b []byte) ([]byte, error) {
+			return gunzip(bytes.NewReader(b))
+		},
+		"body": func(m *amqp.Delivery) ([]byte, error) {
+			return body(m)
+		},
 	}
+}
 
-	counter := int64(1)
-	return func(_ rabtap.TapMessage) bool {
-		counter++
-		return counter <= num
-	}
+// loopCountPred creates is the default message loop
+// termination predicate (loop terminates when predicate is true). When limit
+// is 0, loop will never terminate. Expectes a variable "count" in the
+// context, that holds the current number of messages received. The limit is
+// provided by configuration. To unify predicate handling (see filter
+// predicate), we use the same mechanism here. In later versions, the
+// termination predicate may be defined by the user, so that rabtap quits if a
+// certain condition is met.
+type LoopCountPred struct {
+	limit int64
+}
+
+func (s *LoopCountPred) Eval(env map[string]interface{}) (bool, error) {
+	count := env["count"].(int64)
+	return (s.limit > 0) && (count >= s.limit), nil
+}
+
+func NewLoopCountPred(limit int64) (*LoopCountPred, error) {
+	return &LoopCountPred{limit}, nil
 }
 
 // createAcknowledgeFunc returns the function used to acknowledge received
@@ -77,30 +90,32 @@ func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
 	}
 }
 
-// messageReceiveLoop passes received AMQP messages to messageReceiveFunc
-// and handles errors received on the errorChan. AMQP messages are ascknowledged
-// by the provides acknowleder function. Each message is passed to the predicate
-// pred function. If false is returned, processing is ended. Timeout specifies
-// an idle timeout, which will end processing when for the given duration no
-// new messages are received on messageChan.
+// messageReceiveLoop passes received AMQP messages to messageReceiveFunc and
+// handles errors received on the errorChan. AMQP messages are ascknowledged by
+// the provides acknowleder function. Each message is passed to the predicate
+// termPred function. If true is returned, processing is ended. Timeout
+// specifies an idle timeout, which will end processing when for the given
+// duration no new messages are received on messageChan.
 // TODO pass in struct, limit number of arguments
 func messageReceiveLoop(ctx context.Context,
 	messageChan rabtap.TapChannel,
 	errorChan rabtap.SubscribeErrorChannel,
 	messageReceiveFunc MessageReceiveFunc,
-	pred MessageReceiveLoopPred,
+	filterPred Predicate,
+	termPred Predicate,
 	acknowledger AcknowledgeFunc,
 	timeout time.Duration) error {
 
 	timeoutTicker := time.NewTicker(timeout)
 	defer timeoutTicker.Stop()
 
+	count := int64(0) // counts not filtered messages
 	for {
 		select {
 
 		case <-ctx.Done():
 			log.Debugf("subscribe: cancel")
-			return nil
+			return ctx.Err()
 
 		case err, more := <-errorChan:
 			if more {
@@ -108,6 +123,7 @@ func messageReceiveLoop(ctx context.Context,
 			}
 
 		case message, more := <-messageChan:
+			timeoutTicker.Reset(timeout)
 			if !more {
 				log.Debug("subscribe: messageReceiveLoop: channel closed.")
 				return nil // ErrMessageLoopEnded
@@ -119,14 +135,30 @@ func messageReceiveLoop(ctx context.Context,
 				log.Error(err)
 			}
 
+			env := createMessagePredEnv(message, count)
+			passed, err := filterPred.Eval(env)
+			if err != nil {
+				log.Errorf("filter expression evaluation: %s", err.Error())
+			}
+
+			if !passed {
+				log.Debugf("message with MessageId=%s was filtered out", message.AmqpMessage.MessageId)
+				continue
+			}
+			count += 1
+
 			if err := messageReceiveFunc(message); err != nil {
 				log.Error(err)
 			}
 
-			if !pred(message) {
+			env = createMessagePredEnv(message, count)
+			terminate, err := termPred.Eval(env)
+			if err != nil {
+				log.Errorf("terminate expression evaluation: %s", err.Error())
+			}
+			if terminate {
 				return nil
 			}
-			timeoutTicker.Reset(timeout)
 
 		case <-timeoutTicker.C:
 			return ErrIdleTimeout

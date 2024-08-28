@@ -33,15 +33,15 @@ Usage:
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
               [--show-default] [--mode=MODE] [--format=FORMAT] [-kncv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR]
-              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jkncsv]
-              [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR]
-              [--format=FORMAT]  [--limit=NUM] [--idle-timeout=DURATION] [-jkncsv]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] 
+	      [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
+	      [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] 
+	      [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
               [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jkcsvn]
-			  [--idle-timeout=DURATION]
+              [--filter=EXPR] [--idle-timeout=DURATION]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
               [--routingkey=KEY | (--header=KV)...]
@@ -99,7 +99,7 @@ Arguments and options:
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
- --filter=EXPR        Predicate for info command to filter queues [default: true]
+ --filter=EXPR        Predicate for sub, tap, info command to filter the output [default: true]
  --format=FORMAT      * for tap, pub, sub command: format to write/read messages to console
                         and optionally to file (when --saveto DIR is given).
                         Valid options are: "raw", "json", "json-nopp". Default: raw
@@ -158,12 +158,14 @@ Examples:
   rabtap queue bind JDQ to amq.topic --bindingkey=key
   echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
   rabtap sub JDQ
+  # print only messages that have ".Name == 'JAN'" in their JSON payload
+  rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.body(r.msg))); b.Name == 'JAN'" 
   rabtap queue rm JDQ
 
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
   export RABTAP_APIURI=http://guest:guest@localhost:15672/api
   rabtap info
-  rabtap info --filter "binding.Source == 'amq.topic'" --omit-empty
+  rabtap info --filter "r.binding.Source == 'amq.topic'" --omit-empty
   rabtap conn close "172.17.0.1:40874 -> 172.17.0.2:5672"
 
   # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
@@ -280,9 +282,9 @@ type CommandLineArgs struct {
 	ShowConsumers       bool              // info: also show consumer
 	InfoMode            string            // info: byExchange, byConnection
 	ShowStats           bool              // info: also show statistics
-	QueueFilter         string            // info: optional filter predicate
 	OmitEmptyExchanges  bool              // info: do not show exchanges wo/ bindings
 	ShowDefaultExchange bool              // info: show default exchange
+	Filter              string            // sub/tap/info: optional filter predicate
 	Format              string            // output format, depends on command
 	Durable             bool              // queue create, exchange create
 	Autodelete          bool              // queue create, exchange create
@@ -361,7 +363,7 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:                 InfoCmd,
 		commonArgs:          parseCommonArgs(args),
-		QueueFilter:         args["--filter"].(string),
+		Filter:              args["--filter"].(string),
 		OmitEmptyExchanges:  args["--omit-empty"].(bool),
 		ShowConsumers:       args["--consumers"].(bool),
 		ShowStats:           args["--stats"].(bool),
@@ -431,6 +433,7 @@ func parseSubCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		Reject:      args["--reject"].(bool),
 		Requeue:     args["--requeue"].(bool),
 		QueueName:   args["QUEUE"].(string),
+		Filter:      args["--filter"].(string),
 		Silent:      args["--silent"].(bool),
 		IdleTimeout: time.Duration(math.MaxInt64),
 	}
@@ -640,6 +643,7 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		Cmd:         TapCmd,
 		commonArgs:  parseCommonArgs(args),
+		Filter:      args["--filter"].(string),
 		Silent:      args["--silent"].(bool),
 		TapConfig:   []rabtap.TapConfiguration{},
 		IdleTimeout: time.Duration(math.MaxInt64)}

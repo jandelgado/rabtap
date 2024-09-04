@@ -52,7 +52,7 @@ func TestParseMessagePropertiesReturnsFullyPopulatedProperties(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "content-type", *props.ContentType)
 	assert.Equal(t, "content-encoding", *props.ContentEncoding)
-	assert.Equal(t, uint8(0), *props.DeliveryMode)
+	assert.Equal(t, uint8(2), *props.DeliveryMode)
 	assert.Equal(t, uint8(2), *props.Priority)
 	assert.Equal(t, "correlation-id", *props.CorrelationID)
 	assert.Equal(t, "reply-to", *props.ReplyTo)

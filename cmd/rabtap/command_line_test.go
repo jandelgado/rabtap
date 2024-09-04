@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
@@ -374,14 +375,16 @@ func TestCliPubCmdFromFileMinimalOptsSet(t *testing.T) {
 	assert.False(t, args.Mandatory)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+	assert.Nil(t, args.Properties.ContentType)
 }
+
 func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{"pub", "--uri=uri", "--exchange=exchange", "file",
 			"--routingkey=key", "--delay=5s", "--format=json",
-			"--confirms", "--mandatory"})
+			"--confirms", "--mandatory", "--property=ContentEncoding=gzip"})
 
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
 	assertEqualURL(t, "uri", args.AMQPURL)
 	assert.Equal(t, "exchange", *args.PubExchange)
@@ -394,6 +397,7 @@ func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	assert.True(t, args.Mandatory)
 	assert.False(t, args.Verbose)
 	assert.False(t, args.InsecureTLS)
+	assert.Equal(t, "gzip", *args.Properties.ContentEncoding)
 }
 
 func TestCliPubCmdURLFromEnv(t *testing.T) {

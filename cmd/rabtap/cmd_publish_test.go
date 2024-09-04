@@ -174,7 +174,8 @@ func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		"--exchange=exchange",
 		tmpfile.Name(),
-		"--routingkey", routingKey}
+		"--routingkey", routingKey,
+		"--property=ContentType=text/plain"}
 
 	main()
 
@@ -182,6 +183,7 @@ func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 	case message := <-deliveries:
 		assert.Equal(t, "exchange", message.Exchange)
 		assert.Equal(t, routingKey, message.RoutingKey)
+		assert.Equal(t, "text/plain", message.ContentType)
 		assert.Equal(t, "hello", string(message.Body))
 	case <-time.After(time.Second * 2):
 		assert.Fail(t, "did not receive message within expected time")

@@ -11,21 +11,29 @@ func TestNewMessageTransformerProvidesAMessageProviderThatTransformsAMessageOnSu
 
 	// given
 	provider := func() (RabtapPersistentMessage, error) {
-		return RabtapPersistentMessage{UserID: "user1"}, nil
+		return RabtapPersistentMessage{MessageID: "123", UserID: "user1"}, nil
 	}
-	transformer := func(m RabtapPersistentMessage) (RabtapPersistentMessage, error) {
+	transformer1 := func(m RabtapPersistentMessage) (RabtapPersistentMessage, error) {
+		newmsg := m
+		newmsg.AppID = "appID"
+		newmsg.UserID = ""
+		return newmsg, nil
+	}
+	transformer2 := func(m RabtapPersistentMessage) (RabtapPersistentMessage, error) {
 		newmsg := m
 		newmsg.UserID = "transformedUser"
 		return newmsg, nil
 	}
 
 	// when
-	provider = NewTransformingMessageProvider(transformer, provider)
+	provider = NewTransformingMessageProvider(provider, transformer1, transformer2)
 	msg, err := provider()
 
 	// then
 	assert.NoError(t, err)
 	assert.Equal(t, "transformedUser", msg.UserID)
+	assert.Equal(t, "appID", msg.AppID)
+	assert.Equal(t, "123", msg.MessageID)
 }
 
 func TestNewMessageTransformerProvidesAMessageProviderThatPropagtesErrors(t *testing.T) {
@@ -41,7 +49,7 @@ func TestNewMessageTransformerProvidesAMessageProviderThatPropagtesErrors(t *tes
 	}
 
 	// when
-	provider = NewTransformingMessageProvider(transformer, provider)
+	provider = NewTransformingMessageProvider(provider, transformer)
 	_, err := provider()
 
 	// then

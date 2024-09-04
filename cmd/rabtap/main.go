@@ -131,7 +131,9 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		fmt.Fprint(os.Stderr, "Warning: using raw message format but neither exchange or routing key are set.\n")
 	}
 	provider, err := createMessageReaderForPublishFunc(args.Source, args.Format)
-	provider = NewTransformingMessageProvider(FireHoseTransformer, provider)
+	provider = NewTransformingMessageProvider(provider,
+		FireHoseTransformer,
+		NewPropertiesTransformer(args.Properties))
 
 	failOnError(err, "message-reader", os.Exit)
 	err = cmdPublish(ctx, CmdPublishArg{
@@ -213,6 +215,8 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 		color.NoColor = false
 	}
 	switch args.Cmd {
+	case HelpCmd:
+		PrintHelp(args.HelpTopic)
 	case InfoCmd:
 		startCmdInfo(ctx, args, args.APIURL)
 	case SubCmd:

@@ -783,7 +783,7 @@ func PrintHelp(topic HelpTopic) {
 	case GeneralHelp:
 		docopt.PrintHelpOnly(nil, usage)
 	case PropertiesHelp:
-		fmt.Printf(propertiesHelp)
+		fmt.Print(propertiesHelp)
 	}
 }
 

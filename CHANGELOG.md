@@ -1,5 +1,11 @@
 # Changelog for rabtap
 
+## v1.42 (2024-09-04)
+
+* new: `--property KEY=VALUE` option to specify message properties like e.g.
+  `Expiration`, `ContentType` etc. in the `pub` command. Run
+  `rabtap help properties` to list the available message properties.
+
 ## v1.41 (2024-08-27)
 
 * new: `--filter=FILTER` option for `tap` and `sub` commands to filter output
@@ -263,6 +269,3 @@
 ### Changed
 
 * minor changes to output of `info` command (i.e. some values are now quoted)
-
-
-

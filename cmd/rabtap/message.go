@@ -41,6 +41,21 @@ type RabtapPersistentMessage struct {
 	Body []byte
 }
 
+type PropertiesOverride struct {
+	ContentType     *string
+	ContentEncoding *string
+	DeliveryMode    *uint8
+	Priority        *uint8
+	CorrelationID   *string
+	ReplyTo         *string
+	Expiration      *string
+	MessageID       *string
+	Timestamp       *time.Time
+	Type            *string
+	UserID          *string
+	AppID           *string
+}
+
 // NewRabtapPersistentMessage creates RabtapPersistentMessage object
 // from a rabtap.TapMessage
 func NewRabtapPersistentMessage(message rabtap.TapMessage) RabtapPersistentMessage {
@@ -68,7 +83,7 @@ func NewRabtapPersistentMessage(message rabtap.TapMessage) RabtapPersistentMessa
 }
 
 // ToAmqpPublishing converts message to an amqp.Publishing object
-func (s RabtapPersistentMessage) ToAmqpPublishing() amqp.Publishing {
+func (s *RabtapPersistentMessage) ToAmqpPublishing() amqp.Publishing {
 	return amqp.Publishing{
 		Headers:         s.Headers,
 		ContentType:     s.ContentType,
@@ -84,4 +99,44 @@ func (s RabtapPersistentMessage) ToAmqpPublishing() amqp.Publishing {
 		UserId:          s.UserID,
 		AppId:           s.AppID,
 		Body:            s.Body}
+}
+
+func (s *RabtapPersistentMessage) WithProperties(props PropertiesOverride) *RabtapPersistentMessage {
+	if props.ContentType != nil {
+		s.ContentType = *props.ContentType
+	}
+	if props.ContentEncoding != nil {
+		s.ContentEncoding = *props.ContentEncoding
+	}
+	if props.DeliveryMode != nil {
+		s.DeliveryMode = *props.DeliveryMode
+	}
+	if props.Priority != nil {
+		s.Priority = *props.Priority
+	}
+	if props.CorrelationID != nil {
+		s.CorrelationID = *props.CorrelationID
+	}
+	if props.ReplyTo != nil {
+		s.ReplyTo = *props.ReplyTo
+	}
+	if props.Expiration != nil {
+		s.Expiration = *props.Expiration
+	}
+	if props.MessageID != nil {
+		s.MessageID = *props.MessageID
+	}
+	if props.Timestamp != nil {
+		s.Timestamp = *props.Timestamp
+	}
+	if props.Type != nil {
+		s.Type = *props.Type
+	}
+	if props.UserID != nil {
+		s.UserID = *props.UserID
+	}
+	if props.AppID != nil {
+		s.AppID = *props.AppID
+	}
+	return s
 }

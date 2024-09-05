@@ -1,7 +1,8 @@
 // command line parsing for rabtap
 // TODO split in per-command parsers
 // TODO use docopt's bind feature to simplify mappings
-// Copyright (C) 2017-2021 Jan Delgado
+// TODO consider using a different cli parser package
+// Copyright (C) 2017-2024 Jan Delgado
 
 package main
 
@@ -29,7 +30,6 @@ const (
 	usage = `rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
-  rabtap -h|--help
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
               [--show-default] [--mode=MODE] [--format=FORMAT] [-kncv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
@@ -44,7 +44,7 @@ Usage:
               [--filter=EXPR] [--idle-timeout=DURATION]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
-              [--routingkey=KEY | (--header=KV)...]
+              [--routingkey=KEY | (--header=KV)...] [ (--property=KV)... ]
               [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jkv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-kv]
@@ -71,6 +71,7 @@ Usage:
   rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-kv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap --version
+  rabtap (-h | --help | help) [properties]
 
 Arguments and options:
  EXCHANGES            comma-separated list of exchanges and optional binding keys,
@@ -105,7 +106,7 @@ Arguments and options:
                         Valid options are: "raw", "json", "json-nopp". Default: raw
                       * for info command: controls generated output format. Valid
                         options are: "text", "dot". Default: text
- -h, --help           print this help.
+ -h, --help           print this help
  --header=KV          A key value pair in the form of "key=value" used as a
                       routing- or binding-key. Can occur multiple times.
  --idle-timeout=DURATION end reading messages when no new message was received
@@ -125,6 +126,8 @@ Arguments and options:
                       'next', a duration like '10m', a RFC3339-Timestamp or
 					  an integer index value. Basically it is an alias for
 					  '--args=x-stream-offset=OFFSET'.
+ --property=KV        A key value pair in the form of "key=value" to specify 
+	              message properties like e.g. the content-type.
  --queue-type=TYPE    type of queue [default: classic].
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
  --reject             Reject messages. Default behaviour is to acknowledge messages.
@@ -156,8 +159,9 @@ Examples:
   export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
   rabtap queue create JDQ
   rabtap queue bind JDQ to amq.topic --bindingkey=key
-  echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
+  echo "Hello"| gzip | rabtap pub --exchange amq.topic --routingkey "key" --property ContentType=gzip
   rabtap sub JDQ
+
   # print only messages that have ".Name == 'JAN'" in their JSON payload
   rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.body(r.msg))); b.Name == 'JAN'" 
   rabtap queue rm JDQ
@@ -171,6 +175,25 @@ Examples:
   # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
   # instead of specifying --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
 `
+
+	propertiesHelp = `
+The following message properties are used with the '--property Key=Value'
+option of the pub command. All keys are case-insensitve. Use multiple
+'--property' options to set multiple properties at once.
+
+DeliveryMode    - delivery mode: 'transient' or 'persistent' 
+Priority        - message priority for priority queues
+Expiration      - message TTL (ms)
+ContentType     - application use - MIME content type
+ContentEncoding - application use - MIME content encoding
+CorrelationId   - application use - correlation identifier
+ReplyTo         - application use - address to reply to
+MessageId       - application use - message identifier
+Timestamp       - application use - RFC3339 message timestamp
+Type            - application use - message type name
+AppId           - application use - creating application id
+UserId          - user id, validated if set
+`
 )
 
 // ProgramCmd represents the mode of operation
@@ -179,6 +202,7 @@ type ProgramCmd int
 const (
 	// TapCmd sets mode to tapping mode
 	TapCmd ProgramCmd = iota
+	HelpCmd
 	// PubCmd sets mode to message-publish
 	PubCmd
 	// SubCmd sets mode to message-subscribe
@@ -205,6 +229,13 @@ const (
 	ConnCloseCmd
 )
 
+type HelpTopic int
+
+const (
+	GeneralHelp HelpTopic = iota
+	PropertiesHelp
+)
+
 type HeaderMode int
 
 const (
@@ -221,7 +252,7 @@ func parseKeyValue(expr string) (string, string, error) {
 	re := regexp.MustCompile(`\s*([^= ]+)\s*=\s*([^= ]+)\s*`)
 	all := re.FindStringSubmatch(expr)
 	if all == nil {
-		return "", "", fmt.Errorf("could not parse key-value expression")
+		return "", "", fmt.Errorf("could not parse key-value expression %s", expr)
 	}
 	return all[1], all[2], nil
 }
@@ -263,13 +294,14 @@ type CommandLineArgs struct {
 	TapConfig []rabtap.TapConfiguration // configuration in tap mode
 	APIURL    *url.URL
 
-	PubExchange         *string           // pub: exchange to publish to
-	PubRoutingKey       *string           // pub: routing key, defaults to ""
-	Source              *string           // pub: file to send
-	Speed               float64           // pub: speed factor
-	Delay               *time.Duration    // pub: fixed delay in ms
-	Confirms            bool              // pub: wait for confirmations
-	Mandatory           bool              // pub: set mandatory flag
+	PubExchange         *string        // pub: exchange to publish to
+	PubRoutingKey       *string        // pub: routing key, defaults to ""
+	Source              *string        // pub: file to send
+	Speed               float64        // pub: speed factor
+	Delay               *time.Duration // pub: fixed delay in ms
+	Confirms            bool           // pub: wait for confirmations
+	Mandatory           bool           // pub: set mandatory flag
+	Properties          PropertiesOverride
 	Limit               int64             // sub: optional limit
 	Reject              bool              // sub: reject messages
 	Requeue             bool              // sub: requeue rejectied messages
@@ -294,6 +326,7 @@ type CommandLineArgs struct {
 	ConnName            string            // conn: name of connection
 	CloseReason         string            // conn: reason of close
 	HeaderMode          HeaderMode        // queue ceate, header based routing
+	HelpTopic           HelpTopic
 }
 
 // getAMQPURL returns the ith entry of amqpURLs array or the value
@@ -484,8 +517,8 @@ func parseBindingKey(args map[string]interface{}) string {
 }
 
 func parseKVListOption(name string, args map[string]interface{}) (map[string]string, error) {
-	if headers, ok := args[name].([]string); ok {
-		return parseKeyValueList(headers)
+	if values, ok := args[name].([]string); ok {
+		return parseKeyValueList(values)
 	}
 	return map[string]string{}, nil
 }
@@ -636,6 +669,17 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 			return result, fmt.Errorf("failed to parse --speed: %w", err)
 		}
 	}
+	// multiple --property K=V allow to override message properties
+	propsKV, err := parseKVListOption("--property", args)
+	if err != nil {
+		return result, fmt.Errorf("parse properties: %w", err)
+	}
+	props, err := parseMessageProperties(propsKV)
+	if err != nil {
+		return result, fmt.Errorf("parse properties: %w", err)
+	}
+	result.Properties = props
+
 	return result, nil
 }
 
@@ -691,9 +735,21 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
+func parseHelpCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
+	result := CommandLineArgs{Cmd: HelpCmd}
+
+	if args["properties"].(bool) {
+		result.HelpTopic = PropertiesHelp
+	} else {
+		result.HelpTopic = GeneralHelp
+	}
+	return result, nil
+}
+
 func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArgs, error) {
 	info := fmt.Sprintf("%s (%s)", version, commit)
-	args, err := docopt.ParseArgs(spec, cliArgs, info /*RabtapAppVersion*/)
+	parser := docopt.Parser{SkipHelpFlags: true}
+	args, err := parser.ParseArgs(spec, cliArgs, info)
 	if err != nil {
 		return CommandLineArgs{}, err
 	}
@@ -712,8 +768,23 @@ func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArg
 		return parseExchangeCmdArgs(args)
 	case args["conn"].(bool):
 		return parseConnCmdArgs(args)
+	case args["--help"].(bool):
+		fallthrough
+	case args["help"].(bool):
+		return parseHelpCmdArgs(args)
 	}
 	return CommandLineArgs{}, fmt.Errorf("command missing")
+}
+
+// PrintHelp is explicitly called when the "help" command is given. On -h or
+// --help docopt internally prints help
+func PrintHelp(topic HelpTopic) {
+	switch topic {
+	case GeneralHelp:
+		docopt.PrintHelpOnly(nil, usage)
+	case PropertiesHelp:
+		fmt.Print(propertiesHelp)
+	}
 }
 
 // ParseCommandLineArgs parses command line arguments into an object of

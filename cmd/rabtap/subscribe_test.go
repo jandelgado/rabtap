@@ -83,7 +83,7 @@ func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *test
 		// given
 		info := fmt.Sprintf("testcase %d, %+v", i, tc)
 		mock := NewMockAcknowledger()
-		ackFunc := createAcknowledgeFunc(tc.reject, tc.requeue)
+		ackFunc := CreateAcknowledgeFunc(tc.reject, tc.requeue)
 		msg := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{Acknowledger: mock}}
 
 		// when
@@ -126,13 +126,13 @@ func TestCreateCountingMessageReceivePredReturnsTrueOnWhenLimitIsReached(t *test
 	}
 }
 
-func TestChainMessageReceiveFuncCallsBothFunctions(t *testing.T) {
+func TestChainMessageSinkCallsBothFunctions(t *testing.T) {
 	firstCalled := false
 	secondCalled := false
 	first := func(_ rabtap.TapMessage) error { firstCalled = true; return nil }
 	second := func(_ rabtap.TapMessage) error { secondCalled = true; return nil }
 
-	chained := chainedMessageReceiveFunc(first, second)
+	chained := messageSinkTee(first, second)
 	err := chained(rabtap.TapMessage{})
 
 	assert.Nil(t, err)
@@ -140,14 +140,14 @@ func TestChainMessageReceiveFuncCallsBothFunctions(t *testing.T) {
 	assert.True(t, secondCalled)
 }
 
-func TestChainMessageReceiveFuncDoesNotCallSecondOnErrorOnFirst(t *testing.T) {
+func TestChainMessageSinkDoesNotCallSecondOnErrorOnFirst(t *testing.T) {
 	firstCalled := false
 	secondCalled := false
 	expectedErr := errors.New("first failed")
 	first := func(_ rabtap.TapMessage) error { firstCalled = true; return expectedErr }
 	second := func(_ rabtap.TapMessage) error { secondCalled = true; return nil }
 
-	chained := chainedMessageReceiveFunc(first, second)
+	chained := messageSinkTee(first, second)
 	err := chained(rabtap.TapMessage{})
 
 	assert.Equal(t, expectedErr, err)
@@ -155,28 +155,28 @@ func TestChainMessageReceiveFuncDoesNotCallSecondOnErrorOnFirst(t *testing.T) {
 	assert.False(t, secondCalled)
 }
 
-func TestCreateMessageReceiveFuncReturnsErrorWithInvalidFormat(t *testing.T) {
-	opts := MessageReceiveFuncOptions{
+func TestCreateMessageSinkReturnsErrorWithInvalidFormat(t *testing.T) {
+	opts := MessageSinkOptions{
 		format: "invalid",
 	}
-	_, err := createMessageReceiveFunc(opts)
+	_, err := NewMessageSink(opts)
 	assert.NotNil(t, err)
 }
 
-func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
+func TestCreateMessageSinkRawToFile(t *testing.T) {
 	testDir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
 	defer os.RemoveAll(testDir)
 
 	var b bytes.Buffer
-	opts := MessageReceiveFuncOptions{
+	opts := MessageSinkOptions{
 		out:              &b,
 		format:           "raw",
 		optSaveDir:       &testDir,
 		silent:           false,
 		filenameProvider: func() string { return "tapfilename" },
 	}
-	rcvFunc, err := createMessageReceiveFunc(opts)
+	rcvFunc, err := NewMessageSink(opts)
 	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
@@ -186,27 +186,27 @@ func TestCreateMessageReceiveFuncRawToFile(t *testing.T) {
 	assert.True(t, strings.Contains(b.String(), "Testmessage"))
 
 	// check contents of written file(s)
-	contents, err := ioutil.ReadFile(path.Join(testDir, "tapfilename.dat"))
+	contents, err := os.ReadFile(path.Join(testDir, "tapfilename.dat"))
 	assert.Nil(t, err)
 	assert.Equal(t, "Testmessage", string(contents))
 
 	// TODO check contents of JSON metadata "tapfilename.json"
-	contents, err = ioutil.ReadFile(path.Join(testDir, "tapfilename.json"))
+	contents, err = os.ReadFile(path.Join(testDir, "tapfilename.json"))
 	assert.Nil(t, err)
 	var metadata map[string]interface{}
 	err = json.Unmarshal(contents, &metadata)
 	assert.Nil(t, err)
 }
 
-func TestCreateMessageReceiveFuncPrintsNothingWhenSilentOptionIsSet(t *testing.T) {
+func TestCreateMessageSinkPrintsNothingWhenSilentOptionIsSet(t *testing.T) {
 	var b bytes.Buffer
-	opts := MessageReceiveFuncOptions{
+	opts := MessageSinkOptions{
 		out:        &b,
 		format:     "raw",
 		optSaveDir: nil,
 		silent:     true,
 	}
-	rcvFunc, err := createMessageReceiveFunc(opts)
+	rcvFunc, err := NewMessageSink(opts)
 	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
@@ -216,15 +216,15 @@ func TestCreateMessageReceiveFuncPrintsNothingWhenSilentOptionIsSet(t *testing.T
 	assert.Equal(t, b.String(), "")
 }
 
-func TestCreateMessageReceiveFuncJSON(t *testing.T) {
+func TestCreateMessageSinkJSON(t *testing.T) {
 	var b bytes.Buffer
-	opts := MessageReceiveFuncOptions{
+	opts := MessageSinkOptions{
 		out:              &b,
 		format:           "json",
 		optSaveDir:       nil,
 		filenameProvider: func() string { return "tapfilename" },
 	}
-	rcvFunc, err := createMessageReceiveFunc(opts)
+	rcvFunc, err := NewMessageSink(opts)
 	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
@@ -235,22 +235,22 @@ func TestCreateMessageReceiveFuncJSON(t *testing.T) {
 	assert.True(t, strings.Contains(b.String(), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))
 }
 
-func TestCreateMessageReceiveFuncJSONNoPPToFile(t *testing.T) {
+func TestCreateMessageSinkJSONNoPPToFile(t *testing.T) {
 	// message is written as json (no pretty print) to writer and
 	// as json to file.
 
-	testDir, err := ioutil.TempDir("", "")
+	testDir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
 	defer os.RemoveAll(testDir)
 
 	var b bytes.Buffer
-	opts := MessageReceiveFuncOptions{
+	opts := MessageSinkOptions{
 		out:              &b,
 		format:           "json-nopp",
 		optSaveDir:       &testDir,
 		filenameProvider: func() string { return "tapfilename" },
 	}
-	rcvFunc, err := createMessageReceiveFunc(opts)
+	rcvFunc, err := NewMessageSink(opts)
 	assert.Nil(t, err)
 	message := rabtap.NewTapMessage(&amqp.Delivery{Body: []byte("Testmessage")}, time.Now())
 
@@ -274,7 +274,7 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 	done := make(chan bool)
 	received := 0
 
-	receiveFunc := func(rabtap.TapMessage) error {
+	sink := func(rabtap.TapMessage) error {
 		received++
 		done <- true
 		return nil
@@ -283,7 +283,7 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 	passPred := constantPred{val: true}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 	go func() {
-		_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc, passPred, termPred, acknowledger, time.Second*10)
+		_ = MessageReceiveLoop(ctx, messageChan, errorChan, sink, passPred, termPred, acknowledger, time.Second*10)
 	}()
 
 	messageChan <- rabtap.TapMessage{}
@@ -301,7 +301,7 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 
 	close(messageChan)
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, passPred, termPred, acknowledger, time.Second*10)
+	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*10)
 
 	assert.Nil(t, err)
 }
@@ -315,7 +315,7 @@ func TestMessageReceiveLoopExitsWhenTermPredReturnsTrue(t *testing.T) {
 
 	messageChan <- rabtap.TapMessage{}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, passPred, termPred, acknowledger, time.Second*10)
+	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*10)
 
 	assert.Nil(t, err)
 }
@@ -326,7 +326,7 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 	errorChan := make(rabtap.SubscribeErrorChannel)
 	received := 0
 
-	receiveFunc := func(rabtap.TapMessage) error {
+	sink := func(rabtap.TapMessage) error {
 		received++
 		return nil
 	}
@@ -345,7 +345,7 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "test"}}
 	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: ""}}
 
-	_ = messageReceiveLoop(ctx, messageChan, errorChan, receiveFunc,
+	_ = MessageReceiveLoop(ctx, messageChan, errorChan, sink,
 		filterPred, termPred, acknowledger, time.Second*1)
 
 	// we expect 2 of them to be filtered out
@@ -363,7 +363,7 @@ func TestMessageReceiveLoopExitsWithErrorWhenIdle(t *testing.T) {
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 
 	// when
-	err := messageReceiveLoop(ctx, messageChan, errorChan, NullMessageReceiveFunc, passPred, termPred, acknowledger, time.Second*1)
+	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*1)
 
 	// Then
 	assert.Equal(t, ErrIdleTimeout, err)

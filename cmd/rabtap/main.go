@@ -151,14 +151,14 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 }
 
 func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
-	opts := MessageReceiveFuncOptions{
+	opts := MessageSinkOptions{
 		out:              NewColorableWriter(os.Stdout),
 		format:           args.Format,
 		silent:           args.Silent,
 		optSaveDir:       args.SaveDir,
 		filenameProvider: defaultFilenameProvider,
 	}
-	messageReceiveFunc, err := createMessageReceiveFunc(opts)
+	messageSink, err := NewMessageSink(opts)
 	failOnError(err, "options", os.Exit)
 
 	termPred, err := NewLoopCountPred(args.Limit)
@@ -167,29 +167,29 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
 
 	err = cmdSubscribe(ctx, CmdSubscribeArg{
-		amqpURL:            args.AMQPURL,
-		queue:              args.QueueName,
-		requeue:            args.Requeue,
-		reject:             args.Reject,
-		tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
-		messageReceiveFunc: messageReceiveFunc,
-		filterPred:         filterPred,
-		termPred:           termPred,
-		args:               args.Args,
-		timeout:            args.IdleTimeout,
+		amqpURL:     args.AMQPURL,
+		queue:       args.QueueName,
+		requeue:     args.Requeue,
+		reject:      args.Reject,
+		tlsConfig:   getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+		messageSink: messageSink,
+		filterPred:  filterPred,
+		termPred:    termPred,
+		args:        args.Args,
+		timeout:     args.IdleTimeout,
 	})
 	failOnError(err, "error subscribing messages", os.Exit)
 }
 
 func startCmdTap(ctx context.Context, args CommandLineArgs) {
-	opts := MessageReceiveFuncOptions{
+	opts := MessageSinkOptions{
 		out:              NewColorableWriter(os.Stdout),
 		format:           args.Format,
 		silent:           args.Silent,
 		optSaveDir:       args.SaveDir,
 		filenameProvider: defaultFilenameProvider,
 	}
-	messageReceiveFunc, err := createMessageReceiveFunc(opts)
+	messageSink, err := NewMessageSink(opts)
 	failOnError(err, "options", os.Exit)
 	termPred, err := NewLoopCountPred(args.Limit)
 	failOnError(err, "invalid message limit predicate", os.Exit)
@@ -198,12 +198,12 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 
 	cmdTap(ctx,
 		CmdTapArg{
-			tapConfig:          args.TapConfig,
-			tlsConfig:          getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
-			messageReceiveFunc: messageReceiveFunc,
-			filterPred:         filterPred,
-			termPred:           termPred,
-			timeout:            args.IdleTimeout,
+			tapConfig:   args.TapConfig,
+			tlsConfig:   getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+			messageSink: messageSink,
+			filterPred:  filterPred,
+			termPred:    termPred,
+			timeout:     args.IdleTimeout,
 		})
 }
 

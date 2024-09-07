@@ -14,12 +14,12 @@ import (
 )
 
 type CmdTapArg struct {
-	tapConfig          []rabtap.TapConfiguration
-	tlsConfig          *tls.Config
-	messageReceiveFunc MessageReceiveFunc
-	termPred           Predicate
-	filterPred         Predicate
-	timeout            time.Duration
+	tapConfig   []rabtap.TapConfiguration
+	tlsConfig   *tls.Config
+	messageSink MessageSink
+	termPred    Predicate
+	filterPred  Predicate
+	timeout     time.Duration
 }
 
 // cmdTap taps to the given exchanges and displays or saves the received
@@ -43,11 +43,11 @@ func cmdTap(
 		})
 	}
 	g.Go(func() error {
-		acknowledger := createAcknowledgeFunc(false, false) // ACK
-		err := messageReceiveLoop(ctx,
+		acknowledger := CreateAcknowledgeFunc(false, false) // ACK
+		err := MessageReceiveLoop(ctx,
 			tapMessageChannel,
 			errorChannel,
-			cmd.messageReceiveFunc,
+			cmd.messageSink,
 			cmd.filterPred,
 			cmd.termPred,
 			acknowledger,

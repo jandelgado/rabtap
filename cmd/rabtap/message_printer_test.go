@@ -35,6 +35,9 @@ func ExamplePrettyPrintMessage() {
 		Type:            "some type",
 		CorrelationId:   "4712",
 		Headers:         amqp.Table{"header": "value"},
+		UserId:          "jan",
+		AppId:           "rabtap",
+		ReplyTo:         "message123",
 		Body:            []byte("simple test message"),
 	}
 
@@ -54,6 +57,9 @@ func ExamplePrettyPrintMessage() {
 	// app-timestamp..: 2009-11-10 23:00:00 +0000 UTC
 	// app-type.......: some type
 	// app-corr-id....: 4712
+	// reply-to.......: message123
+	// app-id.........: rabtap
+	// user-id........: jan
 	// app-headers....: map[header:value]
 	// simple test message
 	//

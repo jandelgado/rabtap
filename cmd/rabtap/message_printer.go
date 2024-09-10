@@ -22,6 +22,9 @@ exchange.......: {{ ExchangeColor .Message.AmqpMessage.Exchange }}
 {{end}}{{if not .Message.AmqpMessage.Timestamp.IsZero}}app-timestamp..: {{ .Message.AmqpMessage.Timestamp }}
 {{end}}{{with .Message.AmqpMessage.Type}}app-type.......: {{.}}
 {{end}}{{with .Message.AmqpMessage.CorrelationId}}app-corr-id....: {{.}}
+{{end}}{{with .Message.AmqpMessage.ReplyTo}}reply-to.......: {{.}}
+{{end}}{{with .Message.AmqpMessage.AppId}}app-id.........: {{.}}
+{{end}}{{with .Message.AmqpMessage.UserId}}user-id........: {{.}}
 {{end}}{{with .Message.AmqpMessage.Headers}}app-headers....: {{.}}
 {{end -}}
 {{ MessageColor .Body }}

@@ -404,8 +404,8 @@ The features of an exchange are displayed in square brackets with `D`
 displayed in square brackets with `D` (durable), `AD` (auto delete) and `EX`
 (exclusive).
 
-If the `--statistics` option is enabled, basic statistics are included
-in the output.
+If the `--stats` option is enabled, basic statistics are included in the
+output.
 
 The `--filter` option allows to filter output. See
 [filtering](#filtering-output) section for details. Use the

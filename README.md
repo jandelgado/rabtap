@@ -139,18 +139,17 @@ compile from source.
 
 ## Usage
 
-```
-
+```text
 rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
               [--show-default] [--mode=MODE] [--format=FORMAT] [-kncv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] 
 	      [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
 	      [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] 
 	      [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
@@ -210,7 +209,7 @@ Arguments and options:
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
                       If not set then messages will be delayed as recorded.
-					  The value must be suffixed with a time unit, e.g. ms, s etc.
+                      The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
@@ -224,8 +223,8 @@ Arguments and options:
  --header=KV          A key value pair in the form of "key=value" used as a
                       routing- or binding-key. Can occur multiple times.
  --idle-timeout=DURATION end reading messages when no new message was received
-                      for the given duration.  The value must be suffixed with
-					  a time unit, e.g. ms, s etc.
+                      for the given duration.  The value must be suffixed with 
+                      a time unit, e.g. ms, s etc.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --lazy               create a lazy queue.
@@ -238,9 +237,9 @@ Arguments and options:
  --omit-empty         don't show echanges without bindings in info command.
  --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last',
                       'next', a duration like '10m', a RFC3339-Timestamp or
-					  an integer index value. Basically it is an alias for
-					  '--args=x-stream-offset=OFFSET'.
- --property=KV        A key value pair in the form of "key=value" to specify
+                      an integer index value. Basically it is an alias for
+                      '--args=x-stream-offset=OFFSET'.
+ --property=KV        A key value pair in the form of "key=value" to specify 
 	              message properties like e.g. the content-type.
  --queue-type=TYPE    type of queue [default: classic].
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
@@ -248,13 +247,13 @@ Arguments and options:
  --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON
-					  message format).
+                      message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
- -t, --type=TYPE		  type of exchange [default: fanout].
+ -t, --type=TYPE      type of exchange [default: fanout].
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS.
@@ -277,7 +276,7 @@ Examples:
   rabtap sub JDQ
 
   # print only messages that have ".Name == 'JAN'" in their JSON payload
-  rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.body(r.msg))); b.Name == 'JAN'"
+  rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.body(r.msg))); b.Name == 'JAN'" 
   rabtap queue rm JDQ
 
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
@@ -642,7 +641,22 @@ the message and rabtap will log an error.
 
 Use the `--property` option to set message properties like `ContentType` etc.
 Multiple properties can be specified by specifying multiple `--property` options.
-Run `rabtap help properties` to see the list of available properties.
+Run `rabtap help properties` to see the list of available properties:
+
+```text
+DeliveryMode    - delivery mode: 'transient' or 'persistent' 
+Priority        - message priority for priority queues
+Expiration      - message TTL (ms)
+ContentType     - application use - MIME content type
+ContentEncoding - application use - MIME content encoding
+CorrelationId   - application use - correlation identifier
+ReplyTo         - application use - address to reply to
+MessageId       - application use - message identifier
+Timestamp       - application use - RFC3339 message timestamp
+Type            - application use - message type name
+AppId           - application use - creating application id
+UserId          - user id, validated if set
+```
 
 Examples:
 
@@ -665,7 +679,10 @@ Examples:
   from message files previously recorded to this directory and replayed in the
   order they were recorded
 * `echo hello | rabtap pub --exchange amq.fanout --property Expiration=1000` -
-   publish "hello" to exchange amqp.fanout and set the message expiration to 1000ms.
+   publish `hello` to exchange amqp.fanout and set the message expiration to 1000ms.
+* `echo hello | gzip | rabtap pub --exchange amq.fanout --property ContentEncoding=gzip` -
+   publish gzip compressed `hello` to exchange `amqp.fanout` and set the `ContentEncoding`
+   message property accordingly.
 
 #### Poor mans shovel
 
@@ -795,6 +812,9 @@ Notes:
 
 * the `--json` option is now deprecated. Use `--format=json` instead
 * `nopp` stands for `no pretty-print`
+* When the message body is output on the console in `raw` format, Rabtap takes the
+ `ContentEncoding` property into account and decompresses the body if necessary.
+ Currently supported encodings are gzip, deflate, zstd, and bzip2.
 
 ### JSON message format
 

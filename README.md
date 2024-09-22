@@ -679,9 +679,9 @@ Examples:
   from message files previously recorded to this directory and replayed in the
   order they were recorded
 * `echo hello | rabtap pub --exchange amq.fanout --property Expiration=1000` -
-   publish `hello` to exchange amqp.fanout and set the message expiration to 1000ms.
+   publish `hello` to exchange `amq.fanout` and set the message expiration to 1000ms.
 * `echo hello | gzip | rabtap pub --exchange amq.fanout --property ContentEncoding=gzip` -
-   publish gzip compressed `hello` to exchange `amqp.fanout` and set the `ContentEncoding`
+   publish gzip compressed `hello` to exchange `amq.fanout` and set the `ContentEncoding`
    message property accordingly.
 
 #### Poor mans shovel

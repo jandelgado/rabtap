@@ -18,16 +18,16 @@ import (
 
 // CmdPublishArg contains arguments for the publish command
 type CmdPublishArg struct {
-	amqpURL      *url.URL
-	tlsConfig    *tls.Config
-	exchange     *string
-	routingKey   *string
-	headers      rabtap.KeyValueMap
-	providerFunc MessageProviderFunc
-	speed        float64
-	fixedDelay   *time.Duration
-	confirms     bool
-	mandatory    bool
+	amqpURL    *url.URL
+	tlsConfig  *tls.Config
+	exchange   *string
+	routingKey *string
+	headers    rabtap.KeyValueMap
+	source     MessageSource
+	speed      float64
+	fixedDelay *time.Duration
+	confirms   bool
+	mandatory  bool
 }
 
 type DelayFunc func(first, second *RabtapPersistentMessage)
@@ -88,7 +88,7 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 	optExchange *string,
 	optRoutingKey *string,
 	headers rabtap.KeyValueMap,
-	readNextMessageFunc MessageProviderFunc,
+	source MessageSource,
 	delayFunc DelayFunc) error {
 
 	defer func() {
@@ -97,7 +97,7 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 
 	var lastMsg *RabtapPersistentMessage
 	for {
-		msg, err := readNextMessageFunc()
+		msg, err := source()
 		switch err {
 		case io.EOF: //  if errors.Is(err, io.EOF)
 			return nil
@@ -150,13 +150,13 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 	}
 
 	go func() {
-		// runs as long as providerFunc returns messages. Unfortunately, we
+		// runs as long as source returns messages. Unfortunately, we
 		// can not stop a blocking read on a file like we do with channels
 		// and select. So we don't put the goroutine in the error group to
 		// avoid blocking when e.g. the user presses CTRL+S and then CTRL+C.
 		// TODO find better solution
 		resultCh <- publishMessageStream(publishCh, cmd.exchange,
-			cmd.routingKey, cmd.headers, cmd.providerFunc, delayFunc)
+			cmd.routingKey, cmd.headers, cmd.source, delayFunc)
 	}()
 
 	g.Go(func() error {

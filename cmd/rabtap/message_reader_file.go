@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 )
 
 func readMessageFromJSON(reader io.Reader) (RabtapPersistentMessage, error) {
@@ -25,9 +24,9 @@ func readMessageFromJSONStream(decoder *json.Decoder) (RabtapPersistentMessage, 
 	return message, err
 }
 
-// CreateMessageReaderFunc returns a MessageProviderFunc that reads messages from
+// NewReaderMessageSource returns a MessageSource that reads messages from
 // the the given reader in the provided format
-func CreateMessageReaderFunc(format string, reader io.ReadCloser) (MessageProviderFunc, error) {
+func NewReaderMessageSource(format string, reader io.ReadCloser) (MessageSource, error) {
 	switch format {
 	case "json-nopp":
 		fallthrough
@@ -43,7 +42,7 @@ func CreateMessageReaderFunc(format string, reader io.ReadCloser) (MessageProvid
 			if read {
 				return RabtapPersistentMessage{}, io.EOF
 			}
-			buf, err := ioutil.ReadAll(reader) // note: does not return EOF
+			buf, err := io.ReadAll(reader) // note: does not return EOF
 			read = true
 			return RabtapPersistentMessage{Body: buf}, err
 		}, nil

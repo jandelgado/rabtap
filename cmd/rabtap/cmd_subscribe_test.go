@@ -100,7 +100,7 @@ func TestCmdSub(t *testing.T) {
 			routingKey: &testKey,
 			headers:    rabtap.KeyValueMap{},
 			tlsConfig:  tlsConfig,
-			providerFunc: func() (RabtapPersistentMessage, error) {
+			source: func() (RabtapPersistentMessage, error) {
 				// provide exactly one message
 				if messageCount > 0 {
 					return RabtapPersistentMessage{}, io.EOF

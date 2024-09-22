@@ -90,12 +90,12 @@ func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) 
 			out: NewColorableWriter(os.Stdout)})
 }
 
-// createMessageReaderForPublish returns a MessageReaderFunc that reads
+// createMessageReaderForPublish returns a message source that reads
 // messages from the given source in the specified format. The source can
 // be either empty (=stdin), a filename or a directory name
-func createMessageReaderForPublishFunc(source *string, format string) (MessageProviderFunc, error) {
+func newPublishMessageSource(source *string, format string) (MessageSource, error) {
 	if source == nil {
-		return CreateMessageReaderFunc(format, os.Stdin)
+		return NewReaderMessageSource(format, os.Stdin)
 	}
 
 	fi, err := os.Stat(*source)
@@ -109,7 +109,7 @@ func createMessageReaderForPublishFunc(source *string, format string) (MessagePr
 			return nil, err
 		}
 		// TODO close file
-		return CreateMessageReaderFunc(format, file)
+		return NewReaderMessageSource(format, file)
 	} else {
 
 		metadataFiles, err := LoadMetadataFilesFromDir(*source, ioutil.ReadDir, NewRabtapFileInfoPredicate())
@@ -122,7 +122,7 @@ func createMessageReaderForPublishFunc(source *string, format string) (MessagePr
 				metadataFiles[j].metadata.XRabtapReceivedTimestamp)
 		})
 
-		return CreateMessageFromDirReaderFunc(format, metadataFiles)
+		return NewReadFilesFromDirMessageSource(format, metadataFiles)
 	}
 }
 
@@ -130,23 +130,23 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 	if args.Format == "raw" && args.PubExchange == nil && args.PubRoutingKey == nil {
 		fmt.Fprint(os.Stderr, "Warning: using raw message format but neither exchange or routing key are set.\n")
 	}
-	provider, err := createMessageReaderForPublishFunc(args.Source, args.Format)
-	provider = NewTransformingMessageProvider(provider,
+	source, err := newPublishMessageSource(args.Source, args.Format)
+	failOnError(err, "message-reader", os.Exit)
+	source = NewTransformingMessageSource(source,
 		FireHoseTransformer,
 		NewPropertiesTransformer(args.Properties))
 
-	failOnError(err, "message-reader", os.Exit)
 	err = cmdPublish(ctx, CmdPublishArg{
-		amqpURL:      args.AMQPURL,
-		exchange:     args.PubExchange,
-		routingKey:   args.PubRoutingKey,
-		headers:      args.Args,
-		fixedDelay:   args.Delay,
-		speed:        args.Speed,
-		tlsConfig:    getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
-		mandatory:    args.Mandatory,
-		confirms:     args.Confirms,
-		providerFunc: provider})
+		amqpURL:    args.AMQPURL,
+		exchange:   args.PubExchange,
+		routingKey: args.PubRoutingKey,
+		headers:    args.Args,
+		fixedDelay: args.Delay,
+		speed:      args.Speed,
+		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+		mandatory:  args.Mandatory,
+		confirms:   args.Confirms,
+		source:     source})
 	failOnError(err, "publish", os.Exit)
 }
 

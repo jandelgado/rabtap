@@ -43,10 +43,10 @@ func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interfa
 		"count": count,
 		"toStr": func(b []byte) string { return string(b) },
 		"gunzip": func(b []byte) ([]byte, error) {
-			return gunzip(bytes.NewReader(b))
+			return decompressGunzip(bytes.NewReader(b))
 		},
 		"body": func(m *amqp.Delivery) ([]byte, error) {
-			return body(m)
+			return Body(m)
 		},
 	}
 }
@@ -166,8 +166,6 @@ func MessageReceiveLoop(ctx context.Context,
 	}
 }
 
-// nopMessageSink is used a sentinel to terminate a chain of
-// MessageReceiveFuncs
 func nopMessageSink(rabtap.TapMessage) error {
 	return nil
 }
@@ -181,9 +179,9 @@ func messageSinkTee(first, second MessageSink) MessageSink {
 	}
 }
 
-// createMessageReceiveFuncWriteToJSONFile return receive func that writes the
-// message and metadata to separate files in the provided directory using the
-// provided marshaller.
+// newWriteToRawFileMessageSink returns a message sink that writes the message
+// and metadata to separate files in the provided directory using the provided
+// marshaller.
 func newWriteToRawFileMessageSink(dir string, marshaller marshalFunc, filenameProvider FilenameProvider) MessageSink {
 	return func(message rabtap.TapMessage) error {
 		basename := path.Join(dir, filenameProvider())
@@ -200,17 +198,16 @@ func newWriteToJSONFileMessageSink(dir string, marshaller marshalFunc, filenameP
 	}
 }
 
-// newPrintJSONMessageSink returns a function that prints messages as
-// JSON to the provided writer
-// messages as JSON messages
+// newPrintJSONMessageSink returns a function that prints messages as JSON to
+// the provided writer
 func newPrintJSONMessageSink(out io.Writer, marshaller marshalFunc) MessageSink {
 	return func(message rabtap.TapMessage) error {
 		return WriteMessage(out, message, marshaller)
 	}
 }
 
-// newPrettyPrintJSONMessageSink returns a function that pretty prints
-// received messaged to the provided writer
+// newPrettyPrintJSONMessageSink returns a function that pretty prints received
+// messaged to the provided writer
 func newPrettyPrintJSONMessageSink(out io.Writer) MessageSink {
 	return func(message rabtap.TapMessage) error {
 		return PrettyPrintMessage(out, message)
@@ -251,10 +248,10 @@ func newSaveFileMessageSink(format string, optSaveDir *string, filenameProvider 
 	}
 }
 
-// NewMessageSink returns a MessageReceiveFunc which is invoked on
-// receival of a message during tap and subscribe. Depending on the options
-// set, function that optionally prints to the proviced io.Writer and
-// optionally to the provided directory is returned.
+// NewMessageSink returns a message sink which is invoked on receival of a
+// message during tap and subscribe. Depending on the options set, function
+// that optionally prints to the proviced io.Writer and optionally to the
+// provided directory is returned.
 func NewMessageSink(opts MessageSinkOptions) (MessageSink, error) {
 	printFunc, err := newPrintMessageMessageSink(opts.format, opts.out, opts.silent)
 	if err != nil {

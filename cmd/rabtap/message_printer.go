@@ -27,35 +27,35 @@ exchange.......: {{ ExchangeColor .Message.AmqpMessage.Exchange }}
 {{end}}{{with .Message.AmqpMessage.UserId}}user-id........: {{.}}
 {{end}}{{with .Message.AmqpMessage.Headers}}app-headers....: {{.}}
 {{end -}}
-{{ MessageColor .Body }}
+{{ MessageColor (call .Body) }}
 
 `
 
-// PrintMessageInfo holds info for template
-type PrintMessageInfo struct {
+// PrintMessageEnv holds info for template
+type PrintMessageEnv struct {
 	// Message receveived
 	Message rabtap.TapMessage
 	// formatted body
-	Body string
+	Body func() string
 }
 
-// MessageFormatter formats the body of tapped message
-type MessageFormatter interface {
-	Format(message rabtap.TapMessage) string
+// MessageBodyFormatter formats the body of a message
+type MessageBodyFormatter interface {
+	Format(body []byte) string
 }
 
 // Registry of available message formatters. Key is contentType
-var messageFormatters = map[string]MessageFormatter{}
+var messageFormatters = map[string]MessageBodyFormatter{}
 
 // RegisterMessageFormatter registers a new message formatter by its
 // content type.
-func RegisterMessageFormatter(contentType string, formatter MessageFormatter) {
+func RegisterMessageFormatter(contentType string, formatter MessageBodyFormatter) {
 	messageFormatters[contentType] = formatter
 }
 
 // NewMessageFormatter return a message formatter suitable the given
 // contentType.
-func NewMessageFormatter(contentType string) MessageFormatter {
+func NewMessageFormatter(contentType string) MessageBodyFormatter {
 	if formatter, ok := messageFormatters[contentType]; ok {
 		return formatter
 	}
@@ -65,15 +65,21 @@ func NewMessageFormatter(contentType string) MessageFormatter {
 // PrettyPrintMessage formats and prints a tapped message
 func PrettyPrintMessage(out io.Writer, message rabtap.TapMessage) error {
 
-	colorizer := NewColorPrinter()
-
 	formatter := NewMessageFormatter(message.AmqpMessage.ContentType)
 
-	printStruct := PrintMessageInfo{
+	printEnv := PrintMessageEnv{
 		Message: message,
-		Body:    formatter.Format(message),
+		Body: func() string {
+			b, err := Body(message.AmqpMessage)
+			if err != nil {
+				return "err" // TODO
+			}
+			return formatter.Format(b)
+		},
 	}
+
+	colorizer := NewColorPrinter()
 	t := template.Must(template.New("message").
 		Funcs(colorizer.GetFuncMap()).Parse(messageTemplate))
-	return t.Execute(out, printStruct)
+	return t.Execute(out, printEnv)
 }

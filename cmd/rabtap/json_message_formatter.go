@@ -5,8 +5,6 @@ package main
 import (
 	"encoding/json"
 	"strings"
-
-	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // JSONMessageFormatter pretty prints JSON formatted messages.
@@ -22,24 +20,24 @@ var (
 // Format tries to format a message in JSON format. The body can be a simple
 // JSON object or an array of JSON objects. If the message is not valid JSON,
 // it will be returned unformatted as-is.
-func (s JSONMessageFormatter) Format(message rabtap.TapMessage) string {
+func (s JSONMessageFormatter) Format(body []byte) string {
 
 	var formatted []byte
-	originalMessage := strings.TrimSpace(string(message.AmqpMessage.Body))
+	originalMessage := strings.TrimSpace(string(body))
 	if len(originalMessage) == 0 {
-		return string(message.AmqpMessage.Body)
+		return string(body)
 	}
 	if originalMessage[0] == '[' {
 		// try to unmarshal array to JSON objects
 		var arrayJSONObj []map[string]interface{}
 		err := json.Unmarshal([]byte(originalMessage), &arrayJSONObj)
 		if err != nil {
-			return string(message.AmqpMessage.Body)
+			return string(body)
 		}
 		// pretty print JSON
 		formatted, err = json.MarshalIndent(arrayJSONObj, "", "  ")
 		if err != nil {
-			return string(message.AmqpMessage.Body)
+			return string(body)
 		}
 	} else {
 
@@ -48,12 +46,12 @@ func (s JSONMessageFormatter) Format(message rabtap.TapMessage) string {
 		err := json.Unmarshal([]byte(originalMessage), &simpleJSONObj)
 
 		if err != nil {
-			return string(message.AmqpMessage.Body)
+			return string(body)
 		}
 
 		formatted, err = json.MarshalIndent(simpleJSONObj, "", "  ")
 		if err != nil {
-			return string(message.AmqpMessage.Body)
+			return string(body)
 		}
 	}
 	return string(formatted)

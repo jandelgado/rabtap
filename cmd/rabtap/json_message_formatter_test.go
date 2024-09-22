@@ -4,57 +4,44 @@ package main
 
 import (
 	"testing"
-	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestJSONFormatterInvalidArray(t *testing.T) {
 
-	message := amqp.Delivery{
-		Body: []byte("[ {\"a\":1} "),
-	}
-	formattedMessage := JSONMessageFormatter{}.Format(rabtap.NewTapMessage(&message, time.Now()))
+	body := []byte("[ {\"a\":1} ")
+	formattedMessage := JSONMessageFormatter{}.Format(body)
 	// message is expected to be returned untouched
 	assert.Equal(t, "[ {\"a\":1} ", formattedMessage)
 }
 
 func TestJSONFormatterValidArray(t *testing.T) {
 
-	message := amqp.Delivery{
-		Body: []byte(" [   {\"a\":1}    ] "),
-	}
-	formattedMessage := JSONMessageFormatter{}.Format(rabtap.NewTapMessage(&message, time.Now()))
+	body := []byte(" [   {\"a\":1}    ] ")
+	formattedMessage := JSONMessageFormatter{}.Format(body)
 	assert.Equal(t, "[\n  {\n    \"a\": 1\n  }\n]", formattedMessage)
 }
 
 func TestJSONFormatterInvalidObject(t *testing.T) {
 
-	message := amqp.Delivery{
-		Body: []byte("[ {\"a\":1 "),
-	}
-	formattedMessage := JSONMessageFormatter{}.Format(rabtap.NewTapMessage(&message, time.Now()))
+	body := []byte("[ {\"a\":1 ")
+	formattedMessage := JSONMessageFormatter{}.Format(body)
 	// message is expected to be returned untouched
 	assert.Equal(t, "[ {\"a\":1 ", formattedMessage)
 }
 
 func TestJSONFormatterValidObject(t *testing.T) {
 
-	message := amqp.Delivery{
-		Body: []byte("  {\"a\":1}   "),
-	}
-	formattedMessage := JSONMessageFormatter{}.Format(rabtap.NewTapMessage(&message, time.Now()))
+	body := []byte("  {\"a\":1}   ")
+	formattedMessage := JSONMessageFormatter{}.Format(body)
 	assert.Equal(t, "{\n  \"a\": 1\n}", formattedMessage)
 }
 
 func TestJSONFormatterEmptyValue(t *testing.T) {
 	// An empty buffer effectively should be returned unmodified
-	message := amqp.Delivery{
-		Body: []byte(""),
-	}
-	formattedMessage := JSONMessageFormatter{}.Format(rabtap.NewTapMessage(&message, time.Now()))
+	body := []byte("")
+	formattedMessage := JSONMessageFormatter{}.Format(body)
 	// message is expected to be returned untouched
 	assert.Equal(t, "", formattedMessage)
 }

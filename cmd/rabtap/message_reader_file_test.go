@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -85,39 +84,39 @@ func TestReadMessageFromJSONStreamReturnsOneMessagePerCall(t *testing.T) {
 }
 
 func TestCreateMessageReaderFuncReturnsErrorForUnknownFormat(t *testing.T) {
-	reader := ioutil.NopCloser(bytes.NewReader([]byte("")))
-	_, err := CreateMessageReaderFunc("invalid", reader)
+	reader := io.NopCloser(bytes.NewReader([]byte("")))
+	_, err := NewReaderMessageSource("invalid", reader)
 	assert.NotNil(t, err)
 }
 
 func TestCreateMessageReaderFuncReturnsJSONReaderForJSONFormats(t *testing.T) {
 
 	for _, format := range []string{"json", "json-nopp"} {
-		reader := ioutil.NopCloser(bytes.NewReader([]byte(`{"Body": "aGVsbG8="}`)))
+		reader := io.NopCloser(bytes.NewReader([]byte(`{"Body": "aGVsbG8="}`)))
 
-		readFunc, err := CreateMessageReaderFunc(format, reader)
+		source, err := NewReaderMessageSource(format, reader)
 		assert.Nil(t, err)
 
-		msg, err := readFunc()
+		msg, err := source()
 		assert.NoError(t, err)
 		assert.Equal(t, []byte("hello"), msg.Body)
 
-		msg, err = readFunc()
+		msg, err = source()
 		assert.Equal(t, io.EOF, err)
 	}
 }
 
 func TestCreateMessageReaderFuncReturnsRawFileReaderForRawFormats(t *testing.T) {
 
-	reader := ioutil.NopCloser(bytes.NewReader([]byte("hello")))
+	reader := io.NopCloser(bytes.NewReader([]byte("hello")))
 
-	readFunc, err := CreateMessageReaderFunc("raw", reader)
+	source, err := NewReaderMessageSource("raw", reader)
 	assert.Nil(t, err)
 
-	msg, err := readFunc()
+	msg, err := source()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hello"), msg.Body)
 
-	msg, err = readFunc()
+	msg, err = source()
 	assert.Equal(t, io.EOF, err)
 }

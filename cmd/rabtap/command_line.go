@@ -96,7 +96,7 @@ Arguments and options:
  --consumers          include consumers and connections in output of info command.
  --delay=DELAY        Time to wait between sending messages during publish.
                       If not set then messages will be delayed as recorded.
-					  The value must be suffixed with a time unit, e.g. ms, s etc.
+                      The value must be suffixed with a time unit, e.g. ms, s etc.
  -d, --durable        create durable exchange/queue.
  --exchange=EXCHANGE  Optional exchange to publish to. If omitted, exchange will
                       be taken from message being published (see JSON message format).
@@ -111,7 +111,7 @@ Arguments and options:
                       routing- or binding-key. Can occur multiple times.
  --idle-timeout=DURATION end reading messages when no new message was received
                       for the given duration.  The value must be suffixed with 
-					  a time unit, e.g. ms, s etc.
+                      a time unit, e.g. ms, s etc.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
  --lazy               create a lazy queue.
@@ -124,8 +124,8 @@ Arguments and options:
  --omit-empty         don't show echanges without bindings in info command.
  --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last',
                       'next', a duration like '10m', a RFC3339-Timestamp or
-					  an integer index value. Basically it is an alias for
-					  '--args=x-stream-offset=OFFSET'.
+                      an integer index value. Basically it is an alias for
+                      '--args=x-stream-offset=OFFSET'.
  --property=KV        A key value pair in the form of "key=value" to specify 
 	              message properties like e.g. the content-type.
  --queue-type=TYPE    type of queue [default: classic].
@@ -134,13 +134,13 @@ Arguments and options:
  --requeue            Instruct broker to requeue rejected message
  -r, --routingkey=KEY routing key to use in publish mode. If omitted, routing key
                       will be taken from message being published (see JSON
-					  message format).
+                      message format).
  --saveto=DIR         also save messages and metadata to DIR.
  --show-default       include default exchange in output info command.
  -s, --silent         suppress message output to stdout.
  --speed=FACTOR       Speed factor to use during publish [default: 1.0].
  --stats              include statistics in output of info command.
- -t, --type=TYPE		  type of exchange [default: fanout].
+ -t, --type=TYPE      type of exchange [default: fanout].
  --tls-cert-file=CERTFILE A Cert file to use for client authentication.
  --tls-key-file=KEYFILE   A Key file to use for client authentication.
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS.

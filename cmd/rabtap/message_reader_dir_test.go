@@ -250,7 +250,7 @@ func TestReadMetadataOfFilesReturnsExpectedMetadata(t *testing.T) {
 }
 
 func TestCreateMessageFromDirReaderFuncReturnsErrorForUnknownFormat(t *testing.T) {
-	_, err := CreateMessageFromDirReaderFunc("invalid", []FilenameWithMetadata{})
+	_, err := NewReadFilesFromDirMessageSource("invalid", []FilenameWithMetadata{})
 	assert.NotNil(t, err)
 }
 
@@ -259,7 +259,7 @@ func TestCreateMessageFromDirReaderFuncReturnsCorrectReaderForJSONFormat(t *test
 
 	formats := []string{"json", "json-nopp"}
 	for _, format := range formats {
-		reader, err := CreateMessageFromDirReaderFunc(format, []FilenameWithMetadata{})
+		reader, err := NewReadFilesFromDirMessageSource(format, []FilenameWithMetadata{})
 		assert.Nil(t, err)
 		assert.NotNil(t, reader)
 
@@ -272,7 +272,7 @@ func TestCreateMessageFromDirReaderFuncReturnsCorrectReaderForJSONFormat(t *test
 func TestCreateMessageFromDirReaderFuncReturnsCorrectReaderForRawFormat(t *testing.T) {
 	// TODO complete test
 
-	reader, err := CreateMessageFromDirReaderFunc("raw", []FilenameWithMetadata{})
+	reader, err := NewReadFilesFromDirMessageSource("raw", []FilenameWithMetadata{})
 	assert.Nil(t, err)
 	assert.NotNil(t, reader)
 

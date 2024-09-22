@@ -1,5 +1,12 @@
 # Changelog for rabtap
 
+## v1.43 (2024-09-22)
+
+* new: decode compressed message bodies in `tap` and `sub` command, when the
+  messages are printed to the console. The encoding is taken from the
+  `ContentEncoding` message property. `gzip`, `deflate`, `zstd` and `bzip2`
+  are supported.
+
 ## v1.42 (2024-09-04)
 
 * new: `--property KEY=VALUE` option to specify message properties like e.g.

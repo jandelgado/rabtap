@@ -65,13 +65,13 @@ func TestSaveMessageToRawFile(t *testing.T) {
 
 	// check contents of message body .dat file
 	datFilename := basename + ".dat"
-	contentsBody, err := ioutil.ReadFile(datFilename)
+	contentsBody, err := os.ReadFile(datFilename)
 	assert.Nil(t, err)
 	assert.Equal(t, []byte("simple test message."), contentsBody)
 
 	// check contents of metadata file
 	metaFilename := basename + ".json"
-	contentsMeta, err := ioutil.ReadFile(metaFilename)
+	contentsMeta, err := os.ReadFile(metaFilename)
 	assert.Nil(t, err)
 	// deserialize from .json file
 	var jsonMetaActual RabtapPersistentMessage
@@ -96,7 +96,7 @@ func TestSaveMessageToFilesToInvalidDir(t *testing.T) {
 // TestSaveMessageToFile tests the SaveMessagesToFile() function by
 // writing to and reading a temporary files.
 func TestSaveMessageToJSONFile(t *testing.T) {
-	testdir, err := ioutil.TempDir("", "")
+	testdir, err := os.MkdirTemp("", "")
 	assert.Nil(t, err)
 	defer os.RemoveAll(testdir)
 
@@ -105,7 +105,7 @@ func TestSaveMessageToJSONFile(t *testing.T) {
 	err = SaveMessageToJSONFile(filename, rabtap.NewTapMessage(testMessage, createdTs), JSONMarshalIndent)
 	assert.Nil(t, err)
 
-	contents, err := ioutil.ReadFile(filename)
+	contents, err := os.ReadFile(filename)
 	assert.Nil(t, err)
 
 	// deserialize from .json file

@@ -29,12 +29,15 @@ func ExamplePrettyPrintMessage() {
 		Priority:        99,
 		Expiration:      "2017-05-22 17:00:00",
 		ContentType:     "plain/text",
-		ContentEncoding: "utf-8",
+		ContentEncoding: "identity",
 		MessageId:       "4711",
 		Timestamp:       time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 		Type:            "some type",
 		CorrelationId:   "4712",
 		Headers:         amqp.Table{"header": "value"},
+		UserId:          "jan",
+		AppId:           "rabtap",
+		ReplyTo:         "message123",
 		Body:            []byte("simple test message"),
 	}
 
@@ -49,11 +52,14 @@ func ExamplePrettyPrintMessage() {
 	// priority.......: 99
 	// expiration.....: 2017-05-22 17:00:00
 	// content-type...: plain/text
-	// content-enc....: utf-8
+	// content-enc....: identity
 	// app-message-id.: 4711
 	// app-timestamp..: 2009-11-10 23:00:00 +0000 UTC
 	// app-type.......: some type
 	// app-corr-id....: 4712
+	// reply-to.......: message123
+	// app-id.........: rabtap
+	// user-id........: jan
 	// app-headers....: map[header:value]
 	// simple test message
 	//

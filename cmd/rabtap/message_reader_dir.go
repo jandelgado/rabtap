@@ -1,11 +1,9 @@
-// read persisted metadata and messages from a directory
 // Copyright (C) 2019-2022 Jan Delgado
 package main
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -26,7 +24,7 @@ func filenameWithoutExtension(fn string) string {
 	return strings.TrimSuffix(fn, path.Ext(fn))
 }
 
-// newRabtapFileInfoPredicate returns a FileInfoPredicate that matches
+// NewRabtapFileInfoPredicate returns a FileInfoPredicate that matches
 // rabtap metadata files
 func NewRabtapFileInfoPredicate() FileInfoPredicate {
 	filenameRe := regexp.MustCompile(metadataFilePattern)
@@ -99,9 +97,9 @@ func LoadMetadataFilesFromDir(dirname string, dirReader DirReader, pred FileInfo
 	return readMetadataOfFiles(dirname, filenames)
 }
 
-// createMessageFromDirReaderFunc returns a MessageProvicerFunc that reads
+// NewReadFilesFromDirMessageSource returns a MessageProvicerFunc that reads
 // messages from the given list of filenames in the given format.
-func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata) (MessageProviderFunc, error) {
+func NewReadFilesFromDirMessageSource(format string, files []FilenameWithMetadata) (MessageSource, error) {
 
 	curfile := 0
 
@@ -125,7 +123,7 @@ func CreateMessageFromDirReaderFunc(format string, files []FilenameWithMetadata)
 				return message, io.EOF
 			}
 			rawFile := filenameWithoutExtension(files[curfile].filename) + ".dat"
-			body, err := ioutil.ReadFile(rawFile)
+			body, err := os.ReadFile(rawFile)
 			message = files[curfile].metadata
 			message.Body = body
 			curfile++

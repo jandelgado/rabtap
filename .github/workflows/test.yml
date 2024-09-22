@@ -8,7 +8,7 @@ on:
       - master
 
 env:
-  GO_VERSION: "1.22.5"
+  GO_VERSION: "1.23.1"
   GO_LANG_CI_LINT_VERSION: "v1.60.1"
 
 name: run tests

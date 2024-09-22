@@ -8,7 +8,7 @@ package rabtap
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -56,7 +56,7 @@ func TestDialTLSConnectsToTLSEndpoint(t *testing.T) {
 	for _, tc := range testcases {
 		// given
 		tlsConfig := &tls.Config{}
-		caCert, err := ioutil.ReadFile(certDir + "ca.crt")
+		caCert, err := os.ReadFile(certDir + "ca.crt")
 		assert.NoError(t, err)
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMessageTransformerProvidesAMessageProviderThatTransformsAMessageOnSuccess(t *testing.T) {
+func TestNewMessageTransformerProvidesAMessageSourceThatTransformsAMessageOnSuccess(t *testing.T) {
 
 	// given
 	provider := func() (RabtapPersistentMessage, error) {
@@ -26,7 +26,7 @@ func TestNewMessageTransformerProvidesAMessageProviderThatTransformsAMessageOnSu
 	}
 
 	// when
-	provider = NewTransformingMessageProvider(provider, transformer1, transformer2)
+	provider = NewTransformingMessageSource(provider, transformer1, transformer2)
 	msg, err := provider()
 
 	// then
@@ -36,7 +36,7 @@ func TestNewMessageTransformerProvidesAMessageProviderThatTransformsAMessageOnSu
 	assert.Equal(t, "123", msg.MessageID)
 }
 
-func TestNewMessageTransformerProvidesAMessageProviderThatPropagtesErrors(t *testing.T) {
+func TestNewMessageTransformerProvidesAMessageSourceThatPropagtesErrors(t *testing.T) {
 
 	// given
 	provider := func() (RabtapPersistentMessage, error) {
@@ -49,7 +49,7 @@ func TestNewMessageTransformerProvidesAMessageProviderThatPropagtesErrors(t *tes
 	}
 
 	// when
-	provider = NewTransformingMessageProvider(provider, transformer)
+	provider = NewTransformingMessageSource(provider, transformer)
 	_, err := provider()
 
 	// then

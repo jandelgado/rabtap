@@ -24,7 +24,7 @@ type FilenameProvider func() string
 
 type AcknowledgeFunc func(rabtap.TapMessage) error
 
-type MessageReceiveFuncOptions struct {
+type MessageSinkOptions struct {
 	out              io.Writer
 	format           string // currently: raw, json, json-nopp
 	silent           bool
@@ -32,8 +32,8 @@ type MessageReceiveFuncOptions struct {
 	filenameProvider FilenameProvider
 }
 
-// MessageReceiveFunc processes receiced messages from a tap.
-type MessageReceiveFunc func(rabtap.TapMessage) error
+// MessageSink processes received messages
+type MessageSink func(rabtap.TapMessage) error
 
 // var ErrMessageLoopEnded = errors.New("message loop ended")
 
@@ -43,10 +43,10 @@ func createMessagePredEnv(msg rabtap.TapMessage, count int64) map[string]interfa
 		"count": count,
 		"toStr": func(b []byte) string { return string(b) },
 		"gunzip": func(b []byte) ([]byte, error) {
-			return gunzip(bytes.NewReader(b))
+			return decompressGunzip(bytes.NewReader(b))
 		},
 		"body": func(m *amqp.Delivery) ([]byte, error) {
-			return body(m)
+			return Body(m)
 		},
 	}
 }
@@ -72,10 +72,10 @@ func NewLoopCountPred(limit int64) (*LoopCountPred, error) {
 	return &LoopCountPred{limit}, nil
 }
 
-// createAcknowledgeFunc returns the function used to acknowledge received
+// CreateAcknowledgeFunc returns the function used to acknowledge received
 // functions, wich will either be ACKed or REJECTED with optional REQUEUE
 // flag set.
-func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
+func CreateAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
 	return func(message rabtap.TapMessage) error {
 		if reject {
 			if err := message.AmqpMessage.Reject(requeue); err != nil {
@@ -90,17 +90,17 @@ func createAcknowledgeFunc(reject, requeue bool) AcknowledgeFunc {
 	}
 }
 
-// messageReceiveLoop passes received AMQP messages to messageReceiveFunc and
+// MessageReceiveLoop passes received AMQP messages to the messageSink and
 // handles errors received on the errorChan. AMQP messages are ascknowledged by
 // the provides acknowleder function. Each message is passed to the predicate
 // termPred function. If true is returned, processing is ended. Timeout
 // specifies an idle timeout, which will end processing when for the given
 // duration no new messages are received on messageChan.
 // TODO pass in struct, limit number of arguments
-func messageReceiveLoop(ctx context.Context,
+func MessageReceiveLoop(ctx context.Context,
 	messageChan rabtap.TapChannel,
 	errorChan rabtap.SubscribeErrorChannel,
-	messageReceiveFunc MessageReceiveFunc,
+	messageSink MessageSink,
 	filterPred Predicate,
 	termPred Predicate,
 	acknowledger AcknowledgeFunc,
@@ -147,7 +147,7 @@ func messageReceiveLoop(ctx context.Context,
 			}
 			count += 1
 
-			if err := messageReceiveFunc(message); err != nil {
+			if err := messageSink(message); err != nil {
 				log.Error(err)
 			}
 
@@ -166,13 +166,11 @@ func messageReceiveLoop(ctx context.Context,
 	}
 }
 
-// NullMessageReceiveFunc is used a sentinel to terminate a chain of
-// MessageReceiveFuncs
-func NullMessageReceiveFunc(rabtap.TapMessage) error {
+func nopMessageSink(rabtap.TapMessage) error {
 	return nil
 }
 
-func chainedMessageReceiveFunc(first, second MessageReceiveFunc) MessageReceiveFunc {
+func messageSinkTee(first, second MessageSink) MessageSink {
 	return func(message rabtap.TapMessage) error {
 		if err := first(message); err != nil {
 			return err
@@ -181,86 +179,84 @@ func chainedMessageReceiveFunc(first, second MessageReceiveFunc) MessageReceiveF
 	}
 }
 
-// createMessageReceiveFuncWriteToJSONFile return receive func that writes the
-// message and metadata to separate files in the provided directory using the
-// provided marshaller.
-func createMessageReceiveFuncWriteToRawFiles(dir string, marshaller marshalFunc, filenameProvider FilenameProvider) MessageReceiveFunc {
+// newWriteToRawFileMessageSink returns a message sink that writes the message
+// and metadata to separate files in the provided directory using the provided
+// marshaller.
+func newWriteToRawFileMessageSink(dir string, marshaller marshalFunc, filenameProvider FilenameProvider) MessageSink {
 	return func(message rabtap.TapMessage) error {
 		basename := path.Join(dir, filenameProvider())
 		return SaveMessageToRawFiles(basename, message, marshaller)
 	}
 }
 
-// createMessageReceiveFuncWriteToJSONFile return receive func that writes the
+// creatmMessageReceiveFuncWriteToJSONFile return receive func that writes the
 // message to a file in the provided directory using the provided marshaller.
-func createMessageReceiveFuncWriteToJSONFile(dir string, marshaller marshalFunc, filenameProvider FilenameProvider) MessageReceiveFunc {
+func newWriteToJSONFileMessageSink(dir string, marshaller marshalFunc, filenameProvider FilenameProvider) MessageSink {
 	return func(message rabtap.TapMessage) error {
 		filename := path.Join(dir, filenameProvider()+".json")
 		return SaveMessageToJSONFile(filename, message, marshaller)
 	}
 }
 
-// createMessageReceiveFuncPrintJSON returns a function that prints messages as
-// JSON to the provided writer
-// messages as JSON messages
-func createMessageReceiveFuncPrintJSON(out io.Writer, marshaller marshalFunc) MessageReceiveFunc {
+// newPrintJSONMessageSink returns a function that prints messages as JSON to
+// the provided writer
+func newPrintJSONMessageSink(out io.Writer, marshaller marshalFunc) MessageSink {
 	return func(message rabtap.TapMessage) error {
 		return WriteMessage(out, message, marshaller)
 	}
 }
 
-// createMessageReceiveFuncPrintPretty returns a function that pretty prints
-// received messaged to the provided writer
-func createMessageReceiveFuncPrintPretty(out io.Writer) MessageReceiveFunc {
+// newPrettyPrintJSONMessageSink returns a function that pretty prints received
+// messaged to the provided writer
+func newPrettyPrintJSONMessageSink(out io.Writer) MessageSink {
 	return func(message rabtap.TapMessage) error {
 		return PrettyPrintMessage(out, message)
 	}
 }
 
-func createMessageReceivePrintFunc(format string, out io.Writer, silent bool) (MessageReceiveFunc, error) {
+func newPrintMessageMessageSink(format string, out io.Writer, silent bool) (MessageSink, error) {
 	if silent {
-		return NullMessageReceiveFunc, nil
+		return nopMessageSink, nil
 	}
 
 	switch format {
 	case "json-nopp":
-		return createMessageReceiveFuncPrintJSON(out, JSONMarshal), nil
+		return newPrintJSONMessageSink(out, JSONMarshal), nil
 	case "json":
-		return createMessageReceiveFuncPrintJSON(out, JSONMarshalIndent), nil
+		return newPrintJSONMessageSink(out, JSONMarshalIndent), nil
 	case "raw":
-		return createMessageReceiveFuncPrintPretty(out), nil
+		return newPrettyPrintJSONMessageSink(out), nil
 	default:
 		return nil, fmt.Errorf("invalid format %s", format)
 	}
 }
 
-func createMessageReceiveSaveFunc(format string, optSaveDir *string, filenameProvider FilenameProvider) (MessageReceiveFunc, error) {
+func newSaveFileMessageSink(format string, optSaveDir *string, filenameProvider FilenameProvider) (MessageSink, error) {
 	if optSaveDir == nil {
-		return NullMessageReceiveFunc, nil
+		return nopMessageSink, nil
 	}
 
 	switch format {
 	case "json-nopp":
 		fallthrough
 	case "json":
-		return createMessageReceiveFuncWriteToJSONFile(*optSaveDir, JSONMarshalIndent, filenameProvider), nil
+		return newWriteToJSONFileMessageSink(*optSaveDir, JSONMarshalIndent, filenameProvider), nil
 	case "raw":
-		return createMessageReceiveFuncWriteToRawFiles(*optSaveDir, JSONMarshalIndent, filenameProvider), nil
+		return newWriteToRawFileMessageSink(*optSaveDir, JSONMarshalIndent, filenameProvider), nil
 	default:
 		return nil, fmt.Errorf("invalid format %s", format)
 	}
 }
 
-// createMessageReceiveFunc returns a MessageReceiveFunc which is invoked on
-// receival of a message during tap and subscribe. Depending on the options
-// set, function that optionally prints to the proviced io.Writer and
-// optionally to the provided directory is returned.
-func createMessageReceiveFunc(opts MessageReceiveFuncOptions) (MessageReceiveFunc, error) {
-
-	printFunc, err := createMessageReceivePrintFunc(opts.format, opts.out, opts.silent)
+// NewMessageSink returns a message sink which is invoked on receival of a
+// message during tap and subscribe. Depending on the options set, function
+// that optionally prints to the proviced io.Writer and optionally to the
+// provided directory is returned.
+func NewMessageSink(opts MessageSinkOptions) (MessageSink, error) {
+	printFunc, err := newPrintMessageMessageSink(opts.format, opts.out, opts.silent)
 	if err != nil {
 		return printFunc, err
 	}
-	saveFunc, err := createMessageReceiveSaveFunc(opts.format, opts.optSaveDir, opts.filenameProvider)
-	return chainedMessageReceiveFunc(printFunc, saveFunc), err
+	saveFunc, err := newSaveFileMessageSink(opts.format, opts.optSaveDir, opts.filenameProvider)
+	return messageSinkTee(printFunc, saveFunc), err
 }

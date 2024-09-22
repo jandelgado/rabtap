@@ -47,7 +47,7 @@ func TestCmdTap(t *testing.T) {
 	// when
 	go cmdTap(ctx, CmdTapArg{tapConfig: tapConfig,
 		tlsConfig:          &tls.Config{},
-		messageReceiveFunc: receiveFunc,
+		messageSink: receiveFunc,
 		filterPred:         constantPred{true},
 		termPred:           constantPred{false},
 		timeout:            time.Second * 10})

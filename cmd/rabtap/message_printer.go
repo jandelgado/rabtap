@@ -70,11 +70,12 @@ func PrettyPrintMessage(out io.Writer, message rabtap.TapMessage) error {
 	printEnv := PrintMessageEnv{
 		Message: message,
 		Body: func() string {
-			b, err := Body(message.AmqpMessage)
-			if err != nil {
-				return "err" // TODO
+			if b, err := Body(message.AmqpMessage); err != nil {
+				log.Warnf("decoding failed, printing body as-is: %s", err)
+				return formatter.Format(message.AmqpMessage.Body)
+			} else {
+				return formatter.Format(b)
 			}
-			return formatter.Format(b)
 		},
 	}
 

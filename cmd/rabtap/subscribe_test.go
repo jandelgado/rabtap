@@ -260,7 +260,7 @@ func TestCreateMessageSinkJSONNoPPToFile(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(b.String(), "\n"))
 	assert.True(t, strings.Contains(b.String(), ",\"Body\":\"VGVzdG1lc3NhZ2U=\""))
 
-	contents, err := ioutil.ReadFile(path.Join(testDir, "tapfilename.json"))
+	contents, err := os.ReadFile(path.Join(testDir, "tapfilename.json"))
 	assert.Nil(t, err)
 	assert.True(t, strings.Count(string(contents), "\n") > 1)
 	assert.True(t, strings.Contains(string(contents), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))

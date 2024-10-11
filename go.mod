@@ -16,7 +16,7 @@ require (
 
 require (
 	github.com/expr-lang/expr v1.16.9
-	github.com/klauspost/compress v1.17.9
+	github.com/klauspost/compress v1.17.11
 	github.com/stealthrocket/net v0.2.1
 )
 

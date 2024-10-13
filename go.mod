@@ -1,6 +1,8 @@
 module github.com/jandelgado/rabtap
 
-go 1.18
+go 1.21
+
+toolchain go1.22.7
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
@@ -16,7 +18,7 @@ require (
 
 require (
 	github.com/expr-lang/expr v1.16.9
-	github.com/klauspost/compress v1.17.9
+	github.com/klauspost/compress v1.17.11
 	github.com/stealthrocket/net v0.2.1
 )
 

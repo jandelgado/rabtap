@@ -13,6 +13,16 @@ env:
 
 name: run tests
 jobs:
+  check-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+     - name: go mod tidy
+       run: go mod tidy && git diff --exit-code
+     - name: go mod download
+       run: go mod download
+     - name: go mod verify
+       run: go mod verify
+
   lint:
     runs-on: ubuntu-latest
     steps:

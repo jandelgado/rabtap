@@ -16,12 +16,18 @@ jobs:
   check-dependencies:
     runs-on: ubuntu-latest
     steps:
-     - name: go mod tidy
-       run: go mod tidy && git diff --exit-code
-     - name: go mod download
-       run: go mod download
-     - name: go mod verify
-       run: go mod verify
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: go mod tidy
+        run: go mod tidy && git diff --exit-code
+      - name: go mod download
+        run: go mod download
+      - name: go mod verify
+        run: go mod verify
 
   lint:
     runs-on: ubuntu-latest

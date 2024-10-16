@@ -63,7 +63,7 @@ jobs:
       - name: Run tests
         run: make test
       - name: Coveralls
-        uses: coverallsapp/github-action@v2.3.1
+        uses: coverallsapp/github-action@v2.3.2
         with:
           github-token: ${{ secrets.github_token }}
           file: coverage.out

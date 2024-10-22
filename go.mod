@@ -6,7 +6,7 @@ toolchain go1.22.7
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
-	github.com/fatih/color v1.17.0
+	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-colorable v0.1.13
 	github.com/rabbitmq/amqp091-go v1.10.0

@@ -1,7 +1,6 @@
 module github.com/jandelgado/rabtap
 
 go 1.21
-
 toolchain go1.22.7
 
 require (
@@ -18,7 +17,7 @@ require (
 
 require (
 	github.com/expr-lang/expr v1.16.9
-	github.com/klauspost/compress v1.17.11
+	github.com/klauspost/compress v1.18.0
 	github.com/stealthrocket/net v0.2.1
 )
 

@@ -1,8 +1,7 @@
 module github.com/jandelgado/rabtap
 
 go 1.21
-
-toolchain go1.22.7
+toolchain go1.23.7
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
@@ -13,7 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/net v0.35.0
-	golang.org/x/sync v0.11.0
+	golang.org/x/sync v0.12.0
 )
 
 require (

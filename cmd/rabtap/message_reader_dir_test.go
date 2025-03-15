@@ -5,7 +5,6 @@ package main
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,54 +15,49 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// a os.FileInfo implementation for tests
-type fileInfoMock struct {
+// a os.DirEntry implementation for tests
+type dirEntryMock struct {
 	name string
 	mode os.FileMode
 }
 
-func (s fileInfoMock) Name() string {
+func (s dirEntryMock) Name() string {
 	return s.name
 }
 
-func (s fileInfoMock) Size() int64 { return 0 }
+func (s dirEntryMock) IsDir() bool {
+	return false
+}
 
-func (s fileInfoMock) Mode() os.FileMode {
+func (s dirEntryMock) Type() os.FileMode {
 	return s.mode
 }
 
-func (s fileInfoMock) ModTime() time.Time {
-	return time.Now()
+func (s dirEntryMock) Info() (os.FileInfo, error) {
+	panic("not supported")
 }
 
-func (s fileInfoMock) IsDir() bool {
-	return false
-}
-func (s fileInfoMock) Sys() interface{} {
-	return nil
+func newDirEntryMock(name string, mode os.FileMode) dirEntryMock {
+	return dirEntryMock{name, mode}
 }
 
-func newFileInfoMock(name string, mode os.FileMode) fileInfoMock {
-	return fileInfoMock{name, mode}
-}
-
-func mockDirFiles() []os.FileInfo {
-	infos := []fileInfoMock{
-		newFileInfoMock("somefile.txt", 0),
-		newFileInfoMock("rabtap-1234.json", 0),
-		newFileInfoMock("rabtap-9999.json", os.ModeDir),
-		newFileInfoMock("rabtap-1235.json", 0),
-		newFileInfoMock("xrabtap-1235.json", 0),
-		newFileInfoMock("rabtap-1235.invalid", 0),
+func mockDirFiles() []os.DirEntry {
+	infos := []dirEntryMock{
+		newDirEntryMock("somefile.txt", 0),
+		newDirEntryMock("rabtap-1234.json", 0),
+		newDirEntryMock("rabtap-9999.json", os.ModeDir),
+		newDirEntryMock("rabtap-1235.json", 0),
+		newDirEntryMock("xrabtap-1235.json", 0),
+		newDirEntryMock("rabtap-1235.invalid", 0),
 	}
-	result := make([]os.FileInfo, len(infos))
+	result := make([]os.DirEntry, len(infos))
 	for i, v := range infos {
 		result[i] = v
 	}
 	return result
 }
 
-func mockDirReader(dirname string) ([]os.FileInfo, error) {
+func mockDirReader(dirname string) ([]os.DirEntry, error) {
 	if dirname == "/rabtap" {
 		return mockDirFiles(), nil
 	}
@@ -73,7 +67,7 @@ func mockDirReader(dirname string) ([]os.FileInfo, error) {
 // writeTempFile creates a temporary file with data as it's content. The
 // filename is returned.
 func writeTempFile(t *testing.T, data string) string {
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "")
+	tmpFile, err := os.CreateTemp(os.TempDir(), "")
 	require.Nil(t, err)
 
 	defer tmpFile.Close()
@@ -92,17 +86,17 @@ func TestFilenameWithoutExtensionReturnsExpectedResult(t *testing.T) {
 func TestRabtapFileInfoPredicateFiltersExpectedFiles(t *testing.T) {
 	p := NewRabtapFileInfoPredicate()
 
-	assert.True(t, p(newFileInfoMock("rabtap-1234.json", 0)))
-	assert.True(t, p(newFileInfoMock("rabtap-1235.json", 0)))
+	assert.True(t, p(newDirEntryMock("rabtap-1234.json", 0)))
+	assert.True(t, p(newDirEntryMock("rabtap-1235.json", 0)))
 
-	assert.False(t, p(newFileInfoMock("somefile.txt", 0)))
-	assert.False(t, p(newFileInfoMock("rabtap-9999.jsonx", 0)))
-	assert.False(t, p(newFileInfoMock("rabtap-9999.json", os.ModeDir)))
+	assert.False(t, p(newDirEntryMock("somefile.txt", 0)))
+	assert.False(t, p(newDirEntryMock("rabtap-9999.jsonx", 0)))
+	assert.False(t, p(newDirEntryMock("rabtap-9999.json", os.ModeDir)))
 }
 
 func TestFilterMetadataFilesAppliesFilterCorretly(t *testing.T) {
-	pred := func(fi os.FileInfo) bool {
-		return fi.Name() == "rabtap-1234.json"
+	pred := func(e os.DirEntry) bool {
+		return e.Name() == "rabtap-1234.json"
 	}
 	files := filterMetadataFilenames(mockDirFiles(), pred)
 
@@ -111,8 +105,8 @@ func TestFilterMetadataFilesAppliesFilterCorretly(t *testing.T) {
 }
 
 func TestFindMetadataFilenamesFindsAllRabtapMetadataFiles(t *testing.T) {
-	pred := func(fi os.FileInfo) bool {
-		return fi.Name() == "rabtap-1234.json"
+	pred := func(e os.DirEntry) bool {
+		return e.Name() == "rabtap-1234.json"
 	}
 	filenames, err := findMetadataFilenames("/rabtap", mockDirReader, pred)
 	assert.Nil(t, err)
@@ -120,7 +114,7 @@ func TestFindMetadataFilenamesFindsAllRabtapMetadataFiles(t *testing.T) {
 }
 
 func TestFindMetadataFilenamesReturnsErrorOnInvalidDirectory(t *testing.T) {
-	pred := func(fi os.FileInfo) bool {
+	pred := func(e os.DirEntry) bool {
 		return true
 	}
 	_, err := findMetadataFilenames("/invalid", mockDirReader, pred)
@@ -133,24 +127,24 @@ func TestReadMetadataFileReturnsErrorForNonExistingFile(t *testing.T) {
 }
 
 func TestLoadMetadataFilesFromDirReturnsExpectedMetadata(t *testing.T) {
-	pred := func(fi os.FileInfo) bool {
-		return fi.Name() == "rabtap.json"
+	pred := func(e os.DirEntry) bool {
+		return e.Name() == "rabtap.json"
 	}
 	msg := `{ "Exchange": "exchange", "Body": "" }`
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
 	metadataFile := filepath.Join(dir, "rabtap.json")
 	messageFile := filepath.Join(dir, "rabtap.dat")
 
-	err = ioutil.WriteFile(metadataFile, []byte(msg), 0666)
+	err = os.WriteFile(metadataFile, []byte(msg), 0o666)
 	require.Nil(t, err)
-	err = ioutil.WriteFile(messageFile, []byte("Hello123"), 0666)
+	err = os.WriteFile(messageFile, []byte("Hello123"), 0o666)
 	require.Nil(t, err)
 
-	metadata, err := LoadMetadataFilesFromDir(dir, ioutil.ReadDir, pred)
+	metadata, err := LoadMetadataFilesFromDir(dir, os.ReadDir, pred)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(metadata))
 	assert.Equal(t, path.Join(dir, "rabtap.json"), metadata[0].filename)
@@ -158,10 +152,10 @@ func TestLoadMetadataFilesFromDirReturnsExpectedMetadata(t *testing.T) {
 }
 
 func TestLoadMetadataFilesFromDirFailsOnInvalidDir(t *testing.T) {
-	pred := func(fi os.FileInfo) bool {
+	pred := func(e os.DirEntry) bool {
 		return true
 	}
-	dirReader := func(string) ([]os.FileInfo, error) {
+	dirReader := func(string) ([]os.DirEntry, error) {
 		return nil, errors.New("invalid dir")
 	}
 	_, err := LoadMetadataFilesFromDir("unused", dirReader, pred)
@@ -206,7 +200,6 @@ func TestReadPersistentRabtapMessageReturnsCorrectObject(t *testing.T) {
 }
 
 func TestReadMetadataOfFilesFailsWithErrorIfAnyFileCouldNotBeRead(t *testing.T) {
-
 	_, err := readMetadataOfFiles("/base", []string{"/this/file/should/not/exist"})
 	assert.NotNil(t, err)
 }

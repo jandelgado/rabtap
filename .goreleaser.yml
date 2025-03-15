@@ -1,5 +1,4 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com/customization/builds/
+---
 version: 2
 before:
   hooks:
@@ -7,6 +6,13 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
+      - GOTOOLCHAIN=auto
+    ldflags:
+      - -s -w
+      - -X "main.BuildGoVersion={{.Env.GOVERSION}}"
+      - -X "main.BuildCommit={{.FullCommit}}"
+      - -X "main.BuildVersion={{.Tag}}"
+      - -X "main.BuildDate={{.Date}}"
     dir: cmd/rabtap
     goos:
       - linux
@@ -21,8 +27,8 @@ builds:
       - arm
       - arm64
     goarm:
-      - 6
-      - 7
+      - "6"
+      - "7"
     ignore:
       - goos: wasip1
         goarch: amd64
@@ -45,7 +51,7 @@ archives:
       - CHANGELOG.md
     format_overrides:
       - goos: windows
-        format: zip
+        formats: ["zip"]
 checksum:
   name_template: 'checksums.txt'
 snapshot:

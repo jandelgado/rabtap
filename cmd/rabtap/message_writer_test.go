@@ -4,16 +4,16 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // testMessage used troughout tests
@@ -40,7 +40,6 @@ func TestJSONMarshalIndentMarshalsToIndentedJSON(t *testing.T) {
 	assert.Equal(t, `{
   "Test": "ABC"
 }`, string(data))
-
 }
 
 func TestJSONMarshalMarshalsToSingleLineJSON(t *testing.T) {
@@ -52,7 +51,7 @@ func TestJSONMarshalMarshalsToSingleLineJSON(t *testing.T) {
 // TestSaveMessageToFiles tests the SaveMessagesToFiles() function by
 // writing to and reading from temporary files.
 func TestSaveMessageToRawFile(t *testing.T) {
-	testdir, err := ioutil.TempDir("", "")
+	testdir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
 	defer os.RemoveAll(testdir)
 
@@ -129,7 +128,6 @@ func TestSaveMessageToFileToInvalidDir(t *testing.T) {
 }
 
 func ExampleWriteMessage() {
-
 	// serialize with message body, Body will be base64 encoded.
 	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)
 	err := WriteMessage(os.Stdout,

@@ -12,8 +12,10 @@ import (
 
 const metadataFilePattern = `^rabtap-[0-9]+.json$`
 
-type DirReader func(string) ([]os.FileInfo, error)
-type FileInfoPredicate func(fileinfo os.FileInfo) bool
+type (
+	DirReader         func(string) ([]os.DirEntry, error)
+	FileInfoPredicate func(entry os.DirEntry) bool
+)
 
 type FilenameWithMetadata struct {
 	filename string
@@ -28,16 +30,16 @@ func filenameWithoutExtension(fn string) string {
 // rabtap metadata files
 func NewRabtapFileInfoPredicate() FileInfoPredicate {
 	filenameRe := regexp.MustCompile(metadataFilePattern)
-	return func(fi os.FileInfo) bool {
-		return fi.Mode().IsRegular() && filenameRe.MatchString(fi.Name())
+	return func(entry os.DirEntry) bool {
+		return entry.Type().IsRegular() && filenameRe.MatchString(entry.Name())
 	}
 }
 
-func filterMetadataFilenames(fileinfos []os.FileInfo, pred FileInfoPredicate) []string {
+func filterMetadataFilenames(fileinfos []os.DirEntry, pred FileInfoPredicate) []string {
 	var filenames []string
-	for _, fi := range fileinfos {
-		if pred(fi) {
-			filenames = append(filenames, fi.Name())
+	for _, entry := range fileinfos {
+		if pred(entry) {
+			filenames = append(filenames, entry.Name())
 		}
 	}
 	return filenames
@@ -69,7 +71,6 @@ func readRabtapPersistentMessage(filename string) (RabtapPersistentMessage, erro
 // readMetadataOfFiles reads all metadata files from the given list of files.
 // returns an error if any error occurs.
 func readMetadataOfFiles(dirname string, filenames []string) ([]FilenameWithMetadata, error) {
-
 	data := make([]FilenameWithMetadata, len(filenames))
 	for i, filename := range filenames {
 		fullpath := path.Join(dirname, filename)
@@ -100,7 +101,6 @@ func LoadMetadataFilesFromDir(dirname string, dirReader DirReader, pred FileInfo
 // NewReadFilesFromDirMessageSource returns a MessageProvicerFunc that reads
 // messages from the given list of filenames in the given format.
 func NewReadFilesFromDirMessageSource(format string, files []FilenameWithMetadata) (MessageSource, error) {
-
 	curfile := 0
 
 	switch format {

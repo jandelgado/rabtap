@@ -8,21 +8,20 @@ package main
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
+	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
 
 func TestRoutingFromMessageUsesOptExchangeWhenSpecified(t *testing.T) {
-
 	key := "okey"
 	exchange := "oexchange"
 	testMsg := RabtapPersistentMessage{Exchange: "exchange", RoutingKey: "key", Headers: amqp.Table{"A": "B"}}
@@ -43,7 +42,6 @@ func TestRoutingFromMessageUsesOptExchangeWhenSpecified(t *testing.T) {
 		routing := routingFromMessage(tc.optExchange, tc.optKey, tc.headers, tc.msg)
 		assert.Equal(t, tc.expected, routing, tc)
 	}
-
 }
 
 func TestMultDurationReturnsCorrectValue(t *testing.T) {
@@ -144,7 +142,7 @@ func TestPublishMessageStreamPropagatesMessageReadError(t *testing.T) {
 func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 	// integrative test publishing a raw file
 
-	tmpfile, err := ioutil.TempFile("", "rabtap")
+	tmpfile, err := os.CreateTemp("", "rabtap")
 	require.Nil(t, err)
 	defer os.Remove(tmpfile.Name())
 
@@ -170,12 +168,14 @@ func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 
 	// execution: run publish command through call of main(), the actual
 	// message is in tmpfile.Name()
-	os.Args = []string{"rabtap", "pub",
+	os.Args = []string{
+		"rabtap", "pub",
 		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		"--exchange=exchange",
 		tmpfile.Name(),
 		"--routingkey", routingKey,
-		"--property=ContentType=text/plain"}
+		"--property=ContentType=text/plain",
+	}
 
 	main()
 
@@ -191,7 +191,6 @@ func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 }
 
 func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
-
 	conn, ch := testcommon.IntegrationTestConnection(t, "myexchange", "topic", 1, false)
 	defer conn.Close()
 
@@ -234,7 +233,7 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 	  "XRabtapReceivedTimestamp": "2017-10-28T23:45:35+02:00"
 	}`
 
-	tmpfile, err := ioutil.TempFile("", "rabtap")
+	tmpfile, err := os.CreateTemp("", "rabtap")
 	require.Nil(t, err)
 	defer os.Remove(tmpfile.Name())
 
@@ -258,10 +257,12 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 	// execution: run publish command through call of main(), the actual
 	// message is in tmpfile.Name(). We expect exchange and routingkey to
 	// be taken from the JSON metadata as they are not specified.
-	os.Args = []string{"rabtap", "pub",
+	os.Args = []string{
+		"rabtap", "pub",
 		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		tmpfile.Name(),
-		"--format=json"}
+		"--format=json",
+	}
 	main()
 
 	// verification: we expect 2 messages to be sent by above call
@@ -295,13 +296,13 @@ func TestCmdPublishFilesFromDirectory(t *testing.T) {
 
 	msg := `{ "Exchange": "myexchange", "RoutingKey": "` + routingKey + `", "Body": "ixxx" }`
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	err = ioutil.WriteFile(filepath.Join(dir, "rabtap-1.json"), []byte(msg), 0666)
+	err = os.WriteFile(filepath.Join(dir, "rabtap-1.json"), []byte(msg), 0o666)
 	require.Nil(t, err)
-	err = ioutil.WriteFile(filepath.Join(dir, "rabtap-1.dat"), []byte("Hello123"), 0666)
+	err = os.WriteFile(filepath.Join(dir, "rabtap-1.dat"), []byte("Hello123"), 0o666)
 	require.Nil(t, err)
 
 	deliveries, err := ch.Consume(
@@ -321,10 +322,12 @@ func TestCmdPublishFilesFromDirectory(t *testing.T) {
 	// execution: run publish command through call of main(), the actual
 	// message is read from the provided directory. We expect exchange and
 	// routingkey to be taken from the JSON metadata as they are not specified.
-	os.Args = []string{"rabtap", "pub",
+	os.Args = []string{
+		"rabtap", "pub",
 		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		dir,
-		"--format=raw"}
+		"--format=raw",
+	}
 	main()
 
 	// verification: we expect 1 messages to be sent by above call

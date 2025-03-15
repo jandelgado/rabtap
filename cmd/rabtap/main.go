@@ -7,16 +7,15 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
-
 	"net/url"
 	"os"
 	"sort"
 	"time"
 
 	"github.com/fatih/color"
-	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/sirupsen/logrus"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 var log = logrus.New()
@@ -83,11 +82,14 @@ func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) 
 				ShowConsumers:       args.ShowConsumers,
 				ShowDefaultExchange: args.ShowDefaultExchange,
 				Filter:              filter,
-				OmitEmptyExchanges:  args.OmitEmptyExchanges},
+				OmitEmptyExchanges:  args.OmitEmptyExchanges,
+			},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    args.Format,
-				ShowStats: args.ShowStats},
-			out: NewColorableWriter(os.Stdout)})
+				ShowStats: args.ShowStats,
+			},
+			out: NewColorableWriter(os.Stdout),
+		})
 }
 
 // createMessageReaderForPublish returns a message source that reads
@@ -112,7 +114,7 @@ func newPublishMessageSource(source *string, format string) (MessageSource, erro
 		return NewReaderMessageSource(format, file)
 	} else {
 
-		metadataFiles, err := LoadMetadataFilesFromDir(*source, ioutil.ReadDir, NewRabtapFileInfoPredicate())
+		metadataFiles, err := LoadMetadataFilesFromDir(*source, os.ReadDir, NewRabtapFileInfoPredicate())
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +148,8 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
 		mandatory:  args.Mandatory,
 		confirms:   args.Confirms,
-		source:     source})
+		source:     source,
+	})
 	failOnError(err, "publish", os.Exit)
 }
 
@@ -226,10 +229,12 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 	case TapCmd:
 		startCmdTap(ctx, args)
 	case ExchangeCreateCmd:
-		cmdExchangeCreate(CmdExchangeCreateArg{amqpURL: args.AMQPURL,
+		cmdExchangeCreate(CmdExchangeCreateArg{
+			amqpURL:  args.AMQPURL,
 			exchange: args.ExchangeName, exchangeType: args.ExchangeType,
 			durable: args.Durable, autodelete: args.Autodelete,
-			tlsConfig: tlsConfig, args: args.Args})
+			tlsConfig: tlsConfig, args: args.Args,
+		})
 	case ExchangeRemoveCmd:
 		cmdExchangeRemove(args.AMQPURL, args.ExchangeName, tlsConfig)
 	case ExchangeBindToExchangeCmd:
@@ -238,12 +243,15 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			sourceExchange: args.ExchangeName,
 			targetExchange: args.DestExchangeName, key: args.BindingKey,
 			headerMode: args.HeaderMode, args: args.Args,
-			tlsConfig: tlsConfig})
+			tlsConfig: tlsConfig,
+		})
 	case QueueCreateCmd:
-		cmdQueueCreate(CmdQueueCreateArg{amqpURL: args.AMQPURL,
-			queue: args.QueueName, durable: args.Durable,
+		cmdQueueCreate(CmdQueueCreateArg{
+			amqpURL: args.AMQPURL,
+			queue:   args.QueueName, durable: args.Durable,
 			autodelete: args.Autodelete, tlsConfig: tlsConfig,
-			args: args.Args})
+			args: args.Args,
+		})
 	case QueueRemoveCmd:
 		cmdQueueRemove(args.AMQPURL, args.QueueName, tlsConfig)
 	case QueuePurgeCmd:
@@ -254,14 +262,16 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			exchange: args.ExchangeName,
 			queue:    args.QueueName, key: args.BindingKey,
 			headerMode: args.HeaderMode, args: args.Args,
-			tlsConfig: tlsConfig})
+			tlsConfig: tlsConfig,
+		})
 	case QueueUnbindCmd:
 		cmdQueueUnbindFromExchange(CmdQueueBindArg{
 			amqpURL:  args.AMQPURL,
 			exchange: args.ExchangeName,
 			queue:    args.QueueName, key: args.BindingKey,
 			headerMode: args.HeaderMode, args: args.Args,
-			tlsConfig: tlsConfig})
+			tlsConfig: tlsConfig,
+		})
 	case ConnCloseCmd:
 		failOnError(cmdConnClose(ctx, args.APIURL, args.ConnName,
 			args.CloseReason, tlsConfig),

@@ -1,14 +1,20 @@
 # rabtap makefile
+SHELL:=/bin/bash
 
 SOURCE=$(shell find . -name "*go" -a -not -path "./vendor/*" -not -path "./cmd/testgen/*" )
-VERSION=$(shell git describe --tags)
+INFO_VERSION=$(shell git describe --tags)
+INFO_COMMIT=$(shell git rev-parse --short HEAD)
+INFO_GO_VERSION:=$(shell go version | awk '{print $$3}')
+INFO_BUILD_DATE:=$(shell date -R)
 TOXICMD:=docker compose exec toxiproxy /go/bin/toxiproxy-cli
 
 .PHONY: phony
-
+LDFLAGS=-s -w -X main.BuildVersion=$(INFO_VERSION) \
+        -X 'main.BuildDate=$(INFO_BUILD_DATE)' \
+        -X 'main.BuildGoVersion=$(INFO_GO_VERSION)' \
+        -X 'main.BuildCommit=$(INFO_COMMIT)'
 build: phony
-	CGO_ENABLED=0 go build -ldflags \
-				"-s -w -X main.version=$(VERSION)" -o ./bin/rabtap ./cmd/rabtap
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o ./bin/rabtap ./cmd/rabtap
 wasm-build: phony
 	CGO_ENABLED=1 GOOS=wasip1 GOARCH=wasm go build -o ./bin/rabtap-wasm ./cmd/rabtap
 

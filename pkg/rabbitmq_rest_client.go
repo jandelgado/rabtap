@@ -49,9 +49,11 @@ func httpTimeout() time.Duration {
 // is the base API URL of the REST server.
 func NewRabbitHTTPClient(url *url.URL, tlsConfig *tls.Config) *RabbitHTTPClient {
 	tr := &http.Transport{
-		TLSClientConfig:    tlsConfig,
-		DisableCompression: false,
-		Dial:               Dialer,
+		TLSClientConfig:     tlsConfig,
+		MaxIdleConnsPerHost: 10,
+		MaxConnsPerHost:     10,
+		DisableCompression:  false,
+		Dial:                Dialer,
 	}
 	client := &http.Client{Transport: tr, Timeout: httpTimeout()}
 	return &RabbitHTTPClient{url, client}
@@ -162,6 +164,8 @@ func (s *RabbitHTTPClient) Vhosts(ctx context.Context) ([]RabbitVhost, error) {
 
 // BrokerInfo gets all resources of the broker in parallel
 func (s *RabbitHTTPClient) BrokerInfo(ctx context.Context) (BrokerInfo, error) {
+	ctx, cancel := context.WithTimeout(ctx, httpTimeout())
+	defer cancel()
 	g, ctx := errgroup.WithContext(ctx)
 
 	var r BrokerInfo

@@ -1,5 +1,15 @@
 # Changelog for rabtap
 
+## v1.44 (2025-03-15)
+
+* new: specify HTTP timeout (for `rabtap info` induced requests) using
+       environment variable `RABTAP_HTTP_TIMEOUT`
+* print detailed build info when called with `--version`
+* update go to 1.24.1
+* update dependencies
+* remove deprecated code (ioutil)
+* use go version specified in go.mod during build in CI and locally
+
 ## v1.43 (2024-09-22)
 
 * new: decode compressed message bodies in `tap` and `sub` command, when the

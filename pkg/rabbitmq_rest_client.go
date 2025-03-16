@@ -8,16 +8,18 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"time"
-
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
+	"time"
 
 	"golang.org/x/net/context/ctxhttp"
 
 	"golang.org/x/sync/errgroup"
 )
+
+const HTTP_DEFAULT_TIMEOUT = time.Duration(time.Second * 10)
 
 // RabbitHTTPClient is a minimal client to the rabbitmq management REST api.
 // It implements only functions needed by this tool (i.e. GET on some of the
@@ -28,15 +30,30 @@ type RabbitHTTPClient struct {
 	client *http.Client
 }
 
+// httpTimeout returns the HTTP timeout value to use. It's either the default
+// HTTP_DEFAULT_TIMEOUT or specified by the environment variable RABTAP_HTTP_TIMEOUT
+// as a time.Duration.
+func httpTimeout() time.Duration {
+	timeoutStr := os.Getenv("RABTAP_HTTP_TIMEOUT")
+	if timeoutStr == "" {
+		return HTTP_DEFAULT_TIMEOUT
+	}
+	if timeout, err := time.ParseDuration(timeoutStr); err != nil {
+		return HTTP_DEFAULT_TIMEOUT
+	} else {
+		return timeout
+	}
+}
+
 // NewRabbitHTTPClient returns a new instance of an RabbitHTTPClient. url
 // is the base API URL of the REST server.
 func NewRabbitHTTPClient(url *url.URL, tlsConfig *tls.Config) *RabbitHTTPClient {
-
 	tr := &http.Transport{
 		TLSClientConfig:    tlsConfig,
 		DisableCompression: false,
-		Dial:               Dialer}
-	client := &http.Client{Transport: tr, Timeout: time.Duration(2 * time.Second)}
+		Dial:               Dialer,
+	}
+	client := &http.Client{Transport: tr, Timeout: httpTimeout()}
 	return &RabbitHTTPClient{url, client}
 }
 

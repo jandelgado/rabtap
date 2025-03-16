@@ -9,6 +9,8 @@
 * update dependencies
 * remove deprecated code (ioutil)
 * use go version specified in go.mod during build in CI and locally
+* fix: gracefully close AMQP connections avoiding server side warning messages
+  like `[warning] <0.1213.0> client unexpectedly closed TCP connection`
 
 ## v1.43 (2024-09-22)
 

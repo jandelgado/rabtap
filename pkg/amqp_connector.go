@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net/url"
 )
 
@@ -43,12 +44,12 @@ func NewAmqpConnector(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpC
 	return &AmqpConnector{
 		logger:    logger,
 		url:       url,
-		tlsConfig: tlsConfig}
+		tlsConfig: tlsConfig,
+	}
 }
 
 // Connect  (re-)establishes the connection to RabbitMQ broker.
 func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) error {
-
 	sessions := redial(ctx, s.url.String(), s.tlsConfig, s.logger, FailEarly)
 	for session := range sessions {
 		s.logger.Debugf("waiting for new session on %+v", s.url.Redacted())
@@ -63,9 +64,9 @@ func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) erro
 			s.logger.Errorf("worker failed with: %v", err)
 		}
 		if !action.shouldReconnect() {
-			// if errClose := sub.Connection.Close(); errClose != nil {
-			//     s.logger.Errorf("connection close failed: %v", errClose)
-			// }
+			if errClose := sub.Connection.Close(); errClose != nil {
+				return errors.Join(err, fmt.Errorf("connection close failed: %v", errClose))
+			}
 			return err
 		}
 	}

@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/base-debian10
+FROM gcr.io/distroless/static-debian12
 ARG binary
 LABEL maintainer="Jan Delgado <jdelgado@gmx.net>"
 

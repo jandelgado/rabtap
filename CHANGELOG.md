@@ -1,5 +1,9 @@
 # Changelog for rabtap
 
+## v1.44.1 (2025-03-16)
+
+* fix and update docker image
+
 ## v1.44 (2025-03-15)
 
 * new: specify HTTP timeout (for `rabtap info` induced requests) using

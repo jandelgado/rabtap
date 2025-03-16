@@ -63,6 +63,6 @@ clean: phony
 # create a test-release v99.9.9 to test the ci pipeline
 gh-make-test-release: phony
 	gh release delete v99.9.9 --cleanup-tag --yes || true
-	gh release create v99.9.9 --notes "testing" --title "v99.9.9 testing" --prerelease --target update_dependencies
+	gh release create v99.9.9 --notes "testing" --title "v99.9.9 testing" --prerelease --target $(shell git branch --show-current)
 
 phony:

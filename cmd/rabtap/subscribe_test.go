@@ -10,17 +10,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"testing"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // a mocked amqp.Acknowldger to test our AcknowledgeFunc
@@ -55,7 +55,6 @@ func (s MockAcknowledger) Reject(tag uint64, requeue bool) error {
 }
 
 func TestCreateMessagePredicateProvidesMessageContext(t *testing.T) {
-
 	// when we evalute the predicate for the test Messages
 	msg := rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: "match123"}}
 	env := createMessagePredEnv(msg, 123)
@@ -67,7 +66,6 @@ func TestCreateMessagePredicateProvidesMessageContext(t *testing.T) {
 }
 
 func TestCreateAcknowledgeFuncReturnedFuncCorreclyAcknowledgesTheMessage(t *testing.T) {
-
 	testcases := []struct {
 		reject, requeue               bool // given
 		isacked, isnacked, isrequeued bool // expected
@@ -164,7 +162,7 @@ func TestCreateMessageSinkReturnsErrorWithInvalidFormat(t *testing.T) {
 }
 
 func TestCreateMessageSinkRawToFile(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "")
+	testDir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
 	defer os.RemoveAll(testDir)
 
@@ -264,7 +262,6 @@ func TestCreateMessageSinkJSONNoPPToFile(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, strings.Count(string(contents), "\n") > 1)
 	assert.True(t, strings.Contains(string(contents), "\"Body\": \"VGVzdG1lc3NhZ2U=\""))
-
 }
 
 func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {

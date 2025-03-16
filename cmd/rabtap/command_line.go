@@ -17,13 +17,18 @@ import (
 	"time"
 
 	docopt "github.com/docopt/docopt-go"
+
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // version and commit holds the application version and is set during link
 // using "go -ldflags "-X main.version=a.b.c" (defaults used by goreleaser)
-var version = "(version)"
-var commit = "(commit)"
+var (
+	BuildVersion   = "(version)"
+	BuildCommit    = "(commit)"
+	BuildGoVersion = "(goversion)"
+	BuildDate      = "(builddate)"
+)
 
 const (
 	// note: usage is DSL interpreted by docopt - this is code. Change carefully.
@@ -389,7 +394,8 @@ func parseCommonArgs(args map[string]interface{}) commonArgs {
 		Verbose:     args["--verbose"].(bool),
 		InsecureTLS: args["--insecure"].(bool),
 		NoColor:     args["--no-color"].(bool) || (os.Getenv("NO_COLOR") != ""),
-		ForceColor:  args["--color"].(bool)}
+		ForceColor:  args["--color"].(bool),
+	}
 }
 
 func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
@@ -400,7 +406,8 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		OmitEmptyExchanges:  args["--omit-empty"].(bool),
 		ShowConsumers:       args["--consumers"].(bool),
 		ShowStats:           args["--stats"].(bool),
-		ShowDefaultExchange: args["--show-default"].(bool)}
+		ShowDefaultExchange: args["--show-default"].(bool),
+	}
 
 	mode := args["--mode"].(string)
 	if mode != "byExchange" && mode != "byConnection" {
@@ -426,7 +433,8 @@ func parseInfoCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 
 func parseConnCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
-		commonArgs: parseCommonArgs(args)}
+		commonArgs: parseCommonArgs(args),
+	}
 
 	var err error
 	if result.APIURL, err = parseAPIURI(args); err != nil {
@@ -590,7 +598,8 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	result := CommandLineArgs{
 		commonArgs:   parseCommonArgs(args),
-		ExchangeName: args["EXCHANGE"].(string)}
+		ExchangeName: args["EXCHANGE"].(string),
+	}
 
 	var err error
 	if result.AMQPURL, err = parseAMQPURL(args); err != nil {
@@ -629,7 +638,8 @@ func parsePublishCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		Cmd:        PubCmd,
 		Confirms:   args["--confirms"].(bool),
 		Mandatory:  args["--mandatory"].(bool),
-		commonArgs: parseCommonArgs(args)}
+		commonArgs: parseCommonArgs(args),
+	}
 
 	format, err := parsePubSubFormatArg(args)
 	if err != nil {
@@ -690,7 +700,8 @@ func parseTapCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 		Filter:      args["--filter"].(string),
 		Silent:      args["--silent"].(bool),
 		TapConfig:   []rabtap.TapConfiguration{},
-		IdleTimeout: time.Duration(math.MaxInt64)}
+		IdleTimeout: time.Duration(math.MaxInt64),
+	}
 
 	format, err := parsePubSubFormatArg(args)
 	if err != nil {
@@ -746,10 +757,14 @@ func parseHelpCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	return result, nil
 }
 
+func formatVersion() string {
+	return fmt.Sprintf("version: %s\ncommit: %s\nbuilt with: %s\nbuild date: %s",
+		BuildVersion, BuildCommit, BuildGoVersion, BuildDate)
+}
+
 func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArgs, error) {
-	info := fmt.Sprintf("%s (%s)", version, commit)
 	parser := docopt.Parser{SkipHelpFlags: true}
-	args, err := parser.ParseArgs(spec, cliArgs, info)
+	args, err := parser.ParseArgs(spec, cliArgs, formatVersion())
 	if err != nil {
 		return CommandLineArgs{}, err
 	}

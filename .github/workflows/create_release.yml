@@ -1,7 +1,8 @@
+---
 on:
   push:
     tags:
-      - 'v*'
+      - v*
 
 name: Upload release assets after tagging
 jobs:
@@ -9,13 +10,22 @@ jobs:
     name: create assets
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.1
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Run GoReleaser
+          go-version-file: go.mod
+
+      - name: Verify go version (expecting toolchain setting from go.mod)
+        run: |
+          echo "GOVERSION=$(go version)" >> $GITHUB_ENV
+          go version
+
+      - name: Build release artefacts using goreleaser
         uses: goreleaser/goreleaser-action@v6
         if: startsWith(github.ref, 'refs/tags/')
         with:
@@ -24,33 +34,78 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload rabtap binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rabtap-binary
+          path: dist/rabtap_linux_amd64_v1/rabtap
+          retention-days: 1
+
   docker-image:
+    needs: build
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
+
     name: create docker image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: image=moby/buildkit:latest
+          #buildkitd-flags: --debug
+
       - name: Log in to the Container registry
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: build Docker image
-        run: |
-          VERSION=$(git describe --tags)
-          docker build --build-arg "version=$VERSION" --tag ${IMAGE_NAME} .
 
-      - name: push Docker image
-        run: |
-          TAG=$(git describe --tags)
-          docker tag ${IMAGE_NAME} ${REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}
-          docker tag ${IMAGE_NAME} ${REGISTRY}/${IMAGE_NAME}:${TAG}
-          docker tag ${IMAGE_NAME} ${REGISTRY}/${IMAGE_NAME}:latest
-          docker push ${REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}
-          docker push ${REGISTRY}/${IMAGE_NAME}:${TAG}
-          docker push ${REGISTRY}/${IMAGE_NAME}:latest
+      # Download the binary artifact from the build job
+      - name: Download rabtap binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rabtap-binary
+          path: ./binary
 
+      - name: Make binary executable
+        run: |
+          chmod 755 ./binary/rabtap
+          ls -l ./binary
+
+      - name: Get tag info for image label
+        id: tag
+        run: |
+            TAG=$(git describe --tags)
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          build-args: |
+            binary=./binary/rabtap
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Tag and push latest
+        if: steps.tag.outputs.tag != 'v99.9.9'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          no-cache: false
+          pull: false

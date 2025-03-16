@@ -12,10 +12,25 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
-	"github.com/stretchr/testify/assert"
 )
+
+func TestHTTPTimeoutIsDefaultIfNotSetOrInvalid(t *testing.T) {
+	t.Setenv("RABTAP_HTTP_TIMEOUT", "")
+	assert.Equal(t, HTTP_DEFAULT_TIMEOUT, httpTimeout())
+
+	t.Setenv("RABTAP_HTTP_TIMEOUT", "invalid")
+	assert.Equal(t, HTTP_DEFAULT_TIMEOUT, httpTimeout())
+}
+
+func TestHTTPTimeoutCanBeConfigured(t *testing.T) {
+	t.Setenv("RABTAP_HTTP_TIMEOUT", "3m")
+	assert.Equal(t, time.Duration(3*time.Minute), httpTimeout())
+}
 
 func TestGetAllResources(t *testing.T) {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
@@ -53,7 +68,6 @@ func TestGetResourceInvalidUriReturnsError(t *testing.T) {
 
 // test non 200 status returned in getResource()
 func TestGetResourceStatusNot200(t *testing.T) {
-
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "500 internal server error")
@@ -65,12 +79,10 @@ func TestGetResourceStatusNot200(t *testing.T) {
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 	_, err := client.getResource(context.TODO(), httpRequest{"overview", reflect.TypeOf(RabbitOverview{})})
 	assert.NotNil(t, err) // TODO check error
-
 }
 
 // // test non invalid json returned
 func TestGetResourceInvalidJSON(t *testing.T) {
-
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "non json response")
 	}
@@ -85,7 +97,6 @@ func TestGetResourceInvalidJSON(t *testing.T) {
 
 // test of GET /api/exchanges endpoint
 func TestRabbitClientGetExchanges(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -103,7 +114,6 @@ func TestRabbitClientGetExchanges(t *testing.T) {
 
 // test of GET /api/queues endpoint
 func TestRabbitClientGetQueues(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -119,7 +129,6 @@ func TestRabbitClientGetQueues(t *testing.T) {
 
 // test of GET /api/overview endpoint
 func TestRabbitClientGetOverview(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -132,7 +141,6 @@ func TestRabbitClientGetOverview(t *testing.T) {
 
 // test of GET /api/bindings endpoint
 func TestRabbitClientGetBindings(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -141,12 +149,10 @@ func TestRabbitClientGetBindings(t *testing.T) {
 	_, err := client.Bindings(context.TODO())
 	assert.Nil(t, err)
 	// TODO
-
 }
 
 // test of GET /api/consumers endpoint
 func TestRabbitClientGetConsumers(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -157,12 +163,10 @@ func TestRabbitClientGetConsumers(t *testing.T) {
 	assert.Equal(t, 2, len(consumer))
 	assert.Equal(t, "some_consumer", consumer[0].ConsumerTag)
 	assert.Equal(t, "another_consumer w/ faulty channel", consumer[1].ConsumerTag)
-
 }
 
 // test of GET /api/consumers endpoint
 func TestRabbitClientGetConnections(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -240,7 +244,6 @@ func TestRabbitClientDeserializePeerPortInConsumerAsStringWithoutError(t *testin
 	err := json.Unmarshal([]byte(msg), &consumer)
 	assert.NoError(t, err)
 	assert.Equal(t, OptInt(0), consumer[0].ChannelDetails.PeerPort)
-
 }
 
 // we use a custom unmarshaler as a WORKAROUND for RabbitMQ API
@@ -270,7 +273,6 @@ func TestChannelDetailsIsDetectedAsNull(t *testing.T) {
 	err := json.Unmarshal([]byte(msg), &consumer)
 	assert.NoError(t, err)
 	assert.Equal(t, ChannelDetails{}, consumer[0].ChannelDetails)
-
 }
 
 // we use a custom unmarshaler as a WORKAROUND for RabbitMQ API
@@ -304,7 +306,6 @@ func TestChannelDetailsIsDetectedAsEmptyArray(t *testing.T) {
 
 // test of DELETE /connections/conn to close a connection
 func TestRabbitClientCloseExistingConnection(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -317,7 +318,6 @@ func TestRabbitClientCloseExistingConnection(t *testing.T) {
 
 // test of DELETE /connections/conn to close a connection
 func TestRabbitClientCloseNonExistingConnectionRaisesError(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)

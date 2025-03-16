@@ -13,53 +13,53 @@ and exchanges, inspect broker.
 
 * [Features](#features)
 * [Screenshots](#screenshots)
-  * [Show broker topology](#show-broker-topology)
-  * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
-  * [Tap messages](#tap-messages)
+    * [Show broker topology](#show-broker-topology)
+    * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
+    * [Tap messages](#tap-messages)
 * [Installation](#installation)
-  * [Docker image](#docker-image)
-  * [Pre-compiled binaries](#pre-compiled-binaries)
-  * [Arch Linux](#arch-linux)
-  * [Installation from source](#installation-from-source)
+    * [Docker image](#docker-image)
+    * [Pre-compiled binaries](#pre-compiled-binaries)
+    * [Arch Linux](#arch-linux)
+    * [Installation from source](#installation-from-source)
 * [Usage](#usage)
-  * [Command overview](#command-overview)
-  * [Broker URI specification](#broker-uri-specification)
-    * [Authentication](#authentication)
-  * [Environment variables](#environment-variables)
-    * [Default RabbitMQ broker](#default-rabbitmq-broker)
-    * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
-    * [Default RabbitMQ TLS config](#default-rabbitmq-tls-config)
-    * [Colored output](#colored-output)
-  * [Command reference and examples](#command-reference-and-examples)
-    * [Broker info](#broker-info)
-    * [Wire-tapping messages](#wire-tapping-messages)
-      * [Tap all messages published or delivered (RabbitMQ FireHose)](#tap-all-messages-published-or-delivered-rabbitmq-firehose)
-        * [Replaying messages from the FireHose exchange](#replaying-messages-from-the-firehose-exchange)
-      * [Connect to multiple brokers](#connect-to-multiple-brokers)
-      * [Message recorder](#message-recorder)
-    * [Subscribe messages](#subscribe-messages)
-    * [Publish messages](#publish-messages)
-    * [Poor mans shovel](#poor-mans-shovel)
-    * [Close connection](#close-connection)
-    * [Exchange commands](#exchange-commands)
-    * [Queue commands](#queue-commands)
-  * [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
-  * [JSON message format](#json-message-format)
-  * [Filtering output](#filtering-output)
-    * [Filtering expressions](#filtering-expressions)
-      * [Evaluation context](#evaluation-context)
-      * [Examples](#examples)
-    * [Type reference](#type-reference)
-      * [Exchange type](#exchange-type)
-      * [Queue type](#queue-type)
-      * [Binding type](#binding-type)
-      * [Connection type](#connection-type)
-      * [Channel type](#channel-type)
-      * [Message type](#message-type)
+    * [Command overview](#command-overview)
+    * [Broker URI specification](#broker-uri-specification)
+        * [Authentication](#authentication)
+    * [Environment variables](#environment-variables)
+        * [Default RabbitMQ broker](#default-rabbitmq-broker)
+        * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
+        * [Default RabbitMQ TLS config](#default-rabbitmq-tls-config)
+        * [Colored output](#colored-output)
+    * [Command reference and examples](#command-reference-and-examples)
+        * [Broker info](#broker-info)
+        * [Wire-tapping messages](#wire-tapping-messages)
+            * [Tap all messages published or delivered (RabbitMQ FireHose)](#tap-all-messages-published-or-delivered-rabbitmq-firehose)
+                * [Replaying messages from the FireHose exchange](#replaying-messages-from-the-firehose-exchange)
+            * [Connect to multiple brokers](#connect-to-multiple-brokers)
+            * [Message recorder](#message-recorder)
+        * [Subscribe messages](#subscribe-messages)
+        * [Publish messages](#publish-messages)
+        * [Poor mans shovel](#poor-mans-shovel)
+        * [Close connection](#close-connection)
+        * [Exchange commands](#exchange-commands)
+        * [Queue commands](#queue-commands)
+    * [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
+    * [JSON message format](#json-message-format)
+    * [Filtering output](#filtering-output)
+        * [Filtering expressions](#filtering-expressions)
+            * [Evaluation context](#evaluation-context)
+            * [Examples](#examples)
+        * [Type reference](#type-reference)
+            * [Exchange type](#exchange-type)
+            * [Queue type](#queue-type)
+            * [Binding type](#binding-type)
+            * [Connection type](#connection-type)
+            * [Channel type](#channel-type)
+            * [Message type](#message-type)
 * [Build from source](#build-from-source)
-  * [Download and build using go install](#download-and-build-using-go-install)
-  * [Build using Makefile and tests](#build-using-makefile-and-tests)
-  * [Experimental WASM/wasip1 port](#experimental-wasmwasip1-port)
+    * [Download and build using go install](#download-and-build-using-go-install)
+    * [Build using Makefile and tests](#build-using-makefile-and-tests)
+    * [Experimental WASM/wasip1 port](#experimental-wasmwasip1-port)
 * [Test data generator](#test-data-generator)
 * [Contributing](#contributing)
 * [Author](#author)
@@ -146,10 +146,10 @@ Usage:
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
               [--show-default] [--mode=MODE] [--format=FORMAT] [-kncv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] 
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
 	      [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
 	      [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM] 
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
 	      [--idle-timeout=DURATION] [--filter=EXPR] [-jkncsv]
               [(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE]
   rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
@@ -223,7 +223,7 @@ Arguments and options:
  --header=KV          A key value pair in the form of "key=value" used as a
                       routing- or binding-key. Can occur multiple times.
  --idle-timeout=DURATION end reading messages when no new message was received
-                      for the given duration.  The value must be suffixed with 
+                      for the given duration.  The value must be suffixed with
                       a time unit, e.g. ms, s etc.
  -j, --json           deprecated. Use "--format json" instead.
  -k, --insecure       allow insecure TLS connections (no certificate check).
@@ -239,7 +239,7 @@ Arguments and options:
                       'next', a duration like '10m', a RFC3339-Timestamp or
                       an integer index value. Basically it is an alias for
                       '--args=x-stream-offset=OFFSET'.
- --property=KV        A key value pair in the form of "key=value" to specify 
+ --property=KV        A key value pair in the form of "key=value" to specify
 	              message properties like e.g. the content-type.
  --queue-type=TYPE    type of queue [default: classic].
  --reason=REASON      reason why the connection was closed [default: closed by rabtap].
@@ -276,7 +276,7 @@ Examples:
   rabtap sub JDQ
 
   # print only messages that have ".Name == 'JAN'" in their JSON payload
-  rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.body(r.msg))); b.Name == 'JAN'" 
+  rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.body(r.msg))); b.Name == 'JAN'"
   rabtap queue rm JDQ
 
   # use RABTAP_APIURI environment variable to specify mgmt api uri instead of --api
@@ -355,6 +355,13 @@ $ export RABTAP_APIURI=http://guest:guest@localhost:15672/api
 $ rabtap info
 ...
 ```
+
+The timeout for API requests against this endpoint can be configured using
+the `RABTAP_HTTP_TIMEOUT` environment variable using a
+[time.Duration](https://pkg.go.dev/time#ParseDuration) value, e.g.
+`export RABTAP_HTTP_TIMEOUT=30s`. The default timeout is `10s`. Increase
+the timeout when dealing with brokers with many queues and exchanges, since
+otherwise `rabtap info` may run into timeouts.
 
 #### Default RabbitMQ TLS config
 
@@ -644,7 +651,7 @@ Multiple properties can be specified by specifying multiple `--property` options
 Run `rabtap help properties` to see the list of available properties:
 
 ```text
-DeliveryMode    - delivery mode: 'transient' or 'persistent' 
+DeliveryMode    - delivery mode: 'transient' or 'persistent'
 Priority        - message priority for priority queues
 Expiration      - message TTL (ms)
 ContentType     - application use - MIME content type

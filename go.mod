@@ -12,7 +12,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sirupsen/logrus v1.9.4-0.20241118143825-d1e633264448
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	golang.org/x/sync v0.12.0
 )
 

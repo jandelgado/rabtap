@@ -12,15 +12,12 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"sync"
 	"testing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var captureOutputMutex sync.Mutex
 
 // CaptureOutput captures all output written to stdout, stderr and returns
 // it as string

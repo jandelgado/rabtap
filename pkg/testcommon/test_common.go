@@ -26,21 +26,11 @@ var captureOutputMutex sync.Mutex
 // it as string
 // credits: https://medium.com/@hau12a1/golang-capturing-log-println-and-fmt-println-output-770209c791b4
 // TODO inject stdout, stderr to make this function obsolete
-func CaptureOutput(f func()) string {
-	captureOutputMutex.Lock()
-	defer captureOutputMutex.Unlock()
-
+func CaptureOutput(f func(*os.File)) string {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		panic(err)
 	}
-	stdout, stderr := os.Stdout, os.Stderr
-	defer func() {
-		os.Stdout = stdout
-		os.Stderr = stderr
-	}()
-	os.Stdout = writer
-	os.Stderr = writer
 
 	out := make(chan string, 1)
 
@@ -54,7 +44,7 @@ func CaptureOutput(f func()) string {
 		}
 	}()
 
-	f()
+	f(writer)
 
 	writer.Close()
 

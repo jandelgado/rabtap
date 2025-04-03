@@ -9,6 +9,7 @@ package main
 // integration test
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"io"
@@ -17,15 +18,15 @@ import (
 	"testing"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
+	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
 
 func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
-
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan bool)
 	amqpURL, _ := url.Parse("amqp://invalid.url:5672/")
@@ -72,8 +73,10 @@ func TestCmdSub(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// create and bind queue
-	cmdQueueCreate(CmdQueueCreateArg{amqpURL: amqpURL,
-		queue: testQueue, tlsConfig: tlsConfig})
+	cmdQueueCreate(CmdQueueCreateArg{
+		amqpURL: amqpURL,
+		queue:   testQueue, tlsConfig: tlsConfig,
+	})
 	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig)
 
 	// subscribe to testQueue
@@ -111,7 +114,8 @@ func TestCmdSub(t *testing.T) {
 					ContentType:  "text/plain",
 					DeliveryMode: amqp.Transient,
 				}, nil
-			}})
+			},
+		})
 
 	// test if we received the message
 	select {
@@ -131,8 +135,10 @@ func TestCmdSubIntegration(t *testing.T) {
 	tlsConfig := &tls.Config{}
 	amqpURL := testcommon.IntegrationURIFromEnv()
 
-	cmdQueueCreate(CmdQueueCreateArg{amqpURL: amqpURL,
-		queue: testQueue, tlsConfig: tlsConfig})
+	cmdQueueCreate(CmdQueueCreateArg{
+		amqpURL: amqpURL,
+		queue:   testQueue, tlsConfig: tlsConfig,
+	})
 	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig)
 
 	_, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
@@ -151,13 +157,31 @@ func TestCmdSubIntegration(t *testing.T) {
 
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
-	os.Args = []string{"rabtap", "sub",
+	os.Args = []string{
+		"rabtap", "sub",
 		"--uri", amqpURL.String(),
 		testQueue,
 		"--limit=1",
 		"--format=raw",
-		"--no-color"}
-	output := testcommon.CaptureOutput(main)
+		"--no-color",
+	}
+	//	output := testcommon.CaptureOutput(main)
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	outC := make(chan string, 1)
+	go func() {
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+		outC <- buf.String()
+	}()
+
+	_main(w)
+
+	w.Close()
+	output := <-outC
 
 	assert.Regexp(t, "(?s).*message received.*\nroutingkey.....: sub-queue-test\n.*Hello", output)
 }

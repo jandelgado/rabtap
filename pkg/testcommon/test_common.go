@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
 	"os"
 	"sync"
@@ -36,15 +35,12 @@ func CaptureOutput(f func()) string {
 		panic(err)
 	}
 	stdout, stderr := os.Stdout, os.Stderr
-	oldLogger := log.Writer()
 	defer func() {
 		os.Stdout = stdout
 		os.Stderr = stderr
-		log.SetOutput(oldLogger)
 	}()
 	os.Stdout = writer
 	os.Stderr = writer
-	log.SetOutput(writer)
 
 	out := make(chan string, 1)
 

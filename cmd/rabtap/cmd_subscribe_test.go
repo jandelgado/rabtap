@@ -9,7 +9,6 @@ package main
 // integration test
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"io"
@@ -127,6 +126,7 @@ func TestCmdSub(t *testing.T) {
 }
 
 func TestCmdSubIntegration(t *testing.T) {
+	// given
 	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"
 	testKey := testQueue
@@ -165,23 +165,10 @@ func TestCmdSubIntegration(t *testing.T) {
 		"--format=raw",
 		"--no-color",
 	}
-	//	output := testcommon.CaptureOutput(main)
 
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	outC := make(chan string, 1)
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		outC <- buf.String()
-	}()
+	// when
+	output := testcommon.CaptureOutput(rabtap_main)
 
-	_main(w)
-
-	w.Close()
-	output := <-outC
-
+	// then
 	assert.Regexp(t, "(?s).*message received.*\nroutingkey.....: sub-queue-test\n.*Hello", output)
 }

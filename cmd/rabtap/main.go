@@ -280,10 +280,10 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 }
 
 func main() {
-	_main(os.Stdout)
+	rabtap_main(os.Stdout)
 }
 
-func _main(out *os.File) {
+func rabtap_main(out *os.File) {
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)

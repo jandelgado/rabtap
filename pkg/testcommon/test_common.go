@@ -19,11 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// CaptureOutput captures all output written to stdout, stderr and returns
-// it as string
-// credits: https://medium.com/@hau12a1/golang-capturing-log-println-and-fmt-println-output-770209c791b4
-// TODO inject stdout, stderr to make this function obsolete
-func CaptureOutput(f func(*os.File)) string {
+type FunctionToCapture func(*os.File)
+
+// CaptureOutput captures output of a function that write to the given os.File
+func CaptureOutput(f FunctionToCapture) string {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		panic(err)
@@ -35,7 +34,7 @@ func CaptureOutput(f func(*os.File)) string {
 		var buf bytes.Buffer
 		_, err := io.Copy(&buf, reader)
 		if err != nil {
-			out <- fmt.Sprintf("capturing failed: %v", err)
+			panic(fmt.Sprintf("capturing failed with: %v", err))
 		} else {
 			out <- buf.String()
 		}

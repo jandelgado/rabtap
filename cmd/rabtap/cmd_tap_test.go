@@ -12,15 +12,15 @@ import (
 	"testing"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
+	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
 
 func TestCmdTap(t *testing.T) {
-
 	// given
 	conn, ch := testcommon.IntegrationTestConnection(t, "int-test-exchange", "topic", 1, false)
 	defer conn.Close()
@@ -36,21 +36,29 @@ func TestCmdTap(t *testing.T) {
 	}
 
 	exchangeConfig := []rabtap.ExchangeConfiguration{
-		{Exchange: "int-test-exchange",
-			BindingKey: "my-routing-key"}}
+		{
+			Exchange:   "int-test-exchange",
+			BindingKey: "my-routing-key",
+		},
+	}
 	tapConfig := []rabtap.TapConfiguration{
-		{AMQPURL: testcommon.IntegrationURIFromEnv(),
-			Exchanges: exchangeConfig}}
+		{
+			AMQPURL:   testcommon.IntegrationURIFromEnv(),
+			Exchanges: exchangeConfig,
+		},
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// when
-	go cmdTap(ctx, CmdTapArg{tapConfig: tapConfig,
-		tlsConfig:          &tls.Config{},
+	go cmdTap(ctx, CmdTapArg{
+		tapConfig:   tapConfig,
+		tlsConfig:   &tls.Config{},
 		messageSink: receiveFunc,
-		filterPred:         constantPred{true},
-		termPred:           constantPred{false},
-		timeout:            time.Second * 10})
+		filterPred:  constantPred{true},
+		termPred:    constantPred{false},
+		timeout:     time.Second * 10,
+	})
 
 	time.Sleep(time.Second * 1)
 	err := ch.Publish(
@@ -100,12 +108,16 @@ func TestCmdTapIntegration(t *testing.T) {
 
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
-	os.Args = []string{"rabtap", "tap",
+	os.Args = []string{
+		"rabtap", "tap",
 		"--uri", testcommon.IntegrationURIFromEnv().String(),
 		"amq.topic:" + testKey,
 		"--limit=1",
 		"--format=raw",
-		"--no-color"}
-	output := testcommon.CaptureOutput(main)
+		"--no-color",
+	}
+
+	output := testcommon.CaptureOutput(rabtap_main)
+
 	assert.Regexp(t, "(?s).*message received.*\nroutingkey.....: tap-queue-test\n.*Hello", output)
 }

@@ -9,13 +9,15 @@ import (
 	"context"
 	"crypto/tls"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/fatih/color"
+	"github.com/stretchr/testify/assert"
+
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/jandelgado/rabtap/pkg/testcommon"
-	"github.com/stretchr/testify/assert"
 )
 
 func Example_startCmdInfo() {
@@ -25,14 +27,13 @@ func Example_startCmdInfo() {
 
 	args, _ := ParseCommandLineArgs([]string{"info", "--api", mock.URL, "--no-color"})
 	titleURL, _ := url.Parse("http://guest:guest@rootnode/vhost")
-	startCmdInfo(context.TODO(), args, titleURL)
+	startCmdInfo(context.TODO(), args, titleURL, os.Stdout)
 
 	// Output:
 	// http://rootnode/vhost (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 }
 
 func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -50,11 +51,14 @@ func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
 				ShowConsumers:       true,
 				ShowDefaultExchange: false,
 				Filter:              constantPred{true},
-				OmitEmptyExchanges:  false},
+				OmitEmptyExchanges:  false,
+			},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    "text",
-				ShowStats: false},
-			out: &actual})
+				ShowStats: false,
+			},
+			out: &actual,
+		})
 
 	expected := `http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 └─ Vhost /
@@ -90,7 +94,6 @@ func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
 }
 
 func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -108,11 +111,14 @@ func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
 				ShowConsumers:       true,
 				ShowDefaultExchange: false,
 				Filter:              constantPred{true},
-				OmitEmptyExchanges:  false},
+				OmitEmptyExchanges:  false,
+			},
 			renderConfig: BrokerInfoRendererConfig{
 				Format:    "text",
-				ShowStats: false},
-			out: &actual})
+				ShowStats: false,
+			},
+			out: &actual,
+		})
 
 	expected := `http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 └─ Vhost /
@@ -122,7 +128,6 @@ func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
             └─ direct-q1 (queue(classic),  running, [D])
 `
 	assert.Equal(t, expected, actual.String())
-
 }
 
 const expectedResultDotByExchange = `graph broker {
@@ -214,7 +219,6 @@ const expectedResultDotByExchange = `graph broker {
 }`
 
 func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -232,16 +236,17 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 				ShowConsumers:       false,
 				ShowDefaultExchange: false,
 				Filter:              constantPred{true},
-				OmitEmptyExchanges:  false},
+				OmitEmptyExchanges:  false,
+			},
 			renderConfig: BrokerInfoRendererConfig{Format: "dot"},
-			out:          &actual})
+			out:          &actual,
+		})
 
 	assert.Equal(t, strings.Trim(expectedResultDotByExchange, " \n"),
 		strings.Trim(actual.String(), " \n"))
 }
 
 func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
-
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeStd)
 	defer mock.Close()
 	url, _ := url.Parse(mock.URL)
@@ -259,9 +264,11 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 				ShowConsumers:       false,
 				ShowDefaultExchange: false,
 				Filter:              constantPred{true},
-				OmitEmptyExchanges:  false},
+				OmitEmptyExchanges:  false,
+			},
 			renderConfig: BrokerInfoRendererConfig{Format: "dot"},
-			out:          &actual})
+			out:          &actual,
+		})
 
 	const expected = `graph broker {
 "root" [shape="record", label="{RabbitMQ 3.6.9 |http://rabbitmq/api |rabbit@08f57d1fe8ab }"];

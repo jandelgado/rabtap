@@ -10,10 +10,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
 	"os"
-	"sync"
 	"testing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -21,38 +19,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// CaptureOutput captures all output written to stdout, stderr and returns
-// it as string
-// credits: https://medium.com/@hau12a1/golang-capturing-log-println-and-fmt-println-output-770209c791b4
-func CaptureOutput(f func()) string {
+type FunctionToCapture func(*os.File)
+
+// CaptureOutput captures output of a function that write to the given os.File
+func CaptureOutput(f FunctionToCapture) string {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		panic(err)
 	}
-	stdout := os.Stdout
-	stderr := os.Stderr
-	defer func() {
-		os.Stdout = stdout
-		os.Stderr = stderr
-		log.SetOutput(os.Stderr)
-	}()
-	os.Stdout = writer
-	os.Stderr = writer
-	log.SetOutput(writer)
-	out := make(chan string)
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
+
+	out := make(chan string, 1)
+
 	go func() {
 		var buf bytes.Buffer
-		wg.Done()
 		_, err := io.Copy(&buf, reader)
-		if err == nil {
+		if err != nil {
+			panic(fmt.Sprintf("capturing failed with: %v", err))
+		} else {
 			out <- buf.String()
 		}
 	}()
-	wg.Wait()
-	f()
+
+	f(writer)
+
 	writer.Close()
+
 	return <-out
 }
 
@@ -91,8 +82,8 @@ func IntegrationQueueName(i int) string {
 // additional routing header ("x-match":"any", "header1":"test0" for first
 // queue etc; this feature is needed by the headers test).
 func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
-	numQueues int, addRoutingHeader bool) (*amqp.Connection, *amqp.Channel) {
-
+	numQueues int, addRoutingHeader bool,
+) (*amqp.Connection, *amqp.Channel) {
 	conn, err := amqp.Dial(IntegrationURIFromEnv().String())
 	require.Nil(t, err)
 	ch, err := conn.Channel()
@@ -146,7 +137,8 @@ func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
 // PublishTestMessages publishes the given number of test messages the
 // exchange exhangeName with the provided routingKey
 func PublishTestMessages(t *testing.T, ch *amqp.Channel, numMessages int,
-	exchangeName, routingKey string, optHeaders amqp.Table) {
+	exchangeName, routingKey string, optHeaders amqp.Table,
+) {
 	// inject messages into exchange. Each message should become visible
 	// in the tap-exchange defined above.
 	for i := 1; i <= numMessages; i++ {
@@ -166,14 +158,12 @@ func PublishTestMessages(t *testing.T, ch *amqp.Channel, numMessages int,
 			})
 		require.Nil(t, err)
 	}
-
 }
 
 // VerifyTestMessageOnQueue checks that the expected messages were received on
 // the given queue.  on success the number of received messages  is sent
 // through the provided success channel signalling success.
 func VerifyTestMessageOnQueue(t *testing.T, ch *amqp.Channel, consumer string, numExpected int, queueName string, success chan int) {
-
 	deliveries, err := ch.Consume(
 		queueName,
 		consumer, // consumer

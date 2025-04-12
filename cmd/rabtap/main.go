@@ -69,7 +69,7 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	return tlsConfig
 }
 
-func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) {
+func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL, out *os.File) {
 	filter, err := NewExprPredicate(args.Filter)
 	failOnError(err, fmt.Sprintf("invalid queue filter predicate '%s'", args.Filter), os.Exit)
 
@@ -88,7 +88,7 @@ func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL) 
 				Format:    args.Format,
 				ShowStats: args.ShowStats,
 			},
-			out: NewColorableWriter(os.Stdout),
+			out: NewColorableWriter(out),
 		})
 }
 
@@ -153,9 +153,9 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs) {
 	failOnError(err, "publish", os.Exit)
 }
 
-func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
+func startCmdSubscribe(ctx context.Context, args CommandLineArgs, out *os.File) {
 	opts := MessageSinkOptions{
-		out:              NewColorableWriter(os.Stdout),
+		out:              NewColorableWriter(out),
 		format:           args.Format,
 		silent:           args.Silent,
 		optSaveDir:       args.SaveDir,
@@ -184,9 +184,9 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs) {
 	failOnError(err, "error subscribing messages", os.Exit)
 }
 
-func startCmdTap(ctx context.Context, args CommandLineArgs) {
+func startCmdTap(ctx context.Context, args CommandLineArgs, out *os.File) {
 	opts := MessageSinkOptions{
-		out:              NewColorableWriter(os.Stdout),
+		out:              NewColorableWriter(out),
 		format:           args.Format,
 		silent:           args.Silent,
 		optSaveDir:       args.SaveDir,
@@ -210,7 +210,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs) {
 		})
 }
 
-func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) {
+func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) {
 	if args.commonArgs.NoColor {
 		color.NoColor = true
 	}
@@ -221,13 +221,13 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 	case HelpCmd:
 		PrintHelp(args.HelpTopic)
 	case InfoCmd:
-		startCmdInfo(ctx, args, args.APIURL)
+		startCmdInfo(ctx, args, args.APIURL, out)
 	case SubCmd:
-		startCmdSubscribe(ctx, args)
+		startCmdSubscribe(ctx, args, out)
 	case PubCmd:
 		startCmdPublish(ctx, args)
 	case TapCmd:
-		startCmdTap(ctx, args)
+		startCmdTap(ctx, args, out)
 	case ExchangeCreateCmd:
 		cmdExchangeCreate(CmdExchangeCreateArg{
 			amqpURL:  args.AMQPURL,
@@ -280,16 +280,20 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 }
 
 func main() {
+	rabtap_main(os.Stdout)
+}
+
+func rabtap_main(out *os.File) {
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	initLogging(args.Verbose)
+	initLogging(args.Verbose) // TODO pass out
 	tlsConfig := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go SigIntHandler(ctx, cancel)
 
-	dispatchCmd(ctx, args, tlsConfig)
+	dispatchCmd(ctx, args, tlsConfig, out)
 }

@@ -48,7 +48,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run linters
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
           version: ${{ env.GO_LANG_CI_LINT_VERSION }}
 

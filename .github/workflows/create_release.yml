@@ -70,7 +70,7 @@ jobs:
 
       # Download the binary artifact from the build job
       - name: Download rabtap binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: rabtap-binary
           path: ./docker-build

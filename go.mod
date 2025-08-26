@@ -11,7 +11,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sirupsen/logrus v1.9.4-0.20241118143825-d1e633264448
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	golang.org/x/net v0.42.0
 	golang.org/x/sync v0.16.0
 )

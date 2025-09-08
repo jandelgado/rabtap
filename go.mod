@@ -1,6 +1,6 @@
 module github.com/jandelgado/rabtap
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.1
 
@@ -13,7 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4-0.20241118143825-d1e633264448
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/net v0.42.0
-	golang.org/x/sync v0.16.0
+	golang.org/x/sync v0.17.0
 )
 
 require (

@@ -31,8 +31,10 @@ type BrokerInfoTreeBuilder interface {
 	BuildTree(rootNodeURL *url.URL, metadataService rabtap.MetadataService) (*rootNode, error)
 }
 
-type brokerInfoTreeBuilderByConnection struct{ config BrokerInfoTreeBuilderConfig }
-type brokerInfoTreeBuilderByExchange struct{ config BrokerInfoTreeBuilderConfig }
+type (
+	brokerInfoTreeBuilderByConnection struct{ config BrokerInfoTreeBuilderConfig }
+	brokerInfoTreeBuilderByExchange   struct{ config BrokerInfoTreeBuilderConfig }
+)
 
 // NewBrokerInfoTreeBuilder returns a BrokerInfoTreeBuilder implementation
 // that builds a tree for the config.Mode
@@ -156,8 +158,8 @@ func newDefaultBrokerInfoTreeBuilder(config BrokerInfoTreeBuilderConfig) *defaul
 }
 
 func (s defaultBrokerInfoTreeBuilder) shouldDisplayExchange(
-	exchange *rabtap.RabbitExchange, vhost *rabtap.RabbitVhost) bool {
-
+	exchange *rabtap.RabbitExchange, vhost *rabtap.RabbitVhost,
+) bool {
 	if exchange.Vhost != vhost.Name {
 		return false
 	}
@@ -181,8 +183,8 @@ func orderedKeySet[T any](m map[string]T) []string {
 func (s defaultBrokerInfoTreeBuilder) shouldDisplayQueue(
 	queue *rabtap.RabbitQueue,
 	exchange *rabtap.RabbitExchange,
-	binding *rabtap.RabbitBinding) bool {
-
+	binding *rabtap.RabbitBinding,
+) bool {
 	params := map[string]interface{}{"queue": queue, "binding": binding, "exchange": exchange}
 	if res, err := s.config.Filter.Eval(params); err != nil || !res {
 		if err != nil {
@@ -198,15 +200,14 @@ func (s defaultBrokerInfoTreeBuilder) shouldDisplayQueue(
 // connections -> channels -> consumers consuming from this queue.
 func (s defaultBrokerInfoTreeBuilder) createConnectionNodes(
 	queue *rabtap.RabbitQueue,
-	metadataService rabtap.MetadataService) []*connectionNode {
-
+	metadataService rabtap.MetadataService,
+) []*connectionNode {
 	connectionNodes := map[string]*connectionNode{}
 	channelNodes := map[string]*channelNode{}
 
 	vhostName := queue.Vhost
 	for _, consumer := range metadataService.Consumers() { // TODO AllConsumersByQueue
-		consumer := consumer
-		if !(consumer.Queue.Vhost == vhostName && consumer.Queue.Name == queue.Name) {
+		if consumer.Queue.Vhost != vhostName || consumer.Queue.Name != queue.Name {
 			continue
 		}
 		consumerNode := newConsumerNode(&consumer)
@@ -256,8 +257,8 @@ func (s defaultBrokerInfoTreeBuilder) createConnectionNodes(
 func (s defaultBrokerInfoTreeBuilder) createQueueNodeFromBinding(
 	binding *rabtap.RabbitBinding,
 	exchange *rabtap.RabbitExchange,
-	metadataService rabtap.MetadataService) []*queueNode {
-
+	metadataService rabtap.MetadataService,
+) []*queueNode {
 	// standard binding of queue to exchange
 	queue := metadataService.FindQueueByName(binding.Vhost, binding.Destination)
 
@@ -286,19 +287,18 @@ func (s defaultBrokerInfoTreeBuilder) createQueueNodeFromBinding(
 func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 	exchange *rabtap.RabbitExchange,
 	metadataService rabtap.MetadataService,
-	binding *rabtap.RabbitBinding) *exchangeNode {
-
+	binding *rabtap.RabbitBinding,
+) *exchangeNode {
 	// to detect cyclic exchange-to-exchange bindings. Yes, this is possible.
 	visited := map[string]bool{}
 
 	var create func(*rabtap.RabbitExchange, rabtap.MetadataService, *rabtap.RabbitBinding) *exchangeNode
 	create = func(exchange *rabtap.RabbitExchange, metadataService rabtap.MetadataService, binding *rabtap.RabbitBinding) *exchangeNode {
-
 		exchangeNode := newExchangeNode(exchange, binding)
 
 		// process all bindings for current exchange. Can be exchange-exchange-
 		// as well as queue-to-exchange bindings.
-		//for _, binding := range rabtap.FindBindingsForExchange(exchange, brokerInfo.Bindings) {
+		// for _, binding := range rabtap.FindBindingsForExchange(exchange, brokerInfo.Bindings) {
 		for _, binding := range metadataService.AllBindingsForExchange(exchange.Vhost, exchange.Name) {
 			if binding.IsExchangeToExchange() {
 				boundExchange := metadataService.FindExchangeByName(binding.Vhost, binding.Destination)
@@ -331,7 +331,8 @@ func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 }
 
 func (s defaultBrokerInfoTreeBuilder) createRootNode(rootNodeURL *url.URL,
-	overview *rabtap.RabbitOverview) *rootNode {
+	overview *rabtap.RabbitOverview,
+) *rootNode {
 	b := baseNode{[]interface{}{}}
 	return &rootNode{b, overview, rootNodeURL}
 }
@@ -347,8 +348,8 @@ func (s defaultBrokerInfoTreeBuilder) createRootNode(rootNodeURL *url.URL,
 //	               +--Consumer
 func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(
 	rootNodeURL *url.URL,
-	metadataService rabtap.MetadataService) (*rootNode, error) {
-
+	metadataService rabtap.MetadataService,
+) (*rootNode, error) {
 	overview := metadataService.Overview()
 	rootNode := s.createRootNode(rootNodeURL, &overview)
 
@@ -381,8 +382,8 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(
 //	           +--Queue
 func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 	rootNodeURL *url.URL,
-	metadataService rabtap.MetadataService) (*rootNode, error) {
-
+	metadataService rabtap.MetadataService,
+) (*rootNode, error) {
 	overview := metadataService.Overview()
 	rootNode := s.createRootNode(rootNodeURL, &overview)
 
@@ -440,16 +441,16 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 
 func (s brokerInfoTreeBuilderByConnection) BuildTree(
 	rootNodeURL *url.URL,
-	metadataService rabtap.MetadataService) (*rootNode, error) {
-
+	metadataService rabtap.MetadataService,
+) (*rootNode, error) {
 	builder := newDefaultBrokerInfoTreeBuilder(s.config)
 	return builder.buildTreeByConnection(rootNodeURL, metadataService)
 }
 
 func (s brokerInfoTreeBuilderByExchange) BuildTree(
 	rootNodeURL *url.URL,
-	metadataService rabtap.MetadataService) (*rootNode, error) {
-
+	metadataService rabtap.MetadataService,
+) (*rootNode, error) {
 	builder := newDefaultBrokerInfoTreeBuilder(s.config)
 	return builder.buildTreeByExchange(rootNodeURL, metadataService)
 }

@@ -38,7 +38,7 @@ func ExampleNewTreeNode() {
 	var buffer bytes.Buffer
 	writer := bufio.NewWriter(&buffer)
 	PrintTree(tree, writer)
-	writer.Flush()
+	_ = writer.Flush()
 	fmt.Print(buffer.String())
 
 	// Output:
@@ -56,7 +56,7 @@ func ExamplePrintTree() {
 	var buffer bytes.Buffer
 	writer := bufio.NewWriter(&buffer)
 	PrintTree(tree, writer)
-	writer.Flush()
+	_ = writer.Flush()
 	fmt.Print(buffer.String())
 
 	// Output:

@@ -53,7 +53,9 @@ func TestJSONMarshalMarshalsToSingleLineJSON(t *testing.T) {
 func TestSaveMessageToRawFile(t *testing.T) {
 	testdir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
-	defer os.RemoveAll(testdir)
+	t.Cleanup(func() {
+        require.NoError(t ,os.RemoveAll(testdir))
+    })
 
 	// SaveMessagesToFiles() will create files "test.dat" and "test.json" in
 	// testdir.
@@ -97,7 +99,9 @@ func TestSaveMessageToFilesToInvalidDir(t *testing.T) {
 func TestSaveMessageToJSONFile(t *testing.T) {
 	testdir, err := os.MkdirTemp("", "")
 	assert.Nil(t, err)
-	defer os.RemoveAll(testdir)
+	t.Cleanup(func() {
+        require.NoError(t ,os.RemoveAll(testdir))
+    })
 
 	filename := filepath.Join(testdir, "test")
 	createdTs := time.Date(2019, time.June, 13, 17, 45, 1, 0, time.UTC)

@@ -41,7 +41,7 @@ func saveMessageBodyAsBlobFile(filename string, body []byte) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {_ = file.Close()}()
 	writer := bufio.NewWriter(file)
 	_, err = writer.Write(body)
 	if err != nil {
@@ -55,7 +55,7 @@ func saveMessageAsJSONFile(filename string, message rabtap.TapMessage, marshalle
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {_ = file.Close()}()
 	writer := bufio.NewWriter(file)
 	err = WriteMessage(writer, message, marshaller)
 	if err != nil {

@@ -25,7 +25,7 @@ type Session struct {
 // got closed due to errors.
 func (s *Session) NewChannel() error {
 	if s.Channel != nil {
-		s.Channel.Close()
+		_ = s.Channel.Close()
 	}
 	ch, err := s.Connection.Channel()
 	s.Channel = ch

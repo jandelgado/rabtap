@@ -59,11 +59,11 @@ func routingKeyFromHeader(header map[string]interface{}) string {
 func FromFireHoseMessage(m RabtapPersistentMessage) (RabtapPersistentMessage, error) {
 
 	if m.Headers == nil {
-		return RabtapPersistentMessage{}, fmt.Errorf("Headers not set")
+		return RabtapPersistentMessage{}, fmt.Errorf("headers not set")
 	}
 
 	if props, found := m.Headers["properties"]; !found {
-		return RabtapPersistentMessage{}, fmt.Errorf("Headers.properties attribute missing")
+		return RabtapPersistentMessage{}, fmt.Errorf("headers.properties attribute missing")
 	} else {
 		props := props.(map[string]interface{})
 

@@ -65,12 +65,16 @@ func mockDirReader(dirname string) ([]os.DirEntry, error) {
 }
 
 // writeTempFile creates a temporary file with data as it's content. The
-// filename is returned.
+// filename is returned. File is deleted using t.Cleanup() when no longer needed.
 func writeTempFile(t *testing.T, data string) string {
 	tmpFile, err := os.CreateTemp(os.TempDir(), "")
 	require.Nil(t, err)
 
-	defer tmpFile.Close()
+    t.Cleanup(func() {
+		require.NoError(t, os.Remove(tmpFile.Name()))
+	})
+
+	defer func() {require.NoError(t, tmpFile.Close())}()
 
 	_, err = tmpFile.Write([]byte(data))
 	require.Nil(t, err)
@@ -134,7 +138,9 @@ func TestLoadMetadataFilesFromDirReturnsExpectedMetadata(t *testing.T) {
 
 	dir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
-	defer os.RemoveAll(dir)
+	t.Cleanup( func() {
+        require.NoError(t, os.RemoveAll(dir))
+    })
 
 	metadataFile := filepath.Join(dir, "rabtap.json")
 	messageFile := filepath.Join(dir, "rabtap.dat")
@@ -185,7 +191,6 @@ func TestReadPersistentRabtapMessageReturnsCorrectObject(t *testing.T) {
 }
 `
 	filename := writeTempFile(t, msg)
-	defer os.Remove(filename)
 
 	metadata, err := readRabtapPersistentMessage(filename)
 
@@ -227,7 +232,6 @@ func TestReadMetadataOfFilesReturnsExpectedMetadata(t *testing.T) {
 }
 `
 	dir, filename := path.Split(writeTempFile(t, msg))
-	defer os.Remove(filename)
 
 	data, err := readMetadataOfFiles(dir, []string{filename})
 

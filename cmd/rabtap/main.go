@@ -211,10 +211,10 @@ func startCmdTap(ctx context.Context, args CommandLineArgs, out *os.File) {
 }
 
 func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) {
-	if args.commonArgs.NoColor {
+	if args.NoColor {
 		color.NoColor = true
 	}
-	if args.commonArgs.ForceColor {
+	if args.ForceColor {
 		color.NoColor = false
 	}
 	switch args.Cmd {

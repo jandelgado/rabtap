@@ -1,15 +1,11 @@
 ---
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-    branches:
-      - master
-
+    branches: [master]
 env:
-  GO_LANG_CI_LINT_VERSION: "latest"
-
+  GO_LANG_CI_LINT_VERSION: latest
 name: run tests
 jobs:
   check-dependencies:
@@ -19,26 +15,20 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Install Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-
       - name: Verify go version (expecting toolchain setting from go.mod)
         run: |
           echo "GOVERSION=$(go version)" >> $GITHUB_ENV
           go version
-
       - name: go mod tidy
         run: go mod tidy && git diff --exit-code
-
       - name: go mod download
         run: go mod download
-
       - name: go mod verify
         run: go mod verify
-
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -46,12 +36,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Run linters
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
           version: ${{ env.GO_LANG_CI_LINT_VERSION }}
-
+      - name: Run linters
+        uses: golangci/golangci-lint-action@v8
+        with:
+          problem-matchers: true
+          args: --output.sarif.path linter-results.sarif
+      - name: Upload SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@1b549b9259bda1cb5ddde3b41741a82a2d15a841  # v3.28.13
+        with:
+          sarif_file: ./linter-results.sarif
   test:
     runs-on: ubuntu-latest
     steps:
@@ -59,42 +56,34 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: create certificates
         run: cd inttest/pki && ./mkcerts.sh
-
       - name: Run RabbitMQ
         run: cd inttest/rabbitmq && docker compose up -d
-
       - name: Install Go
         if: success()
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-
       - name: wait for RabbitMQ becoming ready
-        run:
-          timeout 30 sh -c "while true; do curl -s http://guest:password@localhost:15672/api/exchanges/%2f/amq.topic && break || sleep 3; done"
-
+        run: timeout 30 sh -c "while true; do curl -s http://guest:password@localhost:15672/api/exchanges/%2f/amq.topic
+          && break || sleep 3; done"
       - name: Run tests
         run: make test
-
       - name: Coveralls
         uses: coverallsapp/github-action@v2.3.6
         with:
           github-token: ${{ secrets.github_token }}
           file: coverage.out
           format: golang
-
       - name: Build release artifacts
-        if: env.build_artifacts # currently disabled
+        if: env.build_artifacts  # currently disabled
         uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
           args: build ---clean --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload assets
         if: env.build_artifacts
         uses: actions/upload-artifact@v4

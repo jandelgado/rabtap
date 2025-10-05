@@ -42,7 +42,7 @@ func CaptureOutput(f FunctionToCapture) string {
 
 	f(writer)
 
-	writer.Close()
+	_ = writer.Close()
 
 	return <-out
 }

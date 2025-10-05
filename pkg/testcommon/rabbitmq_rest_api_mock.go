@@ -23,10 +23,10 @@ const (
 // of resources is support (GET exchanges, bindings, queues, overviews,
 // channels, connections; DELETE connections)
 // Usage:
-//   mockServer := NewRabbitAPIMock(MockModeStd)
-//   defer mockServer.Close()
-//   client f := NewRabbitHTTPClient(mockServe.URL)
 //
+//	mockServer := NewRabbitAPIMock(MockModeStd)
+//	defer mockServer.Close()
+//	client f := NewRabbitHTTPClient(mockServe.URL)
 func NewRabbitAPIMock(mode MockMode) *httptest.Server {
 	switch mode {
 	case MockModeEmpty:
@@ -43,7 +43,7 @@ func mockEmptyHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		result = "[]"
 	}
-	fmt.Fprint(w, result)
+	_, _ = fmt.Fprint(w, result)
 }
 
 func mockStdHandler(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +81,7 @@ func mockStdGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, result)
+	_, _ = fmt.Fprint(w, result)
 }
 
 func mockStdDeleteHandler(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +91,7 @@ func mockStdDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
-	fmt.Fprint(w, "")
+	_, _ = fmt.Fprint(w, "")
 }
 
 const (
@@ -1188,7 +1188,7 @@ const (
     ]
 }`
 
-	consumerResult = ` 
+	consumerResult = `
 [
     {
         "arguments": [

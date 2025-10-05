@@ -15,7 +15,7 @@ func openAMQPChannel(uri *url.URL, tlsConfig *tls.Config) (*amqp.Connection, *am
 	}
 	chn, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 	}
 	return conn, chn, err
 }
@@ -29,6 +29,6 @@ func SimpleAmqpConnector(amqpURL *url.URL, tlsConfig *tls.Config,
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() {_ = conn.Close()}()
 	return run(Session{conn, chn})
 }

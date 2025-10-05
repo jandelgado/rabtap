@@ -77,7 +77,7 @@ func (s *RabbitHTTPClient) getResource(ctx context.Context, request httpRequest)
 	if resp.StatusCode != 200 {
 		return r, errors.New(resp.Status)
 	}
-	defer resp.Body.Close()
+	defer func() {_ = resp.Body.Close()}()
 	err = json.NewDecoder(resp.Body).Decode(r)
 	return r, err
 }
@@ -97,7 +97,7 @@ func (s *RabbitHTTPClient) delResource(ctx context.Context, path string) error {
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return errors.New(resp.Status)
 	}
-	defer resp.Body.Close()
+	defer func() {_ = resp.Body.Close()}()
 	return nil
 }
 

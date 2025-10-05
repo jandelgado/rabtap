@@ -70,7 +70,7 @@ func TestGetResourceInvalidUriReturnsError(t *testing.T) {
 func TestGetResourceStatusNot200(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, "500 internal server error")
+		_, _ = fmt.Fprint(w, "500 internal server error")
 	}
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
@@ -84,7 +84,7 @@ func TestGetResourceStatusNot200(t *testing.T) {
 // // test non invalid json returned
 func TestGetResourceInvalidJSON(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "non json response")
+		_, _ = fmt.Fprint(w, "non json response")
 	}
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()

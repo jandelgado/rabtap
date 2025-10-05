@@ -58,7 +58,7 @@ func NewBrokerInfoRendererDot(config BrokerInfoRendererConfig) BrokerInfoRendere
 // template is used, later will support loading templates from the filesytem
 func newDotRendererTpl() dotRendererTpl {
 	return dotRendererTpl{dotTplRootNode: `graph broker {
-{{ q .Name }} [shape="record", label="{RabbitMQ {{ esc .Overview.RabbitmqVersion }} | 
+{{ q .Name }} [shape="record", label="{RabbitMQ {{ esc .Overview.RabbitmqVersion }} |
                {{- printf "%s://%s%s" .URL.Scheme .URL.Host .URL.Path }} |
                {{- .Overview.ClusterName }} }"];
 
@@ -73,8 +73,8 @@ func newDotRendererTpl() dotRendererTpl {
 
 		dotTplExchange: `
 {{ q .Name }} [shape="record"; label="{ {{ esc .Exchange.Name }} | {{- esc .Exchange.Type }} | {
-			  {{- if .Exchange.Durable }} D {{ end }} | 
-			  {{- if .Exchange.AutoDelete }} AD {{ end }} | 
+			  {{- if .Exchange.Durable }} D {{ end }} |
+			  {{- if .Exchange.AutoDelete }} AD {{ end }} |
 			  {{- if .Exchange.Internal }} I {{ end }} } }"];
 
 {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }} [fontsize=10; headport=n; label={{ $e.ParentAssoc | esc | q}}]{{ printf ";\n" }}{{ end -}}
@@ -82,8 +82,8 @@ func newDotRendererTpl() dotRendererTpl {
 
 		dotTplBoundQueue: `
 {{ q .Name }} [shape="record"; label="{ {{ esc .Queue.Name }} | {
-			  {{- if .Queue.Durable }} D {{ end }} | 
-			  {{- if .Queue.AutoDelete }} AD {{ end }} | 
+			  {{- if .Queue.Durable }} D {{ end }} |
+			  {{- if .Queue.AutoDelete }} AD {{ end }} |
 			  {{- if .Queue.Exclusive }} EX {{ end }} } }"];
 
 {{ range $i, $e := .Children }}{{ q $.Name }} -- {{ q $e.Name }}{{ end -}}
@@ -262,6 +262,6 @@ func (s *brokerInfoRendererDot) renderNode(n interface{}, queueRendered map[stri
 // https://www.graphviz.org/doc/info/lang.html
 func (s *brokerInfoRendererDot) Render(rootNode *rootNode, out io.Writer) error {
 	res := s.renderNode(rootNode, map[string]bool{})
-	fmt.Fprint(out, res.Text)
-	return nil
+    _, err :=fmt.Fprint(out, res.Text)
+	return err
 }

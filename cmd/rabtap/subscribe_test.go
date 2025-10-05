@@ -164,7 +164,9 @@ func TestCreateMessageSinkReturnsErrorWithInvalidFormat(t *testing.T) {
 func TestCreateMessageSinkRawToFile(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
-	defer os.RemoveAll(testDir)
+	t.Cleanup(func() {
+        require.NoError(t ,os.RemoveAll(testDir))
+    })
 
 	var b bytes.Buffer
 	opts := MessageSinkOptions{
@@ -239,8 +241,9 @@ func TestCreateMessageSinkJSONNoPPToFile(t *testing.T) {
 
 	testDir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
-	defer os.RemoveAll(testDir)
-
+	t.Cleanup(func() {
+        require.NoError(t ,os.RemoveAll(testDir))
+    })
 	var b bytes.Buffer
 	opts := MessageSinkOptions{
 		out:              &b,

@@ -75,7 +75,7 @@ func PrintTree(node *TreeNode, buffer io.Writer) {
 	default:
 		treeLines += "├─ "
 	}
-	fmt.Fprintf(buffer, "%s%s\n", treeLines, node.Text)
+	_, _ = fmt.Fprintf(buffer, "%s%s\n", treeLines, node.Text)
 
 	for _, p := range node.Children {
 		PrintTree(p, buffer)

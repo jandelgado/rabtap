@@ -33,11 +33,12 @@ func NewDecompressor(alg string) (DecompressionFunc, error) {
 }
 
 func decompressZstd(r io.Reader) ([]byte, error) {
-	cr, err := zstd.NewReader(r)
+	decoder, err := zstd.NewReader(r)
 	if err != nil {
 		return nil, err
 	}
-	defer cr.Close()
+    cr := decoder.IOReadCloser()
+    defer func() {_  = cr.Close()}()
 	return io.ReadAll(cr)
 }
 
@@ -45,7 +46,7 @@ func decompressDeflate(r io.Reader) ([]byte, error) {
 	// compress/zlib is for zlib-formatted data (DEFLATE data with zlib header).
 	// compress/flate is for raw DEFLATE data without any headers.
 	cr := flate.NewReader(r)
-	defer cr.Close()
+    defer func() {_  = cr.Close()}()
 	return io.ReadAll(cr)
 }
 
@@ -59,6 +60,6 @@ func decompressGunzip(r io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer cr.Close()
+    defer func() {_  = cr.Close()}()
 	return io.ReadAll(cr)
 }

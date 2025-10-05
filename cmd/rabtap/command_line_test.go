@@ -16,8 +16,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	os.Unsetenv("RABTAP_AMQPURI")
-	os.Unsetenv("RABTAP_APIURI")
+	_ = os.Unsetenv("RABTAP_AMQPURI")
+	_ = os.Unsetenv("RABTAP_APIURI")
 	code := m.Run()
 	os.Exit(code)
 }
@@ -76,7 +76,7 @@ func TestParseAMQPURLParsesValidURI(t *testing.T) {
 
 func TestParseAMQPURLFailsIfNotSet(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
-	os.Unsetenv(key)
+	t.Setenv(key, "")
 	args := map[string]interface{}{"--uri": []string{}}
 
 	_, err := parseAMQPURL(args)
@@ -197,7 +197,7 @@ func TestCliTapCmdSingleUriFromEnv(t *testing.T) {
 
 func TestCliTapFailsWhenNoURIisSpecified(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
-	defer os.Unsetenv(key)
+	t.Setenv(key, "")
 
 	_, err := ParseCommandLineArgs(
 		[]string{"tap", "exchange1:binding1"})
@@ -413,7 +413,7 @@ func TestCliPubCmdURLFromEnv(t *testing.T) {
 
 func TestCliPubCmdFailsWithMissingURL(t *testing.T) {
 	const key = "RABTAP_AMQPURI"
-	os.Unsetenv(key)
+	t.Setenv(key, "")
 	_, err := ParseCommandLineArgs([]string{"pub"})
 	assert.NotNil(t, err)
 }

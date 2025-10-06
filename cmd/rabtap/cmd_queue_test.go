@@ -14,10 +14,11 @@ import (
 	"testing"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
+	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
 
 func TestAmqpHeaderRoutingModeConverts(t *testing.T) {
@@ -41,7 +42,6 @@ func findQueueByName(apiURL *url.URL, vhost, name string) (*rabtap.RabbitQueue, 
 }
 
 func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
-
 	// integration tests queue creation, bind to exchange, purge,
 	// unbdind from exchange via calls through the main method
 	oldArgs := os.Args
@@ -58,9 +58,11 @@ func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 	os.Args = []string{"rabtap", "queue", "create", testQueue, "--uri", amqpURL}
 	main()
 
-	os.Args = []string{"rabtap", "queue", "bind", testQueue, "to", testExchange,
+	os.Args = []string{
+		"rabtap", "queue", "bind", testQueue, "to", testExchange,
 		"--bindingkey", testQueue,
-		"--uri", amqpURL}
+		"--uri", amqpURL,
+	}
 	main()
 
 	// TODO publish some messages
@@ -79,9 +81,11 @@ func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
 	assert.Equal(t, 0, queue.Messages)
 
 	// unbind queue
-	os.Args = []string{"rabtap", "queue", "unbind", testQueue, "from", testExchange,
+	os.Args = []string{
+		"rabtap", "queue", "unbind", testQueue, "from", testExchange,
 		"--bindingkey", testQueue,
-		"--uri", amqpURL}
+		"--uri", amqpURL,
+	}
 	main()
 
 	// remove queue

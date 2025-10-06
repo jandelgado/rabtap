@@ -26,11 +26,12 @@ func TestCmdTap(t *testing.T) {
 	defer conn.Close()
 
 	// receiveFunc must receive messages passed through tapMessageChannel
-	done := make(chan bool)
+	received := make(chan struct{})
+	done := make(chan struct{})
 	receiveFunc := func(message rabtap.TapMessage) error {
 		log.Debug("received message on tap: #+v", message)
 		if string(message.AmqpMessage.Body) == "Hello" {
-			done <- true
+			received <- struct{}{}
 		}
 		return nil
 	}
@@ -51,14 +52,19 @@ func TestCmdTap(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// when
-	go cmdTap(ctx, CmdTapArg{
-		tapConfig:   tapConfig,
-		tlsConfig:   &tls.Config{},
-		messageSink: receiveFunc,
-		filterPred:  constantPred{true},
-		termPred:    constantPred{false},
-		timeout:     time.Second * 10,
-	})
+	go func() {
+		err := cmdTap(ctx, CmdTapArg{
+			tapConfig:   tapConfig,
+			tlsConfig:   &tls.Config{},
+			messageSink: receiveFunc,
+			filterPred:  constantPred{true},
+			termPred:    constantPred{false},
+			timeout:     time.Second * 10,
+		})
+		//		require.NoError(t, err)
+		require.ErrorIs(t, err, context.Canceled)
+		done <- struct{}{}
+	}()
 
 	time.Sleep(time.Second * 1)
 	err := ch.Publish(
@@ -73,13 +79,14 @@ func TestCmdTap(t *testing.T) {
 		})
 
 	// then: our tap received the message
-	require.Nil(t, err)
+	require.NoError(t, err)
 	select {
-	case <-done:
+	case <-received:
 	case <-time.After(time.Second * 2):
 		assert.Fail(t, "did not receive message within expected time")
 	}
 	cancel() // stop cmdTap()
+	<-done
 }
 
 func TestCmdTapIntegration(t *testing.T) {

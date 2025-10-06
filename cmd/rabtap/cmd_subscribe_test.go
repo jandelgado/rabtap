@@ -31,7 +31,7 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 	amqpURL, _ := url.Parse("amqp://invalid.url:5672/")
 	go func() {
 		// we expect cmdSubscribe to return
-		cmdSubscribe(ctx, CmdSubscribeArg{
+		err := cmdSubscribe(ctx, CmdSubscribeArg{
 			amqpURL:     amqpURL,
 			queue:       "queue",
 			tlsConfig:   &tls.Config{},
@@ -39,6 +39,7 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 			termPred:    &constantPred{false},
 			timeout:     time.Second * 10,
 		})
+		require.Error(t, err)
 		done <- true
 	}()
 
@@ -79,22 +80,25 @@ func TestCmdSub(t *testing.T) {
 	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig)
 
 	// subscribe to testQueue
-	go cmdSubscribe(ctx, CmdSubscribeArg{
-		amqpURL:     amqpURL,
-		queue:       testQueue,
-		tlsConfig:   tlsConfig,
-		messageSink: receiveFunc,
-		filterPred:  constantPred{true},
-		termPred:    constantPred{false},
-		timeout:     time.Second * 10,
-	})
+	go func() {
+		err := cmdSubscribe(ctx, CmdSubscribeArg{
+			amqpURL:     amqpURL,
+			queue:       testQueue,
+			tlsConfig:   tlsConfig,
+			messageSink: receiveFunc,
+			filterPred:  constantPred{true},
+			termPred:    constantPred{false},
+			timeout:     time.Second * 10,
+		})
+		require.ErrorIs(t, err, context.Canceled)
+	}()
 
 	time.Sleep(time.Second * 1)
 
 	messageCount := 0
 
 	// TODO test without cmdPublish
-	cmdPublish(
+	err := cmdPublish(
 		ctx,
 		CmdPublishArg{
 			amqpURL:    amqpURL,
@@ -115,6 +119,7 @@ func TestCmdSub(t *testing.T) {
 				}, nil
 			},
 		})
+	require.NoError(t, err)
 
 	// test if we received the message
 	select {

@@ -3,7 +3,6 @@
 package main
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -24,30 +23,14 @@ func TestDefaultFilenameProviderReturnsFilenameInExpectedFormat(t *testing.T) {
 }
 
 func TestGetTLSConfig(t *testing.T) {
-
 	var TLSCertFile string
 	var TLSKeyFile string
 	var TLSCaFile string
-	tls := getTLSConfig(true, TLSCertFile, TLSKeyFile, TLSCaFile)
+	tls, err := getTLSConfig(true, TLSCertFile, TLSKeyFile, TLSCaFile)
+	assert.NoError(t, err)
 	assert.True(t, tls.InsecureSkipVerify)
-	tls = getTLSConfig(false, TLSCertFile, TLSKeyFile, TLSCaFile)
+
+	tls, err = getTLSConfig(false, TLSCertFile, TLSKeyFile, TLSCaFile)
+	assert.NoError(t, err)
 	assert.False(t, tls.InsecureSkipVerify)
-}
-
-func TestFailOnError(t *testing.T) {
-
-	exitFuncCalled := false
-	exitFunc := func(int) {
-		exitFuncCalled = true
-	}
-
-	// error case
-	failOnError(errors.New("error"), "error test", exitFunc)
-	assert.True(t, exitFuncCalled)
-
-	// no error case
-	exitFuncCalled = false
-	failOnError(nil, "test", exitFunc)
-	assert.False(t, exitFuncCalled)
-
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 	"github.com/jandelgado/rabtap/pkg/testcommon"
@@ -27,7 +28,7 @@ func Example_startCmdInfo() {
 
 	args, _ := ParseCommandLineArgs([]string{"info", "--api", mock.URL, "--no-color"})
 	titleURL, _ := url.Parse("http://guest:guest@rootnode/vhost")
-	startCmdInfo(context.TODO(), args, titleURL, os.Stdout)
+	_ = startCmdInfo(context.TODO(), args, &tls.Config{}, titleURL, os.Stdout)
 
 	// Output:
 	// http://rootnode/vhost (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
@@ -42,7 +43,7 @@ func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
 	var actual bytes.Buffer
 	rootURL, _ := url.Parse("http://rabbitmq/api")
 	color.NoColor = true
-	cmdInfo(context.TODO(),
+	err := cmdInfo(context.TODO(),
 		CmdInfoArg{
 			rootNode: rootURL,
 			client:   client,
@@ -59,6 +60,7 @@ func TestCmdInfoByExchangeInTextFormatProducesExpectedTree(t *testing.T) {
 			},
 			out: &actual,
 		})
+	require.NoError(t, err)
 
 	expected := `http://rabbitmq/api (broker ver='3.6.9', mgmt ver='3.6.9', cluster='rabbit@08f57d1fe8ab')
 └─ Vhost /
@@ -102,7 +104,7 @@ func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
 
 	var actual bytes.Buffer
 	color.NoColor = true
-	cmdInfo(context.TODO(),
+	err := cmdInfo(context.TODO(),
 		CmdInfoArg{
 			rootNode: rootURL,
 			client:   client,
@@ -127,6 +129,7 @@ func TestCmdInfoByConnectionInTextFormatProducesExpectedTree(t *testing.T) {
          └─ some_consumer (consumer prefetch=0, ack_req=no, active=no, status=)
             └─ direct-q1 (queue(classic),  running, [D])
 `
+	require.NoError(t, err)
 	assert.Equal(t, expected, actual.String())
 }
 
@@ -226,7 +229,7 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 	rootURL, _ := url.Parse("http://rabbitmq/api")
 
 	var actual bytes.Buffer
-	cmdInfo(
+	err := cmdInfo(
 		context.TODO(),
 		CmdInfoArg{
 			rootNode: rootURL,
@@ -242,6 +245,7 @@ func TestCmdInfoByExchangeInDotFormat(t *testing.T) {
 			out:          &actual,
 		})
 
+	require.NoError(t, err)
 	assert.Equal(t, strings.Trim(expectedResultDotByExchange, " \n"),
 		strings.Trim(actual.String(), " \n"))
 }
@@ -254,7 +258,7 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 	rootURL, _ := url.Parse("http://rabbitmq/api")
 
 	var actual bytes.Buffer
-	cmdInfo(
+	err := cmdInfo(
 		context.TODO(),
 		CmdInfoArg{
 			rootNode: rootURL,
@@ -290,6 +294,7 @@ func TestCmdInfoByConnectionInDotFormat(t *testing.T) {
 "queue_/_direct-q1" [shape="record"; label="{ direct-q1 | { D  | | } }"];
 
 }`
+	require.NoError(t, err)
 	assert.Equal(t, strings.Trim(expected, " \n"),
 		strings.Trim(actual.String(), " \n"))
 }

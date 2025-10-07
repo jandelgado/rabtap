@@ -7,6 +7,8 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"log/slog"
 	"net/url"
 
 	uuid "github.com/google/uuid"
@@ -22,7 +24,7 @@ type AmqpTap struct {
 
 // NewAmqpTap returns a new AmqpTap object associated with the RabbitMQ
 // broker denoted by the uri parameter.
-func NewAmqpTap(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpTap {
+func NewAmqpTap(url *url.URL, tlsConfig *tls.Config, logger *slog.Logger) *AmqpTap {
 	config := AmqpSubscriberConfig{Exclusive: true}
 	return &AmqpTap{
 		AmqpSubscriber: NewAmqpSubscriber(config, url, tlsConfig, logger)}
@@ -167,7 +169,7 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 		// TODO handle errors
 		_ = session.NewChannel()
 		if err2 := RemoveExchange(session, tapExchangeName, false); err2 != nil {
-			s.logger.Errorf("failed to remove exchange %s", tapExchangeName)
+			s.logger.Error(fmt.Sprintf("failed to remove exchange %s", tapExchangeName), "error", err2)
 		}
 		return err
 	}

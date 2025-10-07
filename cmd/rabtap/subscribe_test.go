@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
@@ -268,6 +270,7 @@ func TestCreateMessageSinkJSONNoPPToFile(t *testing.T) {
 }
 
 func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	ctx, cancel := context.WithCancel(context.Background())
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
@@ -283,7 +286,7 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 	passPred := constantPred{val: true}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 	go func() {
-		_ = MessageReceiveLoop(ctx, messageChan, errorChan, sink, passPred, termPred, acknowledger, time.Second*10)
+		_ = MessageReceiveLoop(ctx, messageChan, errorChan, sink, passPred, termPred, acknowledger, time.Second*10, logger)
 	}()
 
 	messageChan <- rabtap.TapMessage{}
@@ -293,6 +296,7 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 }
 
 func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
@@ -301,12 +305,13 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 
 	close(messageChan)
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*10)
+	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*10, logger)
 
 	assert.Nil(t, err)
 }
 
 func TestMessageReceiveLoopExitsWhenTermPredReturnsTrue(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel, 1)
 	errorChan := make(rabtap.SubscribeErrorChannel)
@@ -315,12 +320,13 @@ func TestMessageReceiveLoopExitsWhenTermPredReturnsTrue(t *testing.T) {
 
 	messageChan <- rabtap.TapMessage{}
 	acknowledger := func(rabtap.TapMessage) error { return nil }
-	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*10)
+	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*10, logger)
 
 	assert.Nil(t, err)
 }
 
 func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	ctx, cancel := context.WithCancel(context.Background())
 	messageChan := make(rabtap.TapChannel, 3)
 	errorChan := make(rabtap.SubscribeErrorChannel)
@@ -346,7 +352,7 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 	messageChan <- rabtap.TapMessage{AmqpMessage: &amqp.Delivery{MessageId: ""}}
 
 	_ = MessageReceiveLoop(ctx, messageChan, errorChan, sink,
-		filterPred, termPred, acknowledger, time.Second*1)
+		filterPred, termPred, acknowledger, time.Second*1, logger)
 
 	// we expect 2 of them to be filtered out
 	cancel()
@@ -354,6 +360,7 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 }
 
 func TestMessageReceiveLoopExitsWithErrorWhenIdle(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	// given
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
@@ -363,7 +370,7 @@ func TestMessageReceiveLoopExitsWithErrorWhenIdle(t *testing.T) {
 	acknowledger := func(rabtap.TapMessage) error { return nil }
 
 	// when
-	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*1)
+	err := MessageReceiveLoop(ctx, messageChan, errorChan, nopMessageSink, passPred, termPred, acknowledger, time.Second*1, logger)
 
 	// Then
 	assert.Equal(t, ErrIdleTimeout, err)

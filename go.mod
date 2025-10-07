@@ -10,7 +10,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-colorable v0.1.14
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/sirupsen/logrus v1.9.4-0.20241118143825-d1e633264448
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/net v0.44.0
 	golang.org/x/sync v0.17.0

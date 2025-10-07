@@ -1,4 +1,5 @@
 // Copyright (C) 2017-2021 Jan Delgado
+//go:build integration
 // +build integration
 
 package rabtap
@@ -6,6 +7,8 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -35,8 +38,8 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 	finishChan := make(chan int)
 
 	config := AmqpSubscriberConfig{Exclusive: false}
-	log := testcommon.NewTestLogger()
-	subscriber := NewAmqpSubscriber(config, testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	subscriber := NewAmqpSubscriber(config, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger)
 	resultChannel := make(TapChannel)
 	resultErrChannel := make(SubscribeErrorChannel)
 	ctx, cancel := context.WithCancel(context.Background())

@@ -1,5 +1,6 @@
 // Copyright (C) 2017 Jan Delgado
 
+//go:build integration
 // +build integration
 
 package rabtap
@@ -12,6 +13,8 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"io"
+	"log/slog"
 	"testing"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
@@ -29,10 +32,10 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 	conn, ch := testcommon.IntegrationTestConnection(t, "direct-exchange", "direct", 2, false)
 	defer conn.Close()
 
-	log := testcommon.NewTestLogger()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mandatory := true
 	confirms := true
-	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, mandatory, confirms, log)
+	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, mandatory, confirms, logger)
 	publishChannel := make(PublishChannel)
 	errorChannel := make(PublishErrorChannel)
 	ctx := context.Background()

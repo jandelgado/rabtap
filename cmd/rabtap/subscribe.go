@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
 	"time"
 
@@ -104,7 +105,8 @@ func MessageReceiveLoop(ctx context.Context,
 	filterPred Predicate,
 	termPred Predicate,
 	acknowledger AcknowledgeFunc,
-	timeout time.Duration) error {
+	timeout time.Duration,
+	logger *slog.Logger) error {
 
 	timeoutTicker := time.NewTicker(timeout)
 	defer timeoutTicker.Stop()
@@ -114,47 +116,47 @@ func MessageReceiveLoop(ctx context.Context,
 		select {
 
 		case <-ctx.Done():
-			log.Debugf("subscribe: cancel")
+			logger.Debug("subscribe: cancel")
 			return ctx.Err()
 
 		case err, more := <-errorChan:
 			if more {
-				log.Errorf("subscribe: %v", err)
+				logger.Error("subscribe error", "error", err)
 			}
 
 		case message, more := <-messageChan:
 			timeoutTicker.Reset(timeout)
 			if !more {
-				log.Debug("subscribe: messageReceiveLoop: channel closed.")
+				logger.Debug("subscribe: messageReceiveLoop: channel closed.")
 				return nil // ErrMessageLoopEnded
 			}
-			log.Debugf("subscribe: messageReceiveLoop: new message %+v", message)
+			logger.Debug(fmt.Sprintf("subscribe: messageReceiveLoop: new message %+v", message))
 
 			// acknowledge or reject the message
 			if err := acknowledger(message); err != nil {
-				log.Error(err)
+				logger.Error("acknowledge failed", "error", err)
 			}
 
 			env := createMessagePredEnv(message, count)
 			passed, err := filterPred.Eval(env)
 			if err != nil {
-				log.Errorf("filter expression evaluation: %s", err.Error())
+				logger.Error("filter expression evaluation failed", "error", err)
 			}
 
 			if !passed {
-				log.Debugf("message with MessageId=%s was filtered out", message.AmqpMessage.MessageId)
+				logger.Debug(fmt.Sprintf("message with MessageId=%s was filtered out", message.AmqpMessage.MessageId))
 				continue
 			}
 			count += 1
 
 			if err := messageSink(message); err != nil {
-				log.Error(err)
+				logger.Error("message sink error", "error", err)
 			}
 
 			env = createMessagePredEnv(message, count)
 			terminate, err := termPred.Eval(env)
 			if err != nil {
-				log.Errorf("terminate expression evaluation: %s", err.Error())
+				logger.Error("terminate expression evaluation failed", "error", err)
 			}
 			if terminate {
 				return nil

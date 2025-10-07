@@ -138,7 +138,7 @@ func ExampleWriteMessage() {
 		rabtap.NewTapMessage(testMessage, createdTs),
 		JSONMarshalIndent)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	// Output:

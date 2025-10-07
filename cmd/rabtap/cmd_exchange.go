@@ -6,6 +6,8 @@ package main
 
 import (
 	"crypto/tls"
+	"fmt"
+	"log/slog"
 	"net/url"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
@@ -33,36 +35,36 @@ type CmdExchangeBindArg struct {
 }
 
 // exchangeCreate creates a new exchange on the given broker
-func cmdExchangeCreate(cmd CmdExchangeCreateArg) error {
+func cmdExchangeCreate(cmd CmdExchangeCreateArg, logger *slog.Logger) error {
 	return rabtap.SimpleAmqpConnector(cmd.amqpURL,
 		cmd.tlsConfig,
 		func(session rabtap.Session) error {
-			log.Debugf("creating exchange %s with type %s, args=%v",
-				cmd.exchange, cmd.exchangeType, cmd.args)
+			logger.Debug(fmt.Sprintf("creating exchange %s with type %s, args=%v",
+				cmd.exchange, cmd.exchangeType, cmd.args))
 			return rabtap.CreateExchange(session, cmd.exchange, cmd.exchangeType,
 				cmd.durable, cmd.autodelete, rabtap.ToAMQPTable(cmd.args))
 		})
 }
 
 // exchangeCreate removes an exchange on the given broker
-func cmdExchangeRemove(amqpURL *url.URL, exchangeName string, tlsConfig *tls.Config) error {
+func cmdExchangeRemove(amqpURL *url.URL, exchangeName string, tlsConfig *tls.Config, logger *slog.Logger) error {
 	return rabtap.SimpleAmqpConnector(amqpURL,
 		tlsConfig,
 		func(session rabtap.Session) error {
-			log.Debugf("removing exchange %s", exchangeName)
+			logger.Debug(fmt.Sprintf("removing exchange %s", exchangeName))
 			return rabtap.RemoveExchange(session, exchangeName, false)
 		})
 }
 
 // cmdExchangeBindToExchange binds an exchange  to another exchange
-func cmdExchangeBindToExchange(cmd CmdExchangeBindArg) error {
+func cmdExchangeBindToExchange(cmd CmdExchangeBindArg, logger *slog.Logger) error {
 	return rabtap.SimpleAmqpConnector(cmd.amqpURL, cmd.tlsConfig,
 		func(session rabtap.Session) error {
 			if cmd.headerMode != HeaderNone {
 				cmd.args["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
 			}
-			log.Debugf("binding exchange %s to exchange %s w/ key %s and headers %v",
-				cmd.sourceExchange, cmd.targetExchange, cmd.key, cmd.args)
+			logger.Debug(fmt.Sprintf("binding exchange %s to exchange %s w/ key %s and headers %v",
+				cmd.sourceExchange, cmd.targetExchange, cmd.key, cmd.args))
 
 			return rabtap.BindExchangeToExchange(session, cmd.sourceExchange, cmd.key, cmd.targetExchange, rabtap.ToAMQPTable(cmd.args))
 		})

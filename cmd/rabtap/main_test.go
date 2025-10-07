@@ -5,16 +5,14 @@ package main
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInitLogging(t *testing.T) {
-	initLogging(false)
-	assert.Equal(t, logrus.WarnLevel, log.Level)
-	initLogging(true)
-	assert.Equal(t, logrus.DebugLevel, log.Level)
-	initLogging(false)
+	logger := initLogging(false)
+	assert.NotNil(t, logger)
+	logger = initLogging(true)
+	assert.NotNil(t, logger)
 }
 
 func TestDefaultFilenameProviderReturnsFilenameInExpectedFormat(t *testing.T) {

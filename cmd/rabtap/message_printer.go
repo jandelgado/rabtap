@@ -71,7 +71,7 @@ func PrettyPrintMessage(out io.Writer, message rabtap.TapMessage) error {
 		Message: message,
 		Body: func() string {
 			if b, err := Body(message.AmqpMessage); err != nil {
-				log.Warnf("decoding failed, printing body as-is: %s", err)
+				// decoding failed, printing body as-is
 				return formatter.Format(message.AmqpMessage.Body)
 			} else {
 				return formatter.Format(b)

@@ -3,6 +3,8 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"log/slog"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -36,7 +38,7 @@ func (s *Session) NewChannel() error {
 // channel in a Session struct. Closes returned chan when initial connection
 // attempt fails.
 func redial(ctx context.Context, url string, tlsConfig *tls.Config,
-	logger Logger, failEarly bool) chan chan Session {
+	logger *slog.Logger, failEarly bool) chan chan Session {
 
 	sessions := make(chan chan Session)
 
@@ -48,7 +50,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 			select {
 			case sessions <- sess:
 			case <-ctx.Done():
-				logger.Debugf("session: shutting down factory (cancel)")
+				logger.Debug("session: shutting down factory (cancel)")
 				close(sess)
 				return
 			}
@@ -66,14 +68,14 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 						break
 					}
 				}
-				logger.Errorf("session: cannot (re-)dial: %v: %q", err, url)
+				logger.Error(fmt.Sprintf("session: cannot (re-)dial: %q", url), "error", err)
 				if failEarly {
 					close(sess)
 					return
 				}
 				select {
 				case <-ctx.Done():
-					logger.Debugf("session: shutting down factory (cancel)")
+					logger.Debug("session: shutting down factory (cancel)")
 					close(sess)
 					return
 				case <-time.After(retryDelay):
@@ -85,7 +87,7 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 			select {
 			case sess <- Session{conn, ch}:
 			case <-ctx.Done():
-				logger.Debugf("session: shutting down factory (cancel)")
+				logger.Debug("session: shutting down factory (cancel)")
 				close(sess)
 				return
 			}

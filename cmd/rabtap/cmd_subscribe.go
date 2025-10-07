@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"time"
 
@@ -29,8 +30,8 @@ type CmdSubscribeArg struct {
 }
 
 // cmdSub subscribes to messages from the given queue
-func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
-	log.Debugf("cmdSub: subscribing to queue %s", cmd.queue)
+func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg, logger *slog.Logger) error {
+	logger.Debug(fmt.Sprintf("cmdSub: subscribing to queue %s", cmd.queue))
 
 	ctx, cancel := context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
@@ -38,7 +39,7 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 	config := rabtap.AmqpSubscriberConfig{
 		Exclusive: false,
 		Args:      rabtap.ToAMQPTable(cmd.args)}
-	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURL, cmd.tlsConfig, log)
+	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURL, cmd.tlsConfig, logger)
 
 	messageChannel := make(rabtap.TapChannel)
 	errorChannel := make(rabtap.SubscribeErrorChannel)
@@ -53,7 +54,8 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 			cmd.filterPred,
 			cmd.termPred,
 			acknowledger,
-			cmd.timeout)
+			cmd.timeout,
+			logger)
 		cancel()
 		return err
 	})

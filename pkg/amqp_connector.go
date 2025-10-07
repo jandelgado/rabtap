@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 )
 
@@ -34,13 +35,13 @@ type AmqpWorkerFunc func(ctx context.Context, session Session) (ReconnectAction,
 // AmqpConnector manages the connection to the amqp broker and automatically
 // reconnects after connections losses
 type AmqpConnector struct {
-	logger    Logger
+	logger    *slog.Logger
 	url       *url.URL
 	tlsConfig *tls.Config
 }
 
 // NewAmqpConnector creates a new AmqpConnector object.
-func NewAmqpConnector(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpConnector {
+func NewAmqpConnector(url *url.URL, tlsConfig *tls.Config, logger *slog.Logger) *AmqpConnector {
 	return &AmqpConnector{
 		logger:    logger,
 		url:       url,
@@ -52,16 +53,16 @@ func NewAmqpConnector(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpC
 func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) error {
 	sessions := redial(ctx, s.url.String(), s.tlsConfig, s.logger, FailEarly)
 	for session := range sessions {
-		s.logger.Debugf("waiting for new session on %+v", s.url.Redacted())
+		s.logger.Debug(fmt.Sprintf("waiting for new session on %+v", s.url.Redacted()))
 		sub, more := <-session
 		if !more {
 			// closed. TODO propagate errors from redial()
 			return errors.New("session factory closed")
 		}
-		s.logger.Debugf("got new amqp session ...")
+		s.logger.Debug("got new amqp session ...")
 		action, err := worker(ctx, sub)
 		if err != nil && action.shouldReconnect() {
-			s.logger.Errorf("worker failed with: %v", err)
+			s.logger.Error("worker failed", "error", err)
 		}
 		if !action.shouldReconnect() {
 			if errClose := sub.Connection.Close(); errClose != nil {

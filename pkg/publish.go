@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"time"
 
@@ -27,7 +28,7 @@ type PublishChannel chan *PublishMessage
 
 // AmqpPublish allows to send to a RabbitMQ exchange.
 type AmqpPublish struct {
-	logger     Logger
+	logger     *slog.Logger
 	connection *AmqpConnector
 	mandatory  bool
 	confirms   bool
@@ -86,7 +87,7 @@ func (s *PublishError) Error() string {
 // NewAmqpPublish returns a new AmqpPublish object associated with the RabbitMQ
 // broker denoted by the uri parameter.
 func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
-	mandatory, confirms bool, logger Logger) *AmqpPublish {
+	mandatory, confirms bool, logger *slog.Logger) *AmqpPublish {
 	return &AmqpPublish{
 		connection: NewAmqpConnector(url, tlsConfig, logger),
 		mandatory:  mandatory,
@@ -129,7 +130,7 @@ func (s *AmqpPublish) createWorkerFunc(
 
 		if s.confirms {
 			if err := session.Confirm(false); err != nil {
-				s.logger.Errorf("Channel could not be put into confirm mode: %s", err)
+				s.logger.Error("Channel could not be put into confirm mode", "error", err)
 			}
 		}
 
@@ -137,7 +138,7 @@ func (s *AmqpPublish) createWorkerFunc(
 		// since these can arrive after we finished publishing.
 		defer func() {
 
-			s.logger.Debugf("waiting for pending server messages ... ")
+			s.logger.Debug("waiting for pending server messages ... ")
 			timeout := time.After(timeoutWaitServer)
 
 			// wait for pending returned messages from the broker, when e.g. a
@@ -179,12 +180,12 @@ func (s *AmqpPublish) createWorkerFunc(
 
 			case message, more := <-publishCh:
 				if !more {
-					s.logger.Debugf("publishing channel closed.")
+					s.logger.Debug("publishing channel closed.")
 					return doNotReconnect, nil
 				}
 
 				size := len((*message.Publishing).Body)
-				s.logger.Debugf("publish message to %s (%d bytes)", message.Routing, size)
+				s.logger.Debug(fmt.Sprintf("publish message to %s (%d bytes)", message.Routing, size))
 				headers := EnsureAMQPTable(message.Routing.Headers()).(amqp.Table)
 				message.Publishing.Headers = headers
 				err := session.PublishWithContext(
@@ -225,8 +226,8 @@ func (s *AmqpPublish) createWorkerFunc(
 								if !confirmed.Ack {
 									errorCh <- &PublishError{Reason: PublishErrorNack, Message: message}
 								} else {
-									s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",
-										confirmed.DeliveryTag)
+									s.logger.Info(fmt.Sprintf("delivery with delivery tag #%d was ACKed by the server",
+										confirmed.DeliveryTag))
 								}
 								break Outer
 							case <-ctx.Done():

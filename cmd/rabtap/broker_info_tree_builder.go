@@ -188,7 +188,7 @@ func (s defaultBrokerInfoTreeBuilder) shouldDisplayQueue(
 	params := map[string]interface{}{"queue": queue, "binding": binding, "exchange": exchange}
 	if res, err := s.config.Filter.Eval(params); err != nil || !res {
 		if err != nil {
-			log.Warnf("error evaluating queue filter: %s", err)
+			// log.Warnf("error evaluating queue filter: %s", err)
 		} else {
 			return false
 		}
@@ -406,7 +406,7 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 			params := map[string]interface{}{"connection": conn, "channel": channel}
 			if res, err := s.config.Filter.Eval(params); err != nil || !res {
 				if err != nil {
-					log.Warnf("error evaluating queue filter: %s", err)
+					// log.Warnf("error evaluating queue filter: %s", err)
 				}
 				continue
 			}

@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
 	"time"
 
@@ -127,13 +128,13 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 // * by an EOF or error on the input file
 // * by ctx.Context() signaling cancellation (e.g. ctrl+c)
 // * by an initial connection failure to the broker
-func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
+func cmdPublish(ctx context.Context, cmd CmdPublishArg, logger *slog.Logger) error {
 
 	g, ctx := errgroup.WithContext(ctx)
 
 	resultCh := make(chan error, 1)
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURL,
-		cmd.tlsConfig, cmd.mandatory, cmd.confirms, log)
+		cmd.tlsConfig, cmd.mandatory, cmd.confirms, logger)
 	publishCh := make(rabtap.PublishChannel)
 	errorCh := make(rabtap.PublishErrorChannel)
 
@@ -142,7 +143,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 			return
 		}
 		delay := durationBetweenMessages(first, second, cmd.speed, cmd.fixedDelay)
-		log.Infof("publish delay: sleeping for %s", delay)
+		logger.Info(fmt.Sprintf("publish delay: sleeping for %s", delay))
 		select {
 		case <-time.After(delay):
 		case <-ctx.Done():
@@ -164,7 +165,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 		// log all publishing errors
 		for err := range errorCh {
 			numPublishErrors++
-			log.Errorf("publishing error: %v", err)
+			logger.Error("publishing error", "error", err)
 		}
 		if numPublishErrors > 0 {
 			return fmt.Errorf("published with errors")
@@ -174,7 +175,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 
 	g.Go(func() error {
 		err := publisher.EstablishConnection(ctx, publishCh, errorCh)
-		log.Info("Publisher ending")
+		logger.Info("Publisher ending")
 		close(errorCh)
 		return err
 	})

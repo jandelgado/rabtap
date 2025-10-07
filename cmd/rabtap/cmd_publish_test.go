@@ -234,11 +234,11 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 	}`
 
 	tmpfile, err := os.CreateTemp("", "rabtap")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.Write([]byte(testmessages))
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	deliveries, err := ch.Consume(
 		queueName,
@@ -249,7 +249,7 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 		false, // noWait
 		nil,   // arguments
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -297,13 +297,13 @@ func TestCmdPublishFilesFromDirectory(t *testing.T) {
 	msg := `{ "Exchange": "myexchange", "RoutingKey": "` + routingKey + `", "Body": "ixxx" }`
 
 	dir, err := os.MkdirTemp("", "")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	err = os.WriteFile(filepath.Join(dir, "rabtap-1.json"), []byte(msg), 0o666)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(dir, "rabtap-1.dat"), []byte("Hello123"), 0o666)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	deliveries, err := ch.Consume(
 		queueName,
@@ -314,7 +314,7 @@ func TestCmdPublishFilesFromDirectory(t *testing.T) {
 		false, // noWait
 		nil,   // arguments
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()

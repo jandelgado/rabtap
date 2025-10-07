@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -27,8 +28,8 @@ type CmdTapArg struct {
 // TODO feature: discover bindings when no binding keys are given (-> discovery.go)
 func cmdTap(
 	ctx context.Context,
-	cmd CmdTapArg) {
-
+	cmd CmdTapArg,
+) error {
 	ctx, cancel := context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -56,6 +57,7 @@ func cmdTap(
 		return err
 	})
 	if err := g.Wait(); err != nil && err != ErrIdleTimeout {
-		log.Errorf("tap failed with %v", err)
+		return fmt.Errorf("tap failed with: %w", err)
 	}
+	return nil
 }

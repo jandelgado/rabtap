@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"sort"
@@ -34,20 +35,13 @@ func initLogging(verbose bool) {
 	}
 }
 
-func failOnError(err error, msg string, exitFunc func(int)) {
-	if err != nil {
-		log.Errorf("%s: %s", msg, err)
-		exitFunc(1)
-	}
-}
-
 // defaultFilenameProvider returns the default filename without extension to
 // use when messages are saved to files during tap or subscribe.
 func defaultFilenameProvider() string {
 	return fmt.Sprintf("rabtap-%d", time.Now().UnixNano())
 }
 
-func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile string) *tls.Config {
+func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile string) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: insecureTLS,
 	}
@@ -55,28 +49,33 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	if certFile != "" && keyFile != "" {
 		// Load client cert
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		failOnError(err, "invalid client tls cert/key file", os.Exit)
+		if err != nil {
+			return nil, fmt.Errorf("load x509 key pair: %w", err)
+		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
 	if caFile != "" {
 		caCert, err := os.ReadFile(caFile)
-		failOnError(err, "invalid tls ca file", os.Exit)
+		if err != nil {
+			return nil, fmt.Errorf("read ca file: %w", err)
+		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
 		tlsConfig.RootCAs = caCertPool
 	}
-	return tlsConfig
+	return tlsConfig, nil
 }
 
-func startCmdInfo(ctx context.Context, args CommandLineArgs, titleURL *url.URL, out *os.File) {
+func startCmdInfo(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, titleURL *url.URL, out *os.File) error {
 	filter, err := NewExprPredicate(args.Filter)
-	failOnError(err, fmt.Sprintf("invalid queue filter predicate '%s'", args.Filter), os.Exit)
-
-	cmdInfo(ctx,
+	if err != nil {
+		return fmt.Errorf("invalid queue filter predicate '%s': %w", args.Filter, err)
+	}
+	return cmdInfo(ctx,
 		CmdInfoArg{
 			rootNode: titleURL, // the title is constructed from this URL
-			client:   rabtap.NewRabbitHTTPClient(args.APIURL, getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)),
+			client:   rabtap.NewRabbitHTTPClient(args.APIURL, tlsConfig),
 			treeConfig: BrokerInfoTreeBuilderConfig{
 				Mode:                args.InfoMode,
 				ShowConsumers:       args.ShowConsumers,
@@ -102,13 +101,13 @@ func newPublishMessageSource(source *string, format string) (MessageSource, erro
 
 	fi, err := os.Stat(*source)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("stat message source file: %w", err)
 	}
 
 	if !fi.IsDir() {
 		file, err := os.Open(*source)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("open message source file: %w", err)
 		}
 		// TODO close file
 		return NewReaderMessageSource(format, file)
@@ -116,7 +115,7 @@ func newPublishMessageSource(source *string, format string) (MessageSource, erro
 
 		metadataFiles, err := LoadMetadataFilesFromDir(*source, os.ReadDir, NewRabtapFileInfoPredicate())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("load message metadata: %w", err)
 		}
 
 		sort.SliceStable(metadataFiles, func(i, j int) bool {
@@ -128,32 +127,33 @@ func newPublishMessageSource(source *string, format string) (MessageSource, erro
 	}
 }
 
-func startCmdPublish(ctx context.Context, args CommandLineArgs) {
+func startCmdPublish(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) error {
 	if args.Format == "raw" && args.PubExchange == nil && args.PubRoutingKey == nil {
-		fmt.Fprint(os.Stderr, "Warning: using raw message format but neither exchange or routing key are set.\n")
+		slog.Warn("using raw message format but neither exchange or routing key are set.")
 	}
 	source, err := newPublishMessageSource(args.Source, args.Format)
-	failOnError(err, "message-reader", os.Exit)
+	if err != nil {
+		return fmt.Errorf("message source: %w", err)
+	}
 	source = NewTransformingMessageSource(source,
 		FireHoseTransformer,
 		NewPropertiesTransformer(args.Properties))
 
-	err = cmdPublish(ctx, CmdPublishArg{
+	return cmdPublish(ctx, CmdPublishArg{
 		amqpURL:    args.AMQPURL,
 		exchange:   args.PubExchange,
 		routingKey: args.PubRoutingKey,
 		headers:    args.Args,
 		fixedDelay: args.Delay,
 		speed:      args.Speed,
-		tlsConfig:  getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+		tlsConfig:  tlsConfig,
 		mandatory:  args.Mandatory,
 		confirms:   args.Confirms,
 		source:     source,
 	})
-	failOnError(err, "publish", os.Exit)
 }
 
-func startCmdSubscribe(ctx context.Context, args CommandLineArgs, out *os.File) {
+func startCmdSubscribe(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) error {
 	opts := MessageSinkOptions{
 		out:              NewColorableWriter(out),
 		format:           args.Format,
@@ -162,29 +162,34 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs, out *os.File) 
 		filenameProvider: defaultFilenameProvider,
 	}
 	messageSink, err := NewMessageSink(opts)
-	failOnError(err, "options", os.Exit)
+	if err != nil {
+		return fmt.Errorf("create message sink: %w", err)
+	}
 
 	termPred, err := NewLoopCountPred(args.Limit)
-	failOnError(err, "invalid message limit predicate", os.Exit)
+	if err != nil {
+		return fmt.Errorf("message limit predicate: %w", err)
+	}
 	filterPred, err := NewExprPredicate(args.Filter)
-	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
+	if err != nil {
+		return fmt.Errorf("message filter predicate: %w", err)
+	}
 
-	err = cmdSubscribe(ctx, CmdSubscribeArg{
+	return cmdSubscribe(ctx, CmdSubscribeArg{
 		amqpURL:     args.AMQPURL,
 		queue:       args.QueueName,
 		requeue:     args.Requeue,
 		reject:      args.Reject,
-		tlsConfig:   getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+		tlsConfig:   tlsConfig,
 		messageSink: messageSink,
 		filterPred:  filterPred,
 		termPred:    termPred,
 		args:        args.Args,
 		timeout:     args.IdleTimeout,
 	})
-	failOnError(err, "error subscribing messages", os.Exit)
 }
 
-func startCmdTap(ctx context.Context, args CommandLineArgs, out *os.File) {
+func startCmdTap(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) error {
 	opts := MessageSinkOptions{
 		out:              NewColorableWriter(out),
 		format:           args.Format,
@@ -193,16 +198,24 @@ func startCmdTap(ctx context.Context, args CommandLineArgs, out *os.File) {
 		filenameProvider: defaultFilenameProvider,
 	}
 	messageSink, err := NewMessageSink(opts)
-	failOnError(err, "options", os.Exit)
-	termPred, err := NewLoopCountPred(args.Limit)
-	failOnError(err, "invalid message limit predicate", os.Exit)
-	filterPred, err := NewExprPredicate(args.Filter)
-	failOnError(err, fmt.Sprintf("invalid message filter predicate '%s'", args.Filter), os.Exit)
+	if err != nil {
+		return fmt.Errorf("create message sink: %w", err)
+	}
 
-	cmdTap(ctx,
+	termPred, err := NewLoopCountPred(args.Limit)
+	if err != nil {
+		return fmt.Errorf("message limit predicate: %w", err)
+	}
+
+	filterPred, err := NewExprPredicate(args.Filter)
+	if err != nil {
+		return fmt.Errorf("message filter predicate: %w", err)
+	}
+
+	return cmdTap(ctx,
 		CmdTapArg{
 			tapConfig:   args.TapConfig,
-			tlsConfig:   getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile),
+			tlsConfig:   tlsConfig,
 			messageSink: messageSink,
 			filterPred:  filterPred,
 			termPred:    termPred,
@@ -210,7 +223,7 @@ func startCmdTap(ctx context.Context, args CommandLineArgs, out *os.File) {
 		})
 }
 
-func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) {
+func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) error {
 	if args.NoColor {
 		color.NoColor = true
 	}
@@ -220,25 +233,26 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 	switch args.Cmd {
 	case HelpCmd:
 		PrintHelp(args.HelpTopic)
+		return nil
 	case InfoCmd:
-		startCmdInfo(ctx, args, args.APIURL, out)
+		return startCmdInfo(ctx, args, tlsConfig, args.APIURL, out)
 	case SubCmd:
-		startCmdSubscribe(ctx, args, out)
+		return startCmdSubscribe(ctx, args, tlsConfig, out)
 	case PubCmd:
-		startCmdPublish(ctx, args)
+		return startCmdPublish(ctx, args, tlsConfig)
 	case TapCmd:
-		startCmdTap(ctx, args, out)
+		return startCmdTap(ctx, args, tlsConfig, out)
 	case ExchangeCreateCmd:
-		cmdExchangeCreate(CmdExchangeCreateArg{
+		return cmdExchangeCreate(CmdExchangeCreateArg{
 			amqpURL:  args.AMQPURL,
 			exchange: args.ExchangeName, exchangeType: args.ExchangeType,
 			durable: args.Durable, autodelete: args.Autodelete,
 			tlsConfig: tlsConfig, args: args.Args,
 		})
 	case ExchangeRemoveCmd:
-		cmdExchangeRemove(args.AMQPURL, args.ExchangeName, tlsConfig)
+		return cmdExchangeRemove(args.AMQPURL, args.ExchangeName, tlsConfig)
 	case ExchangeBindToExchangeCmd:
-		cmdExchangeBindToExchange(CmdExchangeBindArg{
+		return cmdExchangeBindToExchange(CmdExchangeBindArg{
 			amqpURL:        args.AMQPURL,
 			sourceExchange: args.ExchangeName,
 			targetExchange: args.DestExchangeName, key: args.BindingKey,
@@ -246,18 +260,18 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			tlsConfig: tlsConfig,
 		})
 	case QueueCreateCmd:
-		cmdQueueCreate(CmdQueueCreateArg{
+		return cmdQueueCreate(CmdQueueCreateArg{
 			amqpURL: args.AMQPURL,
 			queue:   args.QueueName, durable: args.Durable,
 			autodelete: args.Autodelete, tlsConfig: tlsConfig,
 			args: args.Args,
 		})
 	case QueueRemoveCmd:
-		cmdQueueRemove(args.AMQPURL, args.QueueName, tlsConfig)
+		return cmdQueueRemove(args.AMQPURL, args.QueueName, tlsConfig)
 	case QueuePurgeCmd:
-		cmdQueuePurge(args.AMQPURL, args.QueueName, tlsConfig)
+		return cmdQueuePurge(args.AMQPURL, args.QueueName, tlsConfig)
 	case QueueBindCmd:
-		cmdQueueBindToExchange(CmdQueueBindArg{
+		return cmdQueueBindToExchange(CmdQueueBindArg{
 			amqpURL:  args.AMQPURL,
 			exchange: args.ExchangeName,
 			queue:    args.QueueName, key: args.BindingKey,
@@ -265,7 +279,7 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			tlsConfig: tlsConfig,
 		})
 	case QueueUnbindCmd:
-		cmdQueueUnbindFromExchange(CmdQueueBindArg{
+		return cmdQueueUnbindFromExchange(CmdQueueBindArg{
 			amqpURL:  args.AMQPURL,
 			exchange: args.ExchangeName,
 			queue:    args.QueueName, key: args.BindingKey,
@@ -273,9 +287,10 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			tlsConfig: tlsConfig,
 		})
 	case ConnCloseCmd:
-		failOnError(cmdConnClose(ctx, args.APIURL, args.ConnName,
-			args.CloseReason, tlsConfig),
-			fmt.Sprintf("close connection '%s'", args.ConnName), os.Exit)
+		return cmdConnClose(ctx, args.APIURL, args.ConnName,
+			args.CloseReason, tlsConfig)
+	default:
+		return fmt.Errorf("unknown command %+v", args.Cmd)
 	}
 }
 
@@ -290,10 +305,16 @@ func rabtap_main(out *os.File) {
 	}
 
 	initLogging(args.Verbose) // TODO pass out
-	tlsConfig := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
+	tlsConfig, err := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go SigIntHandler(ctx, cancel)
 
-	dispatchCmd(ctx, args, tlsConfig, out)
+	err = dispatchCmd(ctx, args, tlsConfig, out)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

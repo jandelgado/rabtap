@@ -60,10 +60,10 @@ func readRabtapPersistentMessage(filename string) (RabtapPersistentMessage, erro
 	if err != nil {
 		return RabtapPersistentMessage{}, err
 	}
-	defer func() {_ = file.Close()}()
+	defer func() { _ = file.Close() }()
 	contents, err := readMessageFromJSON(file)
 	if err != nil {
-		return RabtapPersistentMessage{}, fmt.Errorf("error reading %s: %v", filename, err)
+		return RabtapPersistentMessage{}, fmt.Errorf("error reading %s: %w", filename, err)
 	}
 	return contents, nil
 }

@@ -4,9 +4,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/url"
-	"os"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -23,15 +23,22 @@ type CmdInfoArg struct {
 // cmdInfo queries the rabbitMQ brokers REST api and dispays infos
 // on exchanges, queues, bindings etc in a human readably fashion.
 // TODO proper error handling
-func cmdInfo(ctx context.Context, cmd CmdInfoArg) {
+func cmdInfo(ctx context.Context, cmd CmdInfoArg) error {
 	brokerInfo, err := cmd.client.BrokerInfo(ctx)
-	failOnError(err, "failed retrieving info from rabbitmq REST api", os.Exit)
+	if err != nil {
+		return fmt.Errorf("retrieving info from rabbitmq REST API: %w", err)
+	}
 
 	treeBuilder := NewBrokerInfoTreeBuilder(cmd.treeConfig)
-	failOnError(err, "failed instanciating tree builder", os.Exit)
 	renderer := NewBrokerInfoRenderer(cmd.renderConfig)
 
 	metadataService := rabtap.NewInMemoryMetadataService(brokerInfo)
-	tree, _ := treeBuilder.BuildTree(cmd.rootNode, metadataService)
-	failOnError(renderer.Render(tree, cmd.out), "rendering failed", os.Exit)
+	tree, err := treeBuilder.BuildTree(cmd.rootNode, metadataService)
+	if err != nil {
+		return fmt.Errorf("building info tree: %w", err)
+	}
+	if err := renderer.Render(tree, cmd.out); err != nil {
+		return fmt.Errorf("render info tree: %w", err)
+	}
+	return nil
 }

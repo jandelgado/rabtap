@@ -65,7 +65,7 @@ func (s *AmqpConnector) Connect(ctx context.Context, worker AmqpWorkerFunc) erro
 		}
 		if !action.shouldReconnect() {
 			if errClose := sub.Connection.Close(); errClose != nil {
-				return errors.Join(err, fmt.Errorf("connection close failed: %v", errClose))
+				return errors.Join(err, fmt.Errorf("connection close failed: %w", errClose))
 			}
 			return err
 		}

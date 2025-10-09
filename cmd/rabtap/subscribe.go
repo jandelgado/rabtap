@@ -12,8 +12,9 @@ import (
 	"path"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // ErrIdleTimeout is returned by the message loop when the loop was terminated
@@ -106,8 +107,8 @@ func MessageReceiveLoop(ctx context.Context,
 	termPred Predicate,
 	acknowledger AcknowledgeFunc,
 	timeout time.Duration,
-	logger *slog.Logger) error {
-
+	logger *slog.Logger,
+) error {
 	timeoutTicker := time.NewTicker(timeout)
 	defer timeoutTicker.Stop()
 
@@ -116,7 +117,7 @@ func MessageReceiveLoop(ctx context.Context,
 		select {
 
 		case <-ctx.Done():
-			logger.Debug("subscribe: cancel")
+			logger.Debug("messageloop cancelled")
 			return ctx.Err()
 
 		case err, more := <-errorChan:
@@ -127,10 +128,10 @@ func MessageReceiveLoop(ctx context.Context,
 		case message, more := <-messageChan:
 			timeoutTicker.Reset(timeout)
 			if !more {
-				logger.Debug("subscribe: messageReceiveLoop: channel closed.")
+				logger.Debug("channel closed")
 				return nil // ErrMessageLoopEnded
 			}
-			logger.Debug(fmt.Sprintf("subscribe: messageReceiveLoop: new message %+v", message))
+			logger.Debug("new message", "message", message)
 
 			// acknowledge or reject the message
 			if err := acknowledger(message); err != nil {
@@ -144,7 +145,7 @@ func MessageReceiveLoop(ctx context.Context,
 			}
 
 			if !passed {
-				logger.Debug(fmt.Sprintf("message with MessageId=%s was filtered out", message.AmqpMessage.MessageId))
+				logger.Debug("message was filtered out", "message_id", message.AmqpMessage.MessageId)
 				continue
 			}
 			count += 1

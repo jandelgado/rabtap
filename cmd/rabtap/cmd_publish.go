@@ -12,9 +12,10 @@ import (
 	"net/url"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"golang.org/x/sync/errgroup"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // CmdPublishArg contains arguments for the publish command
@@ -41,7 +42,8 @@ func multDuration(duration time.Duration, factor float64) time.Duration {
 // durationBetweenMessages calculates the delay to make between the
 // publishing of two previously recorded messages.
 func durationBetweenMessages(first, second *RabtapPersistentMessage,
-	speed float64, fixedDelay *time.Duration) time.Duration {
+	speed float64, fixedDelay *time.Duration,
+) time.Duration {
 	if first == nil || second == nil {
 		return time.Duration(0)
 	}
@@ -58,11 +60,12 @@ func durationBetweenMessages(first, second *RabtapPersistentMessage,
 // provided routingkey
 func publishMessage(publishChannel rabtap.PublishChannel,
 	routing rabtap.Routing,
-	amqpPublishing amqp.Publishing) {
-
+	amqpPublishing amqp.Publishing,
+) {
 	publishChannel <- &rabtap.PublishMessage{
 		Routing:    routing,
-		Publishing: &amqpPublishing}
+		Publishing: &amqpPublishing,
+	}
 }
 
 // selectOptionalOrDefault returns either an optional string, if set, or
@@ -90,8 +93,8 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 	optRoutingKey *string,
 	headers rabtap.KeyValueMap,
 	source MessageSource,
-	delayFunc DelayFunc) error {
-
+	delayFunc DelayFunc,
+) error {
 	defer func() {
 		close(publishCh)
 	}()
@@ -129,7 +132,6 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 // * by ctx.Context() signaling cancellation (e.g. ctrl+c)
 // * by an initial connection failure to the broker
 func cmdPublish(ctx context.Context, cmd CmdPublishArg, logger *slog.Logger) error {
-
 	g, ctx := errgroup.WithContext(ctx)
 
 	resultCh := make(chan error, 1)
@@ -143,7 +145,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg, logger *slog.Logger) err
 			return
 		}
 		delay := durationBetweenMessages(first, second, cmd.speed, cmd.fixedDelay)
-		logger.Info(fmt.Sprintf("publish delay: sleeping for %s", delay))
+		logger.Info("publisher sleeping", "delay", delay)
 		select {
 		case <-time.After(delay):
 		case <-ctx.Done():
@@ -175,7 +177,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg, logger *slog.Logger) err
 
 	g.Go(func() error {
 		err := publisher.EstablishConnection(ctx, publishCh, errorCh)
-		logger.Info("Publisher ending")
+		logger.Info("publisher ending")
 		close(errorCh)
 		return err
 	})

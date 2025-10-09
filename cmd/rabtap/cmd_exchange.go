@@ -6,7 +6,6 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log/slog"
 	"net/url"
 
@@ -39,8 +38,7 @@ func cmdExchangeCreate(cmd CmdExchangeCreateArg, logger *slog.Logger) error {
 	return rabtap.SimpleAmqpConnector(cmd.amqpURL,
 		cmd.tlsConfig,
 		func(session rabtap.Session) error {
-			logger.Debug(fmt.Sprintf("creating exchange %s with type %s, args=%v",
-				cmd.exchange, cmd.exchangeType, cmd.args))
+			logger.Debug("creating exchange", "exchange", cmd.exchange, "type", cmd.exchangeType, "args", cmd.args)
 			return rabtap.CreateExchange(session, cmd.exchange, cmd.exchangeType,
 				cmd.durable, cmd.autodelete, rabtap.ToAMQPTable(cmd.args))
 		})
@@ -51,7 +49,7 @@ func cmdExchangeRemove(amqpURL *url.URL, exchangeName string, tlsConfig *tls.Con
 	return rabtap.SimpleAmqpConnector(amqpURL,
 		tlsConfig,
 		func(session rabtap.Session) error {
-			logger.Debug(fmt.Sprintf("removing exchange %s", exchangeName))
+			logger.Debug("removing exchange", "exchange", exchangeName)
 			return rabtap.RemoveExchange(session, exchangeName, false)
 		})
 }
@@ -63,8 +61,9 @@ func cmdExchangeBindToExchange(cmd CmdExchangeBindArg, logger *slog.Logger) erro
 			if cmd.headerMode != HeaderNone {
 				cmd.args["x-match"] = amqpHeaderRoutingMode(cmd.headerMode)
 			}
-			logger.Debug(fmt.Sprintf("binding exchange %s to exchange %s w/ key %s and headers %v",
-				cmd.sourceExchange, cmd.targetExchange, cmd.key, cmd.args))
+			logger.Debug("binding exchange to exchange",
+				"exchange", cmd.sourceExchange, "target_exchange", cmd.targetExchange,
+				"key", cmd.key, "args", cmd.args)
 
 			return rabtap.BindExchangeToExchange(session, cmd.sourceExchange, cmd.key, cmd.targetExchange, rabtap.ToAMQPTable(cmd.args))
 		})

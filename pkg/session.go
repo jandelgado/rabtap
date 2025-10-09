@@ -3,8 +3,8 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -37,9 +37,9 @@ func (s *Session) NewChannel() error {
 // redial continually connects to the URL and provides a AMQP connection and
 // channel in a Session struct. Closes returned chan when initial connection
 // attempt fails.
-func redial(ctx context.Context, url string, tlsConfig *tls.Config,
-	logger *slog.Logger, failEarly bool) chan chan Session {
-
+func redial(ctx context.Context, u *url.URL, tlsConfig *tls.Config,
+	logger *slog.Logger, failEarly bool,
+) chan chan Session {
 	sessions := make(chan chan Session)
 
 	go func() {
@@ -61,14 +61,14 @@ func redial(ctx context.Context, url string, tlsConfig *tls.Config,
 			var ch *amqp.Channel
 			var err error
 			for {
-				conn, err = DialTLS(url, tlsConfig)
+				conn, err = DialTLS(u, tlsConfig)
 				if err == nil {
 					ch, err = conn.Channel()
 					if err == nil {
 						break
 					}
 				}
-				logger.Error(fmt.Sprintf("session: cannot (re-)dial: %q", url), "error", err)
+				logger.Error("session: redial failed", "url", u.Redacted(), "error", err)
 				if failEarly {
 					close(sess)
 					return

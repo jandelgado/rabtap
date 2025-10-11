@@ -11,7 +11,6 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"log/slog"
 	"net/url"
 	"testing"
@@ -24,7 +23,7 @@ import (
 func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 
 	ctx := context.Background()
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 
 	url, _ := url.Parse("amqp://localhost:1")
 	conn := NewAmqpConnector(url, &tls.Config{}, logger)
@@ -43,7 +42,7 @@ func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 func TestIntegrationWorkerInteraction(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 
 	resultChan := make(chan int, 1)
 

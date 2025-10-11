@@ -13,7 +13,6 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"log/slog"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 	conn, ch := testcommon.IntegrationTestConnection(t, "direct-exchange", "direct", 2, false)
 	defer conn.Close()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	mandatory := true
 	confirms := true
 	publisher := NewAmqpPublish(testcommon.IntegrationURIFromEnv(), &tls.Config{}, mandatory, confirms, logger)

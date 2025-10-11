@@ -8,7 +8,6 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"log/slog"
 	"net/url"
 	"testing"
@@ -23,7 +22,7 @@ func TestSessionProvidesConnectionAndChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger, FailEarly)
 
 	sessionFactory := <-sessions
@@ -36,7 +35,7 @@ func TestSessionProvidesConnectionAndChannel(t *testing.T) {
 func TestSessionShutsDownProperlyWhenCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger, FailEarly)
 
 	sessionFactory, more := <-sessions
@@ -53,7 +52,7 @@ func TestSessionShutsDownProperlyWhenCancelled(t *testing.T) {
 func TestSessionCanBeCancelledWhenSessionIsNotReadFromChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger, FailEarly)
 
 	sessionFactory, more := <-sessions
@@ -71,7 +70,7 @@ func TestSessionCanBeCancelledWhenSessionIsNotReadFromChannel(t *testing.T) {
 func TestSessionFailsEarlyWhenNoConnectionIsPossible(t *testing.T) {
 	ctx := context.Background()
 	u, _ := url.Parse("amqp://localhost:1")
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	sessions := redial(ctx, u, &tls.Config{}, logger, FailEarly)
 
 	sessionFactory, more := <-sessions
@@ -87,7 +86,7 @@ func TestSessionFailsEarlyWhenNoConnectionIsPossible(t *testing.T) {
 func TestSessionCanBeCancelledDuringRetryDelay(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	u, _ := url.Parse("amqp://localhost:1")
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	sessions := redial(ctx, u, &tls.Config{}, logger, !FailEarly)
 
 	sessionFactory, more := <-sessions
@@ -105,7 +104,7 @@ func TestSessionNewChannelReturnsNewChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger, FailEarly)
 
 	sessionFactory := <-sessions

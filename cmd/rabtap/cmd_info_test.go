@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"io"
 	"log/slog"
 	"net/url"
 	"os"
@@ -28,7 +27,7 @@ func Example_startCmdInfo() {
 	mock := testcommon.NewRabbitAPIMock(testcommon.MockModeEmpty)
 	defer mock.Close()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	args, _ := ParseCommandLineArgs([]string{"info", "--api", mock.URL, "--no-color"})
 	titleURL, _ := url.Parse("http://guest:guest@rootnode/vhost")
 	_ = startCmdInfo(context.TODO(), args, &tls.Config{}, titleURL, os.Stdout, logger)

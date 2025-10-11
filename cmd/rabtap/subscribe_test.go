@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -167,8 +166,8 @@ func TestCreateMessageSinkRawToFile(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
 	t.Cleanup(func() {
-        require.NoError(t ,os.RemoveAll(testDir))
-    })
+		require.NoError(t, os.RemoveAll(testDir))
+	})
 
 	var b bytes.Buffer
 	opts := MessageSinkOptions{
@@ -244,8 +243,8 @@ func TestCreateMessageSinkJSONNoPPToFile(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "")
 	require.Nil(t, err)
 	t.Cleanup(func() {
-        require.NoError(t ,os.RemoveAll(testDir))
-    })
+		require.NoError(t, os.RemoveAll(testDir))
+	})
 	var b bytes.Buffer
 	opts := MessageSinkOptions{
 		out:              &b,
@@ -270,7 +269,7 @@ func TestCreateMessageSinkJSONNoPPToFile(t *testing.T) {
 }
 
 func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	ctx, cancel := context.WithCancel(context.Background())
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
@@ -296,7 +295,7 @@ func TestMessageReceiveLoopForwardsMessagesOnChannel(t *testing.T) {
 }
 
 func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)
 	errorChan := make(rabtap.SubscribeErrorChannel)
@@ -311,7 +310,7 @@ func TestMessageReceiveLoopExitsOnChannelClose(t *testing.T) {
 }
 
 func TestMessageReceiveLoopExitsWhenTermPredReturnsTrue(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel, 1)
 	errorChan := make(rabtap.SubscribeErrorChannel)
@@ -326,7 +325,7 @@ func TestMessageReceiveLoopExitsWhenTermPredReturnsTrue(t *testing.T) {
 }
 
 func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	ctx, cancel := context.WithCancel(context.Background())
 	messageChan := make(rabtap.TapChannel, 3)
 	errorChan := make(rabtap.SubscribeErrorChannel)
@@ -360,7 +359,7 @@ func TestMessageReceiveLoopIgnoresFilteredMessages(t *testing.T) {
 }
 
 func TestMessageReceiveLoopExitsWithErrorWhenIdle(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	// given
 	ctx := context.Background()
 	messageChan := make(rabtap.TapChannel)

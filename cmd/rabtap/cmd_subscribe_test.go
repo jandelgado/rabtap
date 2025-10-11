@@ -27,7 +27,7 @@ import (
 )
 
 func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan bool)
 	amqpURL, _ := url.Parse("amqp://invalid.url:5672/")
@@ -54,7 +54,7 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 }
 
 func TestCmdSub(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"
 	testKey := testQueue
@@ -134,7 +134,7 @@ func TestCmdSub(t *testing.T) {
 }
 
 func TestCmdSubIntegration(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	// given
 	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"

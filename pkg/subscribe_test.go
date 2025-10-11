@@ -7,7 +7,6 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"log/slog"
 	"testing"
 	"time"
@@ -38,7 +37,7 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 	finishChan := make(chan int)
 
 	config := AmqpSubscriberConfig{Exclusive: false}
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	subscriber := NewAmqpSubscriber(config, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger)
 	resultChannel := make(TapChannel)
 	resultErrChannel := make(SubscribeErrorChannel)

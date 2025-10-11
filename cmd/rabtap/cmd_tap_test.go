@@ -8,7 +8,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"log/slog"
 	"os"
 	"testing"
@@ -23,7 +22,7 @@ import (
 )
 
 func TestCmdTap(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	// given
 	conn, ch := testcommon.IntegrationTestConnection(t, "int-test-exchange", "topic", 1, false)
 	defer conn.Close()

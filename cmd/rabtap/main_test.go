@@ -3,15 +3,16 @@
 package main
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInitLogging(t *testing.T) {
-	logger := initLogging(false)
+	logger := initLogging(os.Stderr, false, false)
 	assert.NotNil(t, logger)
-	logger = initLogging(true)
+	logger = initLogging(os.Stderr, true, false)
 	assert.NotNil(t, logger)
 }
 

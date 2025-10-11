@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
@@ -288,7 +289,10 @@ func rabtap_main(out *os.File) {
 		os.Exit(1)
 	}
 
-	logger := initLogging(args.Verbose)
+	logOut := os.Stderr
+	logColored := args.ForceColor || (!args.NoColor && isatty.IsTerminal(logOut.Fd()))
+	logger := initLogging(logOut, args.Verbose, logColored)
+
 	tlsConfig, err := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
 	if err != nil {
 		logger.Error("failed to get TLS config", "error", err)

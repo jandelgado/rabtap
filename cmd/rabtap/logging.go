@@ -5,15 +5,20 @@ package main
 import (
 	"log/slog"
 	"os"
+	"time"
+
+	"github.com/lmittmann/tint"
 )
 
-func initLogging(verbose bool) *slog.Logger {
-	opts := slog.HandlerOptions{}
+func initLogging(f *os.File, verbose bool, colored bool) *slog.Logger {
+	opts := tint.Options{
+		NoColor:    !colored,
+		TimeFormat: time.TimeOnly,
+	}
 	if verbose {
 		opts.Level = slog.LevelDebug
 	} else {
 		opts.Level = slog.LevelWarn
 	}
-
-	return slog.New(slog.NewTextHandler(os.Stdout, &opts))
+	return slog.New(tint.NewHandler(os.Stderr, &opts))
 }

@@ -1,5 +1,6 @@
 // Copyright (C) 2019-2021 Jan Delgado
 
+//go:build integration
 // +build integration
 
 package rabtap
@@ -7,20 +8,22 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
+	"net/url"
 	"testing"
 	"time"
 
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
 
 func TestSessionProvidesConnectionAndChannel(t *testing.T) {
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv().String(), &tls.Config{}, log, FailEarly)
+	logger := slog.New(slog.DiscardHandler)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger, FailEarly)
 
 	sessionFactory := <-sessions
 	session := <-sessionFactory
@@ -30,11 +33,10 @@ func TestSessionProvidesConnectionAndChannel(t *testing.T) {
 }
 
 func TestSessionShutsDownProperlyWhenCancelled(t *testing.T) {
-
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv().String(), &tls.Config{}, log, FailEarly)
+	logger := slog.New(slog.DiscardHandler)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger, FailEarly)
 
 	sessionFactory, more := <-sessions
 	assert.True(t, more)
@@ -50,8 +52,8 @@ func TestSessionShutsDownProperlyWhenCancelled(t *testing.T) {
 func TestSessionCanBeCancelledWhenSessionIsNotReadFromChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv().String(), &tls.Config{}, log, FailEarly)
+	logger := slog.New(slog.DiscardHandler)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger, FailEarly)
 
 	sessionFactory, more := <-sessions
 	assert.True(t, more)
@@ -66,11 +68,10 @@ func TestSessionCanBeCancelledWhenSessionIsNotReadFromChannel(t *testing.T) {
 }
 
 func TestSessionFailsEarlyWhenNoConnectionIsPossible(t *testing.T) {
-
 	ctx := context.Background()
-
-	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, "amqp://localhost:1", &tls.Config{}, log, FailEarly)
+	u, _ := url.Parse("amqp://localhost:1")
+	logger := slog.New(slog.DiscardHandler)
+	sessions := redial(ctx, u, &tls.Config{}, logger, FailEarly)
 
 	sessionFactory, more := <-sessions
 	assert.True(t, more)
@@ -83,11 +84,10 @@ func TestSessionFailsEarlyWhenNoConnectionIsPossible(t *testing.T) {
 }
 
 func TestSessionCanBeCancelledDuringRetryDelay(t *testing.T) {
-
 	ctx, cancel := context.WithCancel(context.Background())
-
-	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, "amqp://localhost:1", &tls.Config{}, log, !FailEarly)
+	u, _ := url.Parse("amqp://localhost:1")
+	logger := slog.New(slog.DiscardHandler)
+	sessions := redial(ctx, u, &tls.Config{}, logger, !FailEarly)
 
 	sessionFactory, more := <-sessions
 	assert.True(t, more)
@@ -104,8 +104,8 @@ func TestSessionNewChannelReturnsNewChannel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log := testcommon.NewTestLogger()
-	sessions := redial(ctx, testcommon.IntegrationURIFromEnv().String(), &tls.Config{}, log, FailEarly)
+	logger := slog.New(slog.DiscardHandler)
+	sessions := redial(ctx, testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger, FailEarly)
 
 	sessionFactory := <-sessions
 	session := <-sessionFactory

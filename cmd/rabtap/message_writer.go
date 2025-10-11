@@ -69,7 +69,6 @@ func saveMessageAsJSONFile(filename string, message rabtap.TapMessage, marshalle
 func SaveMessageToRawFiles(basename string, message rabtap.TapMessage, marshaller marshalFunc) error {
 	filenameRaw := basename + ".dat"
 	filenameMeta := basename + ".json"
-	log.Debugf("saving message  %s (RAW) with meta data in %s", filenameRaw, filenameMeta)
 	err := saveMessageBodyAsBlobFile(filenameRaw, message.AmqpMessage.Body)
 	if err != nil {
 		return err
@@ -85,6 +84,5 @@ func SaveMessageToRawFiles(basename string, message rabtap.TapMessage, marshalle
 // SaveMessageToJSONFile writes a message to a single JSON file, where
 // the body will be BASE64 encoded
 func SaveMessageToJSONFile(filename string, message rabtap.TapMessage, marshaller marshalFunc) error {
-	log.Debugf("saving message to %s (JSON)", filename)
 	return saveMessageAsJSONFile(filename, message, marshaller)
 }

@@ -7,11 +7,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
 	"golang.org/x/sync/errgroup"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // CmdSubscribeArg contains arguments for the subscribe command
@@ -29,22 +31,20 @@ type CmdSubscribeArg struct {
 }
 
 // cmdSub subscribes to messages from the given queue
-func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
-	log.Debugf("cmdSub: subscribing to queue %s", cmd.queue)
-
+func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg, logger *slog.Logger) error {
 	ctx, cancel := context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
 
 	config := rabtap.AmqpSubscriberConfig{
 		Exclusive: false,
-		Args:      rabtap.ToAMQPTable(cmd.args)}
-	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURL, cmd.tlsConfig, log)
+		Args:      rabtap.ToAMQPTable(cmd.args),
+	}
+	subscriber := rabtap.NewAmqpSubscriber(config, cmd.amqpURL, cmd.tlsConfig, logger)
 
 	messageChannel := make(rabtap.TapChannel)
 	errorChannel := make(rabtap.SubscribeErrorChannel)
 	g.Go(func() error { return subscriber.EstablishSubscription(ctx, cmd.queue, messageChannel, errorChannel) })
 	g.Go(func() error {
-
 		acknowledger := CreateAcknowledgeFunc(cmd.reject, cmd.requeue)
 		err := MessageReceiveLoop(ctx,
 			messageChannel,
@@ -53,7 +53,8 @@ func cmdSubscribe(ctx context.Context, cmd CmdSubscribeArg) error {
 			cmd.filterPred,
 			cmd.termPred,
 			acknowledger,
-			cmd.timeout)
+			cmd.timeout,
+			logger)
 		cancel()
 		return err
 	})

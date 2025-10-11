@@ -184,16 +184,9 @@ func (s defaultBrokerInfoTreeBuilder) shouldDisplayQueue(
 	queue *rabtap.RabbitQueue,
 	exchange *rabtap.RabbitExchange,
 	binding *rabtap.RabbitBinding,
-) bool {
+) (bool, error) {
 	params := map[string]interface{}{"queue": queue, "binding": binding, "exchange": exchange}
-	if res, err := s.config.Filter.Eval(params); err != nil || !res {
-		if err != nil {
-			log.Warnf("error evaluating queue filter: %s", err)
-		} else {
-			return false
-		}
-	}
-	return true
+	return s.config.Filter.Eval(params)
 }
 
 // createConnectionNodes creates a tree for the given queue with all
@@ -258,17 +251,21 @@ func (s defaultBrokerInfoTreeBuilder) createQueueNodeFromBinding(
 	binding *rabtap.RabbitBinding,
 	exchange *rabtap.RabbitExchange,
 	metadataService rabtap.MetadataService,
-) []*queueNode {
+) ([]*queueNode, error) {
 	// standard binding of queue to exchange
 	queue := metadataService.FindQueueByName(binding.Vhost, binding.Destination)
 
 	if queue == nil {
 		// can happen in theory since REST calls are not transactional
-		return []*queueNode{}
+		return []*queueNode{}, nil
 	}
 
-	if !s.shouldDisplayQueue(queue, exchange, binding) {
-		return []*queueNode{}
+	shouldDisplayQueue, err := s.shouldDisplayQueue(queue, exchange, binding)
+	if err != nil {
+		return []*queueNode{}, err
+	}
+	if !shouldDisplayQueue {
+		return []*queueNode{}, nil
 	}
 
 	node := newQueueNodeWithBinding(queue, binding)
@@ -279,7 +276,7 @@ func (s defaultBrokerInfoTreeBuilder) createQueueNodeFromBinding(
 			node.Add(consumer)
 		}
 	}
-	return []*queueNode{node}
+	return []*queueNode{node}, nil
 }
 
 // createExchangeNode recursively (in case of exchange-exchange binding) an
@@ -288,12 +285,12 @@ func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 	exchange *rabtap.RabbitExchange,
 	metadataService rabtap.MetadataService,
 	binding *rabtap.RabbitBinding,
-) *exchangeNode {
+) (*exchangeNode, error) {
 	// to detect cyclic exchange-to-exchange bindings. Yes, this is possible.
 	visited := map[string]bool{}
 
-	var create func(*rabtap.RabbitExchange, rabtap.MetadataService, *rabtap.RabbitBinding) *exchangeNode
-	create = func(exchange *rabtap.RabbitExchange, metadataService rabtap.MetadataService, binding *rabtap.RabbitBinding) *exchangeNode {
+	var create func(*rabtap.RabbitExchange, rabtap.MetadataService, *rabtap.RabbitBinding) (*exchangeNode, error)
+	create = func(exchange *rabtap.RabbitExchange, metadataService rabtap.MetadataService, binding *rabtap.RabbitBinding) (*exchangeNode, error) {
 		exchangeNode := newExchangeNode(exchange, binding)
 
 		// process all bindings for current exchange. Can be exchange-exchange-
@@ -311,7 +308,11 @@ func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 					continue
 				}
 				visited[boundExchange.Name] = true
-				exchangeNode.Add(create(boundExchange, metadataService, binding))
+				elem, err := create(boundExchange, metadataService, binding)
+				if err != nil {
+					return nil, err
+				}
+				exchangeNode.Add(elem)
 			} else {
 				// do not add (redundant) queues if in recursive exchange-to-exchange
 				// binding: show queues only below top-level exchange
@@ -319,13 +320,16 @@ func (s defaultBrokerInfoTreeBuilder) createExchangeNode(
 					continue
 				}
 				// queue to exchange binding
-				queues := s.createQueueNodeFromBinding(binding, exchange, metadataService)
+				queues, err := s.createQueueNodeFromBinding(binding, exchange, metadataService)
+				if err != nil {
+					return nil, err
+				}
 				for _, queue := range queues {
 					exchangeNode.Add(queue)
 				}
 			}
 		}
-		return exchangeNode
+		return exchangeNode, nil
 	}
 	return create(exchange, metadataService, binding)
 }
@@ -361,7 +365,10 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByExchange(
 			if !s.shouldDisplayExchange(&exchange, &vhost) {
 				continue
 			}
-			exNode := s.createExchangeNode(&exchange, metadataService, nil)
+			exNode, err := s.createExchangeNode(&exchange, metadataService, nil)
+			if err != nil {
+				return nil, err
+			}
 			if s.config.OmitEmptyExchanges && !exNode.hasChildren() {
 				continue
 			}
@@ -404,10 +411,11 @@ func (s defaultBrokerInfoTreeBuilder) buildTreeByConnection(
 			channel := channel
 
 			params := map[string]interface{}{"connection": conn, "channel": channel}
-			if res, err := s.config.Filter.Eval(params); err != nil || !res {
-				if err != nil {
-					log.Warnf("error evaluating queue filter: %s", err)
-				}
+			res, err := s.config.Filter.Eval(params)
+			if err != nil {
+				return nil, fmt.Errorf("evaluate queue filter: %w", err)
+			}
+			if !res {
 				continue
 			}
 

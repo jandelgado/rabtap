@@ -8,12 +8,14 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"golang.org/x/sync/errgroup"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
 )
 
 // CmdPublishArg contains arguments for the publish command
@@ -40,7 +42,8 @@ func multDuration(duration time.Duration, factor float64) time.Duration {
 // durationBetweenMessages calculates the delay to make between the
 // publishing of two previously recorded messages.
 func durationBetweenMessages(first, second *RabtapPersistentMessage,
-	speed float64, fixedDelay *time.Duration) time.Duration {
+	speed float64, fixedDelay *time.Duration,
+) time.Duration {
 	if first == nil || second == nil {
 		return time.Duration(0)
 	}
@@ -57,11 +60,12 @@ func durationBetweenMessages(first, second *RabtapPersistentMessage,
 // provided routingkey
 func publishMessage(publishChannel rabtap.PublishChannel,
 	routing rabtap.Routing,
-	amqpPublishing amqp.Publishing) {
-
+	amqpPublishing amqp.Publishing,
+) {
 	publishChannel <- &rabtap.PublishMessage{
 		Routing:    routing,
-		Publishing: &amqpPublishing}
+		Publishing: &amqpPublishing,
+	}
 }
 
 // selectOptionalOrDefault returns either an optional string, if set, or
@@ -89,8 +93,8 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 	optRoutingKey *string,
 	headers rabtap.KeyValueMap,
 	source MessageSource,
-	delayFunc DelayFunc) error {
-
+	delayFunc DelayFunc,
+) error {
 	defer func() {
 		close(publishCh)
 	}()
@@ -127,13 +131,12 @@ func publishMessageStream(publishCh rabtap.PublishChannel,
 // * by an EOF or error on the input file
 // * by ctx.Context() signaling cancellation (e.g. ctrl+c)
 // * by an initial connection failure to the broker
-func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
-
+func cmdPublish(ctx context.Context, cmd CmdPublishArg, logger *slog.Logger) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	resultCh := make(chan error, 1)
 	publisher := rabtap.NewAmqpPublish(cmd.amqpURL,
-		cmd.tlsConfig, cmd.mandatory, cmd.confirms, log)
+		cmd.tlsConfig, cmd.mandatory, cmd.confirms, logger)
 	publishCh := make(rabtap.PublishChannel)
 	errorCh := make(rabtap.PublishErrorChannel)
 
@@ -142,7 +145,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 			return
 		}
 		delay := durationBetweenMessages(first, second, cmd.speed, cmd.fixedDelay)
-		log.Infof("publish delay: sleeping for %s", delay)
+		logger.Info("publisher sleeping", "delay", delay)
 		select {
 		case <-time.After(delay):
 		case <-ctx.Done():
@@ -164,7 +167,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 		// log all publishing errors
 		for err := range errorCh {
 			numPublishErrors++
-			log.Errorf("publishing error: %v", err)
+			logger.Error("publishing error", "error", err)
 		}
 		if numPublishErrors > 0 {
 			return fmt.Errorf("published with errors")
@@ -174,7 +177,7 @@ func cmdPublish(ctx context.Context, cmd CmdPublishArg) error {
 
 	g.Go(func() error {
 		err := publisher.EstablishConnection(ctx, publishCh, errorCh)
-		log.Info("Publisher ending")
+		logger.Info("publisher ending")
 		close(errorCh)
 		return err
 	})

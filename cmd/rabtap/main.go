@@ -14,26 +14,10 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/sirupsen/logrus"
+	"github.com/mattn/go-isatty"
 
 	rabtap "github.com/jandelgado/rabtap/pkg"
 )
-
-var log = logrus.New()
-
-func initLogging(verbose bool) {
-	log.Formatter = &logrus.TextFormatter{
-		ForceColors:            true,
-		DisableLevelTruncation: true,
-		FullTimestamp:          false,
-	}
-	log.Out = NewColorableWriter(os.Stderr)
-	if verbose {
-		log.SetLevel(logrus.DebugLevel)
-	} else {
-		log.SetLevel(logrus.WarnLevel)
-	}
-}
 
 // defaultFilenameProvider returns the default filename without extension to
 // use when messages are saved to files during tap or subscribe.
@@ -67,7 +51,7 @@ func getTLSConfig(insecureTLS bool, certFile string, keyFile string, caFile stri
 	return tlsConfig, nil
 }
 
-func startCmdInfo(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, titleURL *url.URL, out *os.File) error {
+func startCmdInfo(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, titleURL *url.URL, out *os.File, logger *slog.Logger) error {
 	filter, err := NewExprPredicate(args.Filter)
 	if err != nil {
 		return fmt.Errorf("invalid queue filter predicate '%s': %w", args.Filter, err)
@@ -127,9 +111,9 @@ func newPublishMessageSource(source *string, format string) (MessageSource, erro
 	}
 }
 
-func startCmdPublish(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config) error {
+func startCmdPublish(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, logger *slog.Logger) error {
 	if args.Format == "raw" && args.PubExchange == nil && args.PubRoutingKey == nil {
-		slog.Warn("using raw message format but neither exchange or routing key are set.")
+		logger.Warn("using raw message format but neither exchange or routing key are set.")
 	}
 	source, err := newPublishMessageSource(args.Source, args.Format)
 	if err != nil {
@@ -150,10 +134,10 @@ func startCmdPublish(ctx context.Context, args CommandLineArgs, tlsConfig *tls.C
 		mandatory:  args.Mandatory,
 		confirms:   args.Confirms,
 		source:     source,
-	})
+	}, logger)
 }
 
-func startCmdSubscribe(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) error {
+func startCmdSubscribe(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File, logger *slog.Logger) error {
 	opts := MessageSinkOptions{
 		out:              NewColorableWriter(out),
 		format:           args.Format,
@@ -186,10 +170,10 @@ func startCmdSubscribe(ctx context.Context, args CommandLineArgs, tlsConfig *tls
 		termPred:    termPred,
 		args:        args.Args,
 		timeout:     args.IdleTimeout,
-	})
+	}, logger)
 }
 
-func startCmdTap(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) error {
+func startCmdTap(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File, logger *slog.Logger) error {
 	opts := MessageSinkOptions{
 		out:              NewColorableWriter(out),
 		format:           args.Format,
@@ -220,10 +204,10 @@ func startCmdTap(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			filterPred:  filterPred,
 			termPred:    termPred,
 			timeout:     args.IdleTimeout,
-		})
+		}, logger)
 }
 
-func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File) error {
+func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Config, out *os.File, logger *slog.Logger) error {
 	if args.NoColor {
 		color.NoColor = true
 	}
@@ -235,22 +219,22 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 		PrintHelp(args.HelpTopic)
 		return nil
 	case InfoCmd:
-		return startCmdInfo(ctx, args, tlsConfig, args.APIURL, out)
+		return startCmdInfo(ctx, args, tlsConfig, args.APIURL, out, logger)
 	case SubCmd:
-		return startCmdSubscribe(ctx, args, tlsConfig, out)
+		return startCmdSubscribe(ctx, args, tlsConfig, out, logger)
 	case PubCmd:
-		return startCmdPublish(ctx, args, tlsConfig)
+		return startCmdPublish(ctx, args, tlsConfig, logger)
 	case TapCmd:
-		return startCmdTap(ctx, args, tlsConfig, out)
+		return startCmdTap(ctx, args, tlsConfig, out, logger)
 	case ExchangeCreateCmd:
 		return cmdExchangeCreate(CmdExchangeCreateArg{
 			amqpURL:  args.AMQPURL,
 			exchange: args.ExchangeName, exchangeType: args.ExchangeType,
 			durable: args.Durable, autodelete: args.Autodelete,
 			tlsConfig: tlsConfig, args: args.Args,
-		})
+		}, logger)
 	case ExchangeRemoveCmd:
-		return cmdExchangeRemove(args.AMQPURL, args.ExchangeName, tlsConfig)
+		return cmdExchangeRemove(args.AMQPURL, args.ExchangeName, tlsConfig, logger)
 	case ExchangeBindToExchangeCmd:
 		return cmdExchangeBindToExchange(CmdExchangeBindArg{
 			amqpURL:        args.AMQPURL,
@@ -258,18 +242,18 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			targetExchange: args.DestExchangeName, key: args.BindingKey,
 			headerMode: args.HeaderMode, args: args.Args,
 			tlsConfig: tlsConfig,
-		})
+		}, logger)
 	case QueueCreateCmd:
 		return cmdQueueCreate(CmdQueueCreateArg{
 			amqpURL: args.AMQPURL,
 			queue:   args.QueueName, durable: args.Durable,
 			autodelete: args.Autodelete, tlsConfig: tlsConfig,
 			args: args.Args,
-		})
+		}, logger)
 	case QueueRemoveCmd:
-		return cmdQueueRemove(args.AMQPURL, args.QueueName, tlsConfig)
+		return cmdQueueRemove(args.AMQPURL, args.QueueName, tlsConfig, logger)
 	case QueuePurgeCmd:
-		return cmdQueuePurge(args.AMQPURL, args.QueueName, tlsConfig)
+		return cmdQueuePurge(args.AMQPURL, args.QueueName, tlsConfig, logger)
 	case QueueBindCmd:
 		return cmdQueueBindToExchange(CmdQueueBindArg{
 			amqpURL:  args.AMQPURL,
@@ -277,7 +261,7 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			queue:    args.QueueName, key: args.BindingKey,
 			headerMode: args.HeaderMode, args: args.Args,
 			tlsConfig: tlsConfig,
-		})
+		}, logger)
 	case QueueUnbindCmd:
 		return cmdQueueUnbindFromExchange(CmdQueueBindArg{
 			amqpURL:  args.AMQPURL,
@@ -285,7 +269,7 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 			queue:    args.QueueName, key: args.BindingKey,
 			headerMode: args.HeaderMode, args: args.Args,
 			tlsConfig: tlsConfig,
-		})
+		}, logger)
 	case ConnCloseCmd:
 		return cmdConnClose(ctx, args.APIURL, args.ConnName,
 			args.CloseReason, tlsConfig)
@@ -301,20 +285,26 @@ func main() {
 func rabtap_main(out *os.File) {
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "Error parsing command line: %v\n", err)
+		os.Exit(1)
 	}
 
-	initLogging(args.Verbose) // TODO pass out
+	logOut := os.Stderr
+	logColored := args.ForceColor || (!args.NoColor && isatty.IsTerminal(logOut.Fd()))
+	logger := initLogging(logOut, args.Verbose, logColored)
+
 	tlsConfig, err := getTLSConfig(args.InsecureTLS, args.TLSCertFile, args.TLSKeyFile, args.TLSCaFile)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("failed to get TLS config", "error", err)
+		os.Exit(1)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go SigIntHandler(ctx, cancel)
 
-	err = dispatchCmd(ctx, args, tlsConfig, out)
+	err = dispatchCmd(ctx, args, tlsConfig, out, logger)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("command failed", "error", err)
+		os.Exit(1)
 	}
 }

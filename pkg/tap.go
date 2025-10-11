@@ -7,6 +7,7 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"net/url"
 
 	uuid "github.com/google/uuid"
@@ -22,10 +23,11 @@ type AmqpTap struct {
 
 // NewAmqpTap returns a new AmqpTap object associated with the RabbitMQ
 // broker denoted by the uri parameter.
-func NewAmqpTap(url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpTap {
+func NewAmqpTap(url *url.URL, tlsConfig *tls.Config, logger *slog.Logger) *AmqpTap {
 	config := AmqpSubscriberConfig{Exclusive: true}
 	return &AmqpTap{
-		AmqpSubscriber: NewAmqpSubscriber(config, url, tlsConfig, logger)}
+		AmqpSubscriber: NewAmqpSubscriber(config, url, tlsConfig, logger),
+	}
 }
 
 func getTapExchangeNameForExchange(exchange, postfix string) string {
@@ -43,17 +45,17 @@ func (s *AmqpTap) EstablishTap(
 	ctx context.Context,
 	exchangeConfigList []ExchangeConfiguration,
 	tapCh TapChannel,
-	errorCh SubscribeErrorChannel) error {
+	errorCh SubscribeErrorChannel,
+) error {
 	return s.connection.Connect(ctx, s.createWorkerFunc(exchangeConfigList, tapCh, errorCh))
 }
 
 func (s *AmqpTap) createWorkerFunc(
 	exchangeConfigList []ExchangeConfiguration,
 	outCh TapChannel,
-	errOutCh SubscribeErrorChannel) AmqpWorkerFunc {
-
+	errOutCh SubscribeErrorChannel,
+) AmqpWorkerFunc {
 	return func(ctx context.Context, session Session) (ReconnectAction, error) {
-
 		tappedChs, err := s.setupTapsForExchanges(session, exchangeConfigList)
 		if err != nil {
 			return doNotReconnect, err
@@ -74,8 +76,8 @@ func (s *AmqpTap) createWorkerFunc(
 
 func (s *AmqpTap) setupTapsForExchanges(
 	session Session,
-	exchangeConfigList []ExchangeConfiguration) ([]<-chan amqp.Delivery, error) {
-
+	exchangeConfigList []ExchangeConfiguration,
+) ([]<-chan amqp.Delivery, error) {
 	var channels []<-chan amqp.Delivery
 
 	for _, exchangeConfig := range exchangeConfigList {
@@ -100,8 +102,8 @@ func (s *AmqpTap) setupTapsForExchanges(
 // receive all messages published to the original exchange. Returns
 // (tapExchangeName, tapQueueName, error)
 func (s *AmqpTap) setupTap(session Session,
-	exchangeConfig ExchangeConfiguration) (string, string, error) {
-
+	exchangeConfig ExchangeConfiguration,
+) (string, string, error) {
 	id := uuid.Must(uuid.NewRandom()).String()
 	tapExchange := getTapExchangeNameForExchange(exchangeConfig.Exchange, id[:12])
 	tapQueue := getTapQueueNameForExchange(exchangeConfig.Exchange, id[:12])
@@ -143,8 +145,8 @@ func (s *AmqpTap) setupTap(session Session,
 // that there are no leftovers lying around on the broker.
 // TODO error handling must be improved - does not work if connection is lost
 func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
-	exchangeName, bindingKey, tapExchangeName string) error {
-
+	exchangeName, bindingKey, tapExchangeName string,
+) error {
 	var err error
 
 	if err := CreateExchange(session, tapExchangeName, amqp.ExchangeFanout,
@@ -167,7 +169,7 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 		// TODO handle errors
 		_ = session.NewChannel()
 		if err2 := RemoveExchange(session, tapExchangeName, false); err2 != nil {
-			s.logger.Errorf("failed to remove exchange %s", tapExchangeName)
+			s.logger.Error("failed to remove exchange", "exchange", tapExchangeName, "error", err2)
 		}
 		return err
 	}
@@ -175,6 +177,7 @@ func (s *AmqpTap) createExchangeToExchangeBinding(session Session,
 }
 
 func (s *AmqpTap) bindQueueToExchange(session Session,
-	exchangeName, bindingKey, queueName string) error {
+	exchangeName, bindingKey, queueName string,
+) error {
 	return BindQueueToExchange(session, queueName, bindingKey, exchangeName, amqp.Table{})
 }

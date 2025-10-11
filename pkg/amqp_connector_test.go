@@ -1,4 +1,5 @@
 // Copyright (C) 2017 Jan Delgado
+//go:build integration
 // +build integration
 
 package rabtap
@@ -10,6 +11,7 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"net/url"
 	"testing"
 	"time"
@@ -21,10 +23,10 @@ import (
 func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 
 	ctx := context.Background()
-	log := testcommon.NewTestLogger()
+	logger := slog.New(slog.DiscardHandler)
 
 	url, _ := url.Parse("amqp://localhost:1")
-	conn := NewAmqpConnector(url, &tls.Config{}, log)
+	conn := NewAmqpConnector(url, &tls.Config{}, logger)
 
 	worker := func(ctx context.Context, session Session) (ReconnectAction, error) {
 		assert.Fail(t, "worker unexpectedly called during test")
@@ -40,7 +42,7 @@ func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 func TestIntegrationWorkerInteraction(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
-	log := testcommon.NewTestLogger()
+	logger := slog.New(slog.DiscardHandler)
 
 	resultChan := make(chan int, 1)
 
@@ -54,7 +56,7 @@ func TestIntegrationWorkerInteraction(t *testing.T) {
 		}
 	}
 
-	conn := NewAmqpConnector(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
+	conn := NewAmqpConnector(testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger)
 	go conn.Connect(ctx, worker)
 
 	time.Sleep(time.Second * 2) // wait for connection to be established

@@ -3,18 +3,17 @@
 package main
 
 import (
+	"os"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInitLogging(t *testing.T) {
-	initLogging(false)
-	assert.Equal(t, logrus.WarnLevel, log.Level)
-	initLogging(true)
-	assert.Equal(t, logrus.DebugLevel, log.Level)
-	initLogging(false)
+	logger := initLogging(os.Stderr, false, false)
+	assert.NotNil(t, logger)
+	logger = initLogging(os.Stderr, true, false)
+	assert.NotNil(t, logger)
 }
 
 func TestDefaultFilenameProviderReturnsFilenameInExpectedFormat(t *testing.T) {

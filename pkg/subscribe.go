@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"time"
 
@@ -27,7 +28,7 @@ type AmqpSubscriberConfig struct {
 type AmqpSubscriber struct {
 	config     AmqpSubscriberConfig
 	connection *AmqpConnector
-	logger     Logger
+	logger     *slog.Logger
 }
 
 type SubscribeErrorReason int
@@ -57,7 +58,7 @@ func (s *SubscribeError) Error() string {
 
 // NewAmqpSubscriber returns a new AmqpSubscriber object associated with the
 // RabbitMQ broker denoted by the uri parameter.
-func NewAmqpSubscriber(config AmqpSubscriberConfig, url *url.URL, tlsConfig *tls.Config, logger Logger) *AmqpSubscriber {
+func NewAmqpSubscriber(config AmqpSubscriberConfig, url *url.URL, tlsConfig *tls.Config, logger *slog.Logger) *AmqpSubscriber {
 	return &AmqpSubscriber{
 		config:     config,
 		connection: NewAmqpConnector(url, tlsConfig, logger),

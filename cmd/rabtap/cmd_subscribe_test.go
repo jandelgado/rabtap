@@ -12,6 +12,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"testing"
@@ -26,6 +27,7 @@ import (
 )
 
 func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan bool)
 	amqpURL, _ := url.Parse("amqp://invalid.url:5672/")
@@ -38,7 +40,7 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 			messageSink: func(rabtap.TapMessage) error { return nil },
 			termPred:    &constantPred{false},
 			timeout:     time.Second * 10,
-		})
+		}, logger)
 		require.Error(t, err)
 		done <- true
 	}()
@@ -52,6 +54,7 @@ func TestCmdSubFailsEarlyWhenBrokerIsNotAvailable(t *testing.T) {
 }
 
 func TestCmdSub(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
 	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"
 	testKey := testQueue
@@ -63,7 +66,7 @@ func TestCmdSub(t *testing.T) {
 
 	done := make(chan bool)
 	receiveFunc := func(message rabtap.TapMessage) error {
-		log.Debug("test: received message: #+v", message)
+		// logger.Debug("test: received message: #+v", message)
 		if string(message.AmqpMessage.Body) == testMessage {
 			done <- true
 		}
@@ -76,8 +79,8 @@ func TestCmdSub(t *testing.T) {
 	cmdQueueCreate(CmdQueueCreateArg{
 		amqpURL: amqpURL,
 		queue:   testQueue, tlsConfig: tlsConfig,
-	})
-	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig)
+	}, logger)
+	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig, logger)
 
 	// subscribe to testQueue
 	go func() {
@@ -89,7 +92,7 @@ func TestCmdSub(t *testing.T) {
 			filterPred:  constantPred{true},
 			termPred:    constantPred{false},
 			timeout:     time.Second * 10,
-		})
+		}, logger)
 		require.ErrorIs(t, err, context.Canceled)
 	}()
 
@@ -118,7 +121,7 @@ func TestCmdSub(t *testing.T) {
 					DeliveryMode: amqp.Transient,
 				}, nil
 			},
-		})
+		}, logger)
 	require.NoError(t, err)
 
 	// test if we received the message
@@ -131,6 +134,7 @@ func TestCmdSub(t *testing.T) {
 }
 
 func TestCmdSubIntegration(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
 	// given
 	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"
@@ -143,8 +147,8 @@ func TestCmdSubIntegration(t *testing.T) {
 	cmdQueueCreate(CmdQueueCreateArg{
 		amqpURL: amqpURL,
 		queue:   testQueue, tlsConfig: tlsConfig,
-	})
-	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig)
+	}, logger)
+	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig, logger)
 
 	_, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
 	err := ch.Publish(

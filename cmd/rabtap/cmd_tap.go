@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -29,6 +30,7 @@ type CmdTapArg struct {
 func cmdTap(
 	ctx context.Context,
 	cmd CmdTapArg,
+	logger *slog.Logger,
 ) error {
 	ctx, cancel := context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
@@ -38,7 +40,7 @@ func cmdTap(
 
 	for _, config := range cmd.tapConfig {
 		config := config
-		tap := rabtap.NewAmqpTap(config.AMQPURL, cmd.tlsConfig, log)
+		tap := rabtap.NewAmqpTap(config.AMQPURL, cmd.tlsConfig, logger)
 		g.Go(func() error {
 			return tap.EstablishTap(ctx, config.Exchanges, tapMessageChannel, errorChannel)
 		})
@@ -52,7 +54,8 @@ func cmdTap(
 			cmd.filterPred,
 			cmd.termPred,
 			acknowledger,
-			cmd.timeout)
+			cmd.timeout,
+			logger)
 		cancel()
 		return err
 	})

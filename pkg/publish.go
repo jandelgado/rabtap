@@ -6,14 +6,17 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const timeoutWaitACK = time.Second * 2
-const timeoutWaitServer = time.Millisecond * 500
+const (
+	timeoutWaitACK    = time.Second * 2
+	timeoutWaitServer = time.Millisecond * 500
+)
 
 // PublishMessage is a message to be published by AmqpPublish via
 // a PublishChannel
@@ -27,7 +30,7 @@ type PublishChannel chan *PublishMessage
 
 // AmqpPublish allows to send to a RabbitMQ exchange.
 type AmqpPublish struct {
-	logger     Logger
+	logger     *slog.Logger
 	connection *AmqpConnector
 	mandatory  bool
 	confirms   bool
@@ -86,12 +89,14 @@ func (s *PublishError) Error() string {
 // NewAmqpPublish returns a new AmqpPublish object associated with the RabbitMQ
 // broker denoted by the uri parameter.
 func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
-	mandatory, confirms bool, logger Logger) *AmqpPublish {
+	mandatory, confirms bool, logger *slog.Logger,
+) *AmqpPublish {
 	return &AmqpPublish{
 		connection: NewAmqpConnector(url, tlsConfig, logger),
 		mandatory:  mandatory,
 		confirms:   confirms,
-		logger:     logger}
+		logger:     logger,
+	}
 }
 
 // createWorkerFunc creates a function that receives messages on the provided
@@ -116,10 +121,9 @@ func NewAmqpPublish(url *url.URL, tlsConfig *tls.Config,
 // TODO simplify
 func (s *AmqpPublish) createWorkerFunc(
 	publishCh PublishChannel,
-	errorCh PublishErrorChannel) AmqpWorkerFunc {
-
+	errorCh PublishErrorChannel,
+) AmqpWorkerFunc {
 	return func(ctx context.Context, session Session) (ReconnectAction, error) {
-
 		// errors receives channel errors (e.g. publishing to non-existant exchange)
 		errors := session.Channel.NotifyClose(make(chan *amqp.Error, 1))
 		// return receivces unroutable messages back from the server
@@ -129,15 +133,14 @@ func (s *AmqpPublish) createWorkerFunc(
 
 		if s.confirms {
 			if err := session.Confirm(false); err != nil {
-				s.logger.Errorf("Channel could not be put into confirm mode: %s", err)
+				s.logger.Error("Channel could not be put into confirm mode", "error", err)
 			}
 		}
 
 		// wait a while for outstanding errors and returned messages
 		// since these can arrive after we finished publishing.
 		defer func() {
-
-			s.logger.Debugf("waiting for pending server messages ... ")
+			s.logger.Debug("waiting for pending server messages ... ")
 			timeout := time.After(timeoutWaitServer)
 
 			// wait for pending returned messages from the broker, when e.g. a
@@ -179,12 +182,12 @@ func (s *AmqpPublish) createWorkerFunc(
 
 			case message, more := <-publishCh:
 				if !more {
-					s.logger.Debugf("publishing channel closed.")
+					s.logger.Debug("publishing channel closed.")
 					return doNotReconnect, nil
 				}
 
 				size := len((*message.Publishing).Body)
-				s.logger.Debugf("publish message to %s (%d bytes)", message.Routing, size)
+				s.logger.Debug("publishing message", "routing", message.Routing, "size", size)
 				headers := EnsureAMQPTable(message.Routing.Headers()).(amqp.Table)
 				message.Publishing.Headers = headers
 				err := session.PublishWithContext(
@@ -198,7 +201,6 @@ func (s *AmqpPublish) createWorkerFunc(
 				if err != nil {
 					errorCh <- &PublishError{Reason: PublishErrorPublishFailed, Message: message, Cause: err}
 				} else {
-
 					// wait for the confirmation before publishing a new message
 					// https://www.rabbitmq.com/confirms.html
 					// TODO batched confirms
@@ -225,8 +227,8 @@ func (s *AmqpPublish) createWorkerFunc(
 								if !confirmed.Ack {
 									errorCh <- &PublishError{Reason: PublishErrorNack, Message: message}
 								} else {
-									s.logger.Infof("delivery with delivery tag #%d was ACKed by the server",
-										confirmed.DeliveryTag)
+									s.logger.Info("delivery was ACKed by the server",
+										"delivery_tag", confirmed.DeliveryTag)
 								}
 								break Outer
 							case <-ctx.Done():
@@ -248,6 +250,7 @@ func (s *AmqpPublish) createWorkerFunc(
 func (s *AmqpPublish) EstablishConnection(
 	ctx context.Context,
 	publishChannel PublishChannel,
-	errorChannel PublishErrorChannel) error {
+	errorChannel PublishErrorChannel,
+) error {
 	return s.connection.Connect(ctx, s.createWorkerFunc(publishChannel, errorChannel))
 }

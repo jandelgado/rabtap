@@ -16,13 +16,7 @@ const (
 // DialTLS is a Wrapper for amqp.DialTLS that supports EXTERNAL auth for mtls
 // can be removed when https://github.com/streadway/amqp/pull/121 gets some day
 // merged.
-func DialTLS(uri string, tlsConfig *tls.Config) (*amqp.Connection, error) {
-
-	u, err := url.Parse(uri)
-	if err != nil {
-		return nil, err
-	}
-
+func DialTLS(u *url.URL, tlsConfig *tls.Config) (*amqp.Connection, error) {
 	// if client certificates are specified and no explicit credentials in the
 	// amqp connect url are given, then request EXTERNAL auth.
 	var sasl []amqp.Authentication
@@ -30,7 +24,7 @@ func DialTLS(uri string, tlsConfig *tls.Config) (*amqp.Connection, error) {
 		sasl = []amqp.Authentication{&amqp.ExternalAuth{}}
 	}
 
-	return amqp.DialConfig(uri, amqp.Config{
+	return amqp.DialConfig(u.String(), amqp.Config{
 		Heartbeat:       defaultHeartbeat,
 		TLSClientConfig: tlsConfig,
 		Locale:          defaultLocale,

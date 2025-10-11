@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ import (
 )
 
 func TestCmdTap(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
 	// given
 	conn, ch := testcommon.IntegrationTestConnection(t, "int-test-exchange", "topic", 1, false)
 	defer conn.Close()
@@ -29,7 +31,7 @@ func TestCmdTap(t *testing.T) {
 	received := make(chan struct{})
 	done := make(chan struct{})
 	receiveFunc := func(message rabtap.TapMessage) error {
-		log.Debug("received message on tap: #+v", message)
+		// logger.Debug("received message on tap: #+v", message)
 		if string(message.AmqpMessage.Body) == "Hello" {
 			received <- struct{}{}
 		}
@@ -60,7 +62,7 @@ func TestCmdTap(t *testing.T) {
 			filterPred:  constantPred{true},
 			termPred:    constantPred{false},
 			timeout:     time.Second * 10,
-		})
+		}, logger)
 		//		require.NoError(t, err)
 		require.ErrorIs(t, err, context.Canceled)
 		done <- struct{}{}

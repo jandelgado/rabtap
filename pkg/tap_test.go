@@ -1,5 +1,7 @@
 // Copyright (C) 2017-2021 Jan Delgado
+//go:build integration
 // +build integration
+
 // TODO rewrite
 
 package rabtap
@@ -12,6 +14,7 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -41,8 +44,8 @@ func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 	tapExchangeName, tapQueueName string,
 	success chan<- int) *AmqpTap {
 
-	log := testcommon.NewTestLogger()
-	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
+	logger := slog.New(slog.DiscardHandler)
+	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger)
 	resultChannel := make(TapChannel)
 	resultErrChannel := make(SubscribeErrorChannel)
 
@@ -216,8 +219,8 @@ func TestIntegrationInvalidExchange(t *testing.T) {
 
 	tapMessages := make(TapChannel)
 	errChannel := make(SubscribeErrorChannel)
-	log := testcommon.NewTestLogger()
-	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, log)
+	logger := slog.New(slog.DiscardHandler)
+	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger)
 	ctx := context.Background()
 	err := tap.EstablishTap(
 		ctx,

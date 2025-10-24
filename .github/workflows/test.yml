@@ -46,7 +46,7 @@ jobs:
           problem-matchers: true
           args: --output.sarif.path linter-results.sarif
       - name: Upload SARIF to Code Scanning
-        uses: github/codeql-action/upload-sarif@16140ae1a102900babc80a33c44059580f687047  # v4.30.9
+        uses: github/codeql-action/upload-sarif@4e94bd11f71e507f7f87df81788dff88d1dacbfb  # v4.31.0
         with:
           sarif_file: ./linter-results.sarif
   test:
@@ -86,7 +86,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload assets
         if: env.build_artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: rabtap-binaries
           path: dist/*

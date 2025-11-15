@@ -1,5 +1,5 @@
 // Copyright (C) 2017 Jan Delgado
-// +build integration
+//go:build integration
 
 package main
 
@@ -10,15 +10,17 @@ import (
 	"testing"
 	"time"
 
-	rabtap "github.com/jandelgado/rabtap/pkg"
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rabtap "github.com/jandelgado/rabtap/pkg"
+	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
 
 func findClosedConnName(connectionsBefore []rabtap.RabbitConnection,
-	connectionsAfter []rabtap.RabbitConnection) string {
+	connectionsAfter []rabtap.RabbitConnection,
+) string {
 	// given to lists of connections, find the first connection by name which
 	// is in the first, but not in the second list.
 	for _, ca := range connectionsAfter {
@@ -37,7 +39,6 @@ func findClosedConnName(connectionsBefore []rabtap.RabbitConnection,
 }
 
 func TestCmdCloseConnection(t *testing.T) {
-
 	url, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 	client := rabtap.NewRabbitHTTPClient(url, &tls.Config{})
 

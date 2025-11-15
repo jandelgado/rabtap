@@ -1,7 +1,5 @@
 // Copyright (C) 2019-2021 Jan Delgado
-
 //go:build integration
-// +build integration
 
 package rabtap
 

@@ -1,7 +1,5 @@
 // Copyright (C) 2017 Jan Delgado
-
 //go:build integration
-// +build integration
 
 package rabtap
 
@@ -26,7 +24,6 @@ const (
 )
 
 func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
-
 	// creates exchange "direct-exchange" and queues "queue-0" and "queue-1"
 	conn, ch := testcommon.IntegrationTestConnection(t, "direct-exchange", "direct", 2, false)
 	defer conn.Close()
@@ -48,7 +45,8 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 		routing := NewRouting("direct-exchange", key, amqp.Table{})
 		publishChannel <- &PublishMessage{
 			Routing:    routing,
-			Publishing: &amqp.Publishing{Body: []byte("Hello")}}
+			Publishing: &amqp.Publishing{Body: []byte("Hello")},
+		}
 	}
 
 	doneChan := make(chan int)

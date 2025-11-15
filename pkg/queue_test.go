@@ -1,6 +1,5 @@
 // Copyright (C) 2017 Jan Delgado
-
-// +build integration
+//go:build integration
 
 package rabtap
 
@@ -15,9 +14,10 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
 
 func findQueue(queue string, queues []RabbitQueue) int {
@@ -41,7 +41,6 @@ func findBinding(queue, exchange, key string, bindings []RabbitBinding) int {
 }
 
 func TestIntegrationAmqpPurgeQueue(t *testing.T) {
-
 	const queueTestName = "purgetestqueue"
 	const exchangeTestName = "" // default exchange
 
@@ -66,7 +65,6 @@ func TestIntegrationAmqpPurgeQueue(t *testing.T) {
 }
 
 func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
-
 	// since in order to remove and unbind a  queue we must create it first, we
 	// tests these functions together in one test case.
 

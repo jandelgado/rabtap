@@ -1,6 +1,5 @@
 // Copyright (C) 2017 Jan Delgado
 //go:build integration
-// +build integration
 
 package rabtap
 
@@ -21,7 +20,6 @@ import (
 )
 
 func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
-
 	ctx := context.Background()
 	logger := slog.New(slog.DiscardHandler)
 
@@ -40,7 +38,6 @@ func TestConnectFailsFastOnFirstNonSuccessfulConnect(t *testing.T) {
 // TestIntegrationWorkerInteraction checks that our worker function is properly
 // called an that the shutdown mechanism works.
 func TestIntegrationWorkerInteraction(t *testing.T) {
-
 	ctx, cancel := context.WithCancel(context.Background())
 	logger := slog.New(slog.DiscardHandler)
 

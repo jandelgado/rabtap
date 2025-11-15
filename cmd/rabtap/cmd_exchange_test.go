@@ -1,7 +1,5 @@
 // Copyright (C) 2017 Jan Delgado
-
 //go:build integration
-// +build integration
 
 package main
 

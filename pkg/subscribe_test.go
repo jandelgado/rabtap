@@ -1,6 +1,5 @@
 // Copyright (C) 2017-2021 Jan Delgado
 //go:build integration
-// +build integration
 
 package rabtap
 
@@ -16,7 +15,6 @@ import (
 )
 
 func TestSubscribeReceivesMessages(t *testing.T) {
-
 	// given
 
 	// establish sending exchange.

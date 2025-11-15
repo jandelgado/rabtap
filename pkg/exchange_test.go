@@ -1,6 +1,6 @@
 // Copyright (C) 2017 Jan Delgado
 
-// +build integration
+//go:build integration
 
 package rabtap
 
@@ -15,8 +15,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/jandelgado/rabtap/pkg/testcommon"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
 
 func findExchange(exchange string, exchanges []RabbitExchange) int {
@@ -29,7 +30,6 @@ func findExchange(exchange string, exchanges []RabbitExchange) int {
 }
 
 func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
-
 	// since in order to remove an exchange we must create it first, we
 	// tests both functions together in one test case.
 

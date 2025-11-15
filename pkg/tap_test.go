@@ -1,6 +1,5 @@
 // Copyright (C) 2017-2021 Jan Delgado
 //go:build integration
-// +build integration
 
 // TODO rewrite
 
@@ -29,21 +28,19 @@ const (
 )
 
 func TestGetTapQueueNameForExchange(t *testing.T) {
-
 	assert.Equal(t, "__tap-queue-for-exchange-1234",
 		getTapQueueNameForExchange("exchange", "1234"))
 }
 
 func TestGetTapEchangeNameForExchange(t *testing.T) {
-
 	assert.Equal(t, "__tap-exchange-for-exchange-1234",
 		getTapExchangeNameForExchange("exchange", "1234"))
 }
 
 func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 	tapExchangeName, tapQueueName string,
-	success chan<- int) *AmqpTap {
-
+	success chan<- int,
+) *AmqpTap {
 	logger := slog.New(slog.DiscardHandler)
 	tap := NewAmqpTap(testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger)
 	resultChannel := make(TapChannel)
@@ -54,7 +51,8 @@ func verifyMessagesOnTap(t *testing.T, consumer string, numExpected int,
 	go tap.EstablishTap(
 		ctx,
 		[]ExchangeConfiguration{
-			{tapExchangeName, tapQueueName}},
+			{tapExchangeName, tapQueueName},
+		},
 		resultChannel,
 		resultErrChannel)
 
@@ -93,7 +91,6 @@ func requireIntFromChan(t *testing.T, c <-chan int, expected int) {
 }
 
 func TestIntegrationHeadersExchange(t *testing.T) {
-
 	messagesPerTest := 5
 
 	// establish sending exchange
@@ -121,7 +118,6 @@ func TestIntegrationHeadersExchange(t *testing.T) {
 }
 
 func TestIntegrationDirectExchange(t *testing.T) {
-
 	// establish sending exchange
 	conn, ch := testcommon.IntegrationTestConnection(t, "direct-exchange", "direct", 2, false)
 	defer conn.Close()
@@ -150,7 +146,6 @@ func TestIntegrationDirectExchange(t *testing.T) {
 // exchange with a routing key so that only messages sent to one topic are
 // tapped.
 func TestIntegrationTopicExchangeTapSingleQueue(t *testing.T) {
-
 	// establish sending exchange
 	conn, ch := testcommon.IntegrationTestConnection(t, "topic-exchange", "topic", 2, false)
 	defer conn.Close()
@@ -183,7 +178,6 @@ func TestIntegrationTopicExchangeTapSingleQueue(t *testing.T) {
 // TestIntegrationTopicExchangeTapWildcard tests tapping to an exechange
 // of type topic. The tap-exchange s bound with the binding-key '#'.
 func TestIntegrationTopicExchangeTapWildcard(t *testing.T) {
-
 	// establish sending exchange
 	conn, ch := testcommon.IntegrationTestConnection(t, "topic-exchange", "topic", 2, false)
 	defer conn.Close()
@@ -216,7 +210,6 @@ func TestIntegrationTopicExchangeTapWildcard(t *testing.T) {
 // TestIntegrationInvalidExchange tries to tap to a non existing exhange, we
 // expect an error returned.
 func TestIntegrationInvalidExchange(t *testing.T) {
-
 	tapMessages := make(TapChannel)
 	errChannel := make(SubscribeErrorChannel)
 	logger := slog.New(slog.DiscardHandler)
@@ -225,7 +218,8 @@ func TestIntegrationInvalidExchange(t *testing.T) {
 	err := tap.EstablishTap(
 		ctx,
 		[]ExchangeConfiguration{
-			{"nonexisting-exchange", "test"}},
+			{"nonexisting-exchange", "test"},
+		},
 		tapMessages,
 		errChannel)
 

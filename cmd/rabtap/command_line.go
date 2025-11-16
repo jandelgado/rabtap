@@ -67,7 +67,8 @@ Usage:
   rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap --version
   rabtap (-h | --help | help) [properties]
-
+`
+	options = `
 Arguments and options:
  EXCHANGES            comma-separated list of exchanges and optional binding keys,
                       e.g. 'amq.topic:#' or 'exchange1:key1,exchange2:key2'
@@ -756,7 +757,7 @@ func formatVersion() string {
 }
 
 func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArgs, error) {
-	parser := docopt.Parser{SkipHelpFlags: true}
+	parser := docopt.Parser{SkipHelpFlags: true, HelpHandler: helpHandler}
 	args, err := parser.ParseArgs(spec, cliArgs, formatVersion())
 	if err != nil {
 		return CommandLineArgs{}, err
@@ -784,21 +785,37 @@ func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArg
 	return CommandLineArgs{}, fmt.Errorf("command missing")
 }
 
-// PrintHelp is explicitly called when the "help" command is given. On -h or
-// --help docopt internally prints help
+// PrintHelp is explicitly called when the -h, --help or help command is given.
 func PrintHelp(topic HelpTopic) {
 	switch topic {
 	case GeneralHelp:
-		docopt.PrintHelpOnly(nil, usage)
+		docopt.PrintHelpOnly(nil, fmt.Sprintf("%s\n%s", usage, options))
 	case PropertiesHelp:
 		fmt.Print(propertiesHelp)
+	}
+}
+
+// since we use templating in the usage text, we override the helpHandler to show
+// our unexpanded usage text and not the version presented to docopt
+func helpHandler(err error, _ string) {
+	if err != nil {
+		// docopt may pass a docopt.UserError with an empty text.
+		if err.Error() != "" {
+			fmt.Printf("%s\n%s\n", err, usage)
+		} else {
+			fmt.Printf("%s\n", usage)
+		}
+	} else {
+		// no error passed -> full help requested
+		PrintHelp(GeneralHelp)
 	}
 }
 
 // ParseCommandLineArgs parses command line arguments into an object of
 // type CommandLineArgs.
 func ParseCommandLineArgs(args []string) (CommandLineArgs, error) {
-	return parseCommandLineArgsWithSpec(toDocoptDSL(usage), args)
+	spec := toDocoptDSL(fmt.Sprintf("%s\n%s", usage, options))
+	return parseCommandLineArgsWithSpec(spec, args)
 }
 
 func toDocoptDSL(usage string) string {

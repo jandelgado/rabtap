@@ -35,36 +35,36 @@ const (
 	// note: usage is DSL template interpreted by docopt - this is code. Change carefully.
 	// to unclutter the user-presented help, we internally use a template where
 	// some options common like [TLSOPTIONS] get expanded before getting parsed by docopt.
+	// This effectively adds a simple macro mechanism to docopt. See toDocoptDSL below.
 	usage = `rabtap - RabbitMQ wire tap.                    github.com/jandelgado/rabtap
 
 Usage:
   rabtap info [--api=APIURI] [--consumers] [--stats] [--filter=EXPR] [--omit-empty]
-              [--show-default] [--mode=MODE] [--format=FORMAT] [-ncv] [TLSOPTIONS]
-  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
-              [--idle-timeout=DURATION] [--filter=EXPR] [-jncsv] [TLSOPTIONS]
-  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
-              [--idle-timeout=DURATION] [--filter=EXPR] [-jncsv] [TLSOPTIONS]
-  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT] [--limit=NUM]
-              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [-jcsvn]
-              [--filter=EXPR] [--idle-timeout=DURATION] [TLSOPTIONS]
-  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
-              [--routingkey=KEY | (--header=KV)...] [ (--property=KV)... ]
-              [--confirms] [--mandatory] [--delay=DELAY | --speed=FACTOR] [-jv]
-              [TLSOPTIONS]
-  rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]... [-v]
-              [--autodelete] [--durable] [TLSOPTIONS]
-  rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI] [-v]
+              [--show-default] [--mode=MODE] [--format=FORMAT] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT|--json]  [--limit=NUM]
+              [--idle-timeout=DURATION] [--filter=EXPR] [--silent] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap (tap --uri=URI EXCHANGES)... [--saveto=DIR] [--format=FORMAT|--json]  [--limit=NUM]
+              [--idle-timeout=DURATION] [--filter=EXPR] [--silent] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap sub QUEUE [--uri URI] [--saveto=DIR] [--format=FORMAT|--json] [--limit=NUM]
+              [--offset=OFFSET] [--args=KV]... [(--reject [--requeue])] [--silent]
+              [--filter=EXPR] [--idle-timeout=DURATION] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT|--json]
+              [--routingkey=KEY | (--header=KV)...] [ (--property=KV)... ] [--confirms]
+              [--mandatory] [--delay=DELAY | --speed=FACTOR] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]...
+              [--autodelete] [--durable] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI]
               (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS]
-  rabtap exchange rm EXCHANGE [--uri=URI] [-v] [TLSOPTIONS]
-  rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]... [-v]
-              [--autodelete] [--durable] [--lazy] [TLSOPTIONS]
-  rabtap queue bind QUEUE to EXCHANGE [--uri=URI] [-v]
-              (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS]
-  rabtap queue unbind QUEUE from EXCHANGE [--uri=URI] [-v]
-              (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS]
-  rabtap queue rm QUEUE [--uri=URI] [-v] [TLSOPTIONS]
-  rabtap queue purge QUEUE [--uri=URI] [-v] [TLSOPTIONS]
-  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [-v] [TLSOPTIONS]
+  rabtap exchange rm EXCHANGE [--uri=URI] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]...
+              [--autodelete] [--durable] [--lazy] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap queue bind QUEUE to EXCHANGE [--uri=URI]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap queue unbind QUEUE from EXCHANGE [--uri=URI]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap queue rm QUEUE [--uri=URI] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap queue purge QUEUE [--uri=URI] [TLSOPTIONS] [COMMON OPTIONS]
+  rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap --version
   rabtap (-h | --help | help) [properties]
 
@@ -86,7 +86,6 @@ Arguments and options:
                       arguments. e.g. '--args=x-queue-type=quorum'
  -b, --bindingkey=KEY binding key to use in bind queue command
  --by-connection      output of info command starts with connections
- -c, --color          force colored output
  --confirms           enable publisher confirms and wait for confirmations
  --consumers          include consumers and connections in output of info command
  --delay=DELAY        Time to wait between sending messages during publish. If not set
@@ -112,7 +111,6 @@ Arguments and options:
                       terminated [default: 0]
  --mandatory          enable mandatory publishing (messages must be delivered to queue)
  --mode=MODE          mode for info command. One of 'byConnection', 'byExchange' [default: byExchange]
- -n, --no-color       don't colorize output (see also environment variable NO_COLOR)
  --omit-empty         don't show echanges without bindings in info command
  --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last', 'next',
                       a duration like '10m', a RFC3339-Timestamp or an integer index value.
@@ -133,10 +131,14 @@ Arguments and options:
  -t, --type=TYPE      type of exchange [default: fanout]
  --uri=URI            connect to given AQMP broker. If omitted, the environment variable
                       RABTAP_AMQPURI will be used
- -v, --verbose        enable verbose mode
  --version            show version information and exit
 
-TLS-Options:
+Common options:
+ -c, --color          force colored output
+ -n, --no-color       don't colorize output (see also environment variable NO_COLOR)
+ -v, --verbose        enable verbose mode
+
+TLS options:
  --tls-cert-file=CERTFILE A Cert file to use for client authentication
  --tls-key-file=KEYFILE   A Key file to use for client authentication
  --tls-ca-file=CAFILE     A CA Cert file to use with TLS
@@ -187,7 +189,8 @@ Type            - application use - message type name
 AppId           - application use - creating application id
 UserId          - user id, validated if set
 `
-	tlsOptions = "[(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE] [--insecure]"
+	tlsOptions    = "[(--tls-cert-file=CERTFILE --tls-key-file=KEYFILE)] [--tls-ca-file=CAFILE] [--insecure]"
+	commonOptions = "[--verbose] [--no-color|--color]"
 )
 
 // ProgramCmd represents the mode of operation
@@ -447,6 +450,7 @@ func parsePubSubFormatArg(args map[string]interface{}) (string, error) {
 
 	// deprecated --json option equals "--format=json"
 	if args["--json"] != nil && args["--json"].(bool) {
+		fmt.Fprintln(os.Stderr, "warning: using deprecated --json option, will be removed. Use --format=json instead.")
 		format = "json"
 	}
 
@@ -800,6 +804,7 @@ func ParseCommandLineArgs(args []string) (CommandLineArgs, error) {
 func toDocoptDSL(usage string) string {
 	replacer := strings.NewReplacer(
 		"[TLSOPTIONS]", tlsOptions,
+		"[COMMON OPTIONS]", commonOptions,
 	)
 	return replacer.Replace(usage)
 }

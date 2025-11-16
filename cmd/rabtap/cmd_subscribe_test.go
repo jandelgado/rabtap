@@ -174,7 +174,7 @@ func TestCmdSubIntegration(t *testing.T) {
 	}
 
 	// when
-	output := testcommon.CaptureOutput(rabtap_main)
+	output := testcommon.CaptureOutput(rabtapMain)
 
 	// then
 	assert.Regexp(t, "(?s).*message received.*\nroutingkey.....: sub-queue-test\n.*Hello", output)

@@ -124,7 +124,7 @@ func TestCmdTapIntegration(t *testing.T) {
 		"--no-color",
 	}
 
-	output := testcommon.CaptureOutput(rabtap_main)
+	output := testcommon.CaptureOutput(rabtapMain)
 
 	assert.Regexp(t, "(?s).*message received.*\nroutingkey.....: tap-queue-test\n.*Hello", output)
 }

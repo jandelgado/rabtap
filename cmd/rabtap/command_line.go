@@ -50,7 +50,7 @@ Usage:
               [--filter=EXPR] [--idle-timeout=DURATION] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT|--json]
               [--routingkey=KEY | (--header=KV)...] [ (--property=KV)... ] [--confirms]
-              [--mandatory] [--delay=DELAY | --speed=FACTOR] [TLSOPTIONS] [COMMON OPTIONS]
+              [--mandatory] [--delay=DURATION | --speed=FACTOR] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]...
               [--autodelete] [--durable] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI]
@@ -77,6 +77,7 @@ Arguments and options:
  QUEUE                name of a queue
  CONNECTION           name of a connection
  DIR                  directory to read messages from
+ DURATION             a numerical duration with a unit suffix like "ms", "s", "m", "h"
  -a, --autodelete     create auto delete exchange/queue
  --all                set x-match=all option in header based routing
  --any                set x-match=any option in header based routing
@@ -88,9 +89,8 @@ Arguments and options:
  --by-connection      output of info command starts with connections
  --confirms           enable publisher confirms and wait for confirmations
  --consumers          include consumers and connections in output of info command
- --delay=DELAY        Time to wait between sending messages during publish. If not set
-                      then messages will be delayed as recorded. The value must be
-                      suffixed with a time unit, e.g. ms, s etc.
+ --delay=DURATION     Time to wait between sending messages during publish. If not set,
+                      then messages will be delayed as recorded.
  -d, --durable        create a durable exchange/queue
  --exchange=EXCHANGE  optional exchange to publish to. If omitted, exchange will be taken
                       from message being published (see JSON message format)
@@ -104,7 +104,7 @@ Arguments and options:
  --header=KV          A key value pair in the form of "key=value" used as a routing- or
                       binding-key. Can occur multiple times
  --idle-timeout=DURATION end reading messages when no new message was received for the
-                      given duration.  The value must be suffixed with a time unit, e.g. ms, s etc.
+                      given duration
  -j, --json           deprecated. Use "--format=json" instead
  --lazy               create a lazy queue
  --limit=NUM          Stop afer NUM messages were received. When set to 0, will run until
@@ -113,7 +113,7 @@ Arguments and options:
  --mode=MODE          mode for info command. One of 'byConnection', 'byExchange' [default: byExchange]
  --omit-empty         don't show echanges without bindings in info command
  --offset=OFFSET      Offset when reading from a stream. Can be 'first', 'last', 'next',
-                      a duration like '10m', a RFC3339-Timestamp or an integer index value.
+                      a DURATION like '10m', a RFC3339-Timestamp or an integer index value.
                       Basically it is an alias for '--args=x-stream-offset=OFFSET'
  --property=KV        A key value pair in the form of "key=value" to specify message properties
                       like e.g. the content-type.

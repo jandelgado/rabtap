@@ -212,8 +212,10 @@ func TestCliTapCmdInvalidNumReturnsError(t *testing.T) {
 
 func TestCliTapCmdWithMultipleUris(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"tap", "--uri=broker1", "exchange1:binding1,exchange2:binding2",
-			"tap", "--uri=broker2", "exchange3:binding3,exchange4:binding4"})
+		[]string{
+			"tap", "--uri=broker1", "exchange1:binding1,exchange2:binding2",
+			"tap", "--uri=broker2", "exchange3:binding3,exchange4:binding4",
+		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, TapCmd, args.Cmd)
@@ -239,9 +241,11 @@ func TestCliTapCmdWithMultipleUris(t *testing.T) {
 
 func TestCliAllOptsInTapCommandiAreRecognized(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"tap", "--uri=uri", "exchange:binding", "--silent", "--verbose",
+		[]string{
+			"tap", "--uri=uri", "exchange:binding", "--silent", "--verbose",
 			"--format=json-nopp", "--insecure", "--saveto", "savedir", "--limit", "123",
-			"--idle-timeout=10s", "--filter=filter"})
+			"--idle-timeout=10s", "--filter=filter",
+		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(args.TapConfig))
@@ -338,22 +342,23 @@ func TestCliInfoCmdApiTakesURIFromEnv(t *testing.T) {
 
 func TestCliInfoCmdAllOptionsAreSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"info", "--api=APIURI", "--stats", "--consumers",
+		[]string{
+			"info", "--api=APIURI", "--stats", "--consumers",
 			"--filter=EXPR", "--omit-empty",
-			"--no-color", "--color", "-k", "--show-default"})
+			"--no-color", "--verbose", "-k", "--show-default",
+		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(args.TapConfig))
 	assert.Equal(t, InfoCmd, args.Cmd)
 	assertEqualURL(t, "APIURI", args.APIURL)
 	assert.Nil(t, args.SaveDir)
-	assert.False(t, args.Verbose)
+	assert.True(t, args.Verbose)
 	assert.Equal(t, "EXPR", args.Filter)
 	assert.True(t, args.ShowStats)
 	assert.True(t, args.ShowConsumers)
 	assert.True(t, args.ShowDefaultExchange)
 	assert.True(t, args.NoColor)
-	assert.True(t, args.ForceColor)
 	assert.True(t, args.InsecureTLS)
 	assert.True(t, args.OmitEmptyExchanges)
 }
@@ -380,9 +385,11 @@ func TestCliPubCmdFromFileMinimalOptsSet(t *testing.T) {
 
 func TestCliPubCmdFromFileAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"pub", "--uri=uri", "--exchange=exchange", "file",
+		[]string{
+			"pub", "--uri=uri", "--exchange=exchange", "file",
 			"--routingkey=key", "--delay=5s", "--format=json",
-			"--confirms", "--mandatory", "--property=ContentEncoding=gzip"})
+			"--confirms", "--mandatory", "--property=ContentEncoding=gzip",
+		})
 
 	require.Nil(t, err)
 	assert.Equal(t, PubCmd, args.Cmd)
@@ -487,8 +494,10 @@ func TestCliSubCmdInvalidNumReturnsError(t *testing.T) {
 
 func TestCliSubCmdAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"sub", "queuename", "--uri", "uri", "--saveto", "dir",
-			"--limit=99", "--offset=123", "--idle-timeout=10s", "--filter=filter"})
+		[]string{
+			"sub", "queuename", "--uri", "uri", "--saveto", "dir",
+			"--limit=99", "--offset=123", "--idle-timeout=10s", "--filter=filter",
+		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, SubCmd, args.Cmd)
@@ -517,8 +526,10 @@ func TestCliCreateQueue(t *testing.T) {
 
 func TestCliCreateQueueAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"queue", "create", "name", "--uri=uri",
-			"--durable", "--autodelete", "--lazy", "--queue-type=quorum"})
+		[]string{
+			"queue", "create", "name", "--uri=uri",
+			"--durable", "--autodelete", "--lazy", "--queue-type=quorum",
+		})
 
 	assert.NoError(t, err)
 	assert.Equal(t, QueueCreateCmd, args.Cmd)
@@ -551,8 +562,10 @@ func TestCliPurgeQueue(t *testing.T) {
 
 func TestCliUnbindQueue(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"queue", "unbind", "queuename", "from", "exchangename",
-			"--bindingkey", "key", "--uri", "uri"})
+		[]string{
+			"queue", "unbind", "queuename", "from", "exchangename",
+			"--bindingkey", "key", "--uri", "uri",
+		})
 
 	assert.NoError(t, err)
 	assert.Equal(t, QueueUnbindCmd, args.Cmd)
@@ -564,8 +577,10 @@ func TestCliUnbindQueue(t *testing.T) {
 
 func TestCliBindQueueWithBindingKey(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"queue", "bind", "queuename", "to", "exchangename",
-			"--bindingkey", "key", "--uri", "uri"})
+		[]string{
+			"queue", "bind", "queuename", "to", "exchangename",
+			"--bindingkey", "key", "--uri", "uri",
+		})
 
 	assert.NoError(t, err)
 	assert.Equal(t, QueueBindCmd, args.Cmd)
@@ -579,8 +594,10 @@ func TestCliBindQueueWithBindingKey(t *testing.T) {
 
 func TestCliBindQueueWithHeaders(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"queue", "bind", "queuename", "to", "exchangename",
-			"--header", "a=b", "--header", "c=d", "--any", "--uri", "uri"})
+		[]string{
+			"queue", "bind", "queuename", "to", "exchangename",
+			"--header", "a=b", "--header", "c=d", "--any", "--uri", "uri",
+		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, QueueBindCmd, args.Cmd)
@@ -594,8 +611,10 @@ func TestCliBindQueueWithHeaders(t *testing.T) {
 
 func TestCliCreateExchange(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"exchange", "create", "name", "--type", "topic", "--args=x=y",
-			"--uri", "uri"})
+		[]string{
+			"exchange", "create", "name", "--type", "topic", "--args=x=y",
+			"--uri", "uri",
+		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, ExchangeCreateCmd, args.Cmd)
@@ -609,8 +628,10 @@ func TestCliCreateExchange(t *testing.T) {
 
 func TestCliBindExchangeToExchangeWithBindingKey(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"exchange", "bind", "source", "to", "dest",
-			"--bindingkey", "key", "--uri", "uri"})
+		[]string{
+			"exchange", "bind", "source", "to", "dest",
+			"--bindingkey", "key", "--uri", "uri",
+		})
 
 	assert.NoError(t, err)
 	assert.Equal(t, ExchangeBindToExchangeCmd, args.Cmd)
@@ -624,8 +645,10 @@ func TestCliBindExchangeToExchangeWithBindingKey(t *testing.T) {
 
 func TestCliCreateDurableAutodeleteExchange(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"exchange", "create", "name", "--type", "topic",
-			"--uri", "uri", "--durable", "--autodelete"})
+		[]string{
+			"exchange", "create", "name", "--type", "topic",
+			"--uri", "uri", "--durable", "--autodelete",
+		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, ExchangeCreateCmd, args.Cmd)
@@ -657,8 +680,10 @@ func TestCliCloseConnectionWithDefaultReason(t *testing.T) {
 
 func TestCliCloseConnection(t *testing.T) {
 	args, err := ParseCommandLineArgs(
-		[]string{"conn", "close", "conn-name", "--api", "uri",
-			"--reason", "reason"})
+		[]string{
+			"conn", "close", "conn-name", "--api", "uri",
+			"--reason", "reason",
+		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, ConnCloseCmd, args.Cmd)

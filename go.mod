@@ -16,7 +16,7 @@ require (
 )
 
 require (
-	github.com/expr-lang/expr v1.17.6
+	github.com/expr-lang/expr v1.17.7
 	github.com/klauspost/compress v1.18.1
 	github.com/lmittmann/tint v1.1.2
 	github.com/mattn/go-isatty v0.0.20

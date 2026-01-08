@@ -279,13 +279,15 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 }
 
 func main() {
-	rabtap_main(os.Stdout)
+	rabtapMain(os.Stdout)
 }
 
-func rabtap_main(out *os.File) {
+func rabtapMain(out *os.File) {
 	args, err := ParseCommandLineArgs(os.Args[1:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing command line: %v\n", err)
+		if err.Error() != "" {
+			fmt.Fprintf(os.Stderr, "Error parsing command line: %v\n", err)
+		}
 		os.Exit(1)
 	}
 

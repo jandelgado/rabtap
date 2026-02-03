@@ -18,7 +18,7 @@ require (
 require (
 	github.com/expr-lang/expr v1.17.7
 	github.com/klauspost/compress v1.18.3
-	github.com/lmittmann/tint v1.1.2
+	github.com/lmittmann/tint v1.1.3
 	github.com/mattn/go-isatty v0.0.20
 	github.com/stealthrocket/net v0.2.1
 )

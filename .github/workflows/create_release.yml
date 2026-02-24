@@ -26,7 +26,7 @@ jobs:
           go version
 
       - name: Build release artefacts using goreleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         if: startsWith(github.ref, 'refs/tags/')
         with:
           version: latest
@@ -62,7 +62,7 @@ jobs:
           #buildkitd-flags: --debug
 
       - name: Log in to the Container registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}

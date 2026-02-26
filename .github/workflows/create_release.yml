@@ -35,7 +35,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload rabtap binary artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: rabtap-binary
           path: dist/rabtap_linux_amd64_v1/rabtap
@@ -70,7 +70,7 @@ jobs:
 
       # Download the binary artifact from the build job
       - name: Download rabtap binary artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: rabtap-binary
           path: ./docker-build

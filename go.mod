@@ -1,8 +1,6 @@
 module github.com/jandelgado/rabtap
 
-go 1.24.0
-
-toolchain go1.24.7
+go 1.25.0
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
@@ -11,7 +9,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	golang.org/x/sync v0.19.0
 )
 

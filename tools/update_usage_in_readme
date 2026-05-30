@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+README="$SCRIPT_DIR/../README.md"
+RABTAP="${RABTAP:-$SCRIPT_DIR/../bin/rabtap}"
+TMPFILE=$(mktemp)
+OUTFILE=$(mktemp)
+
+trap 'rm -f "$TMPFILE" "$OUTFILE"' EXIT
+
+"$RABTAP" --help > "$TMPFILE" 2>&1
+
+# Replace the first ```...``` code block inside the ## Usage section
+# with the fresh help output (preserving the blank line after the fence).
+awk -v helpfile="$TMPFILE" '
+BEGIN { in_usage=0; in_block=0; block_done=0 }
+
+/^## Usage$/ { in_usage=1; print; next }
+
+in_usage && !block_done && /^```/ {
+    if (!in_block) {
+        in_block=1
+        print "```text"
+        print ""
+        while ((getline line < helpfile) > 0) print line
+        close(helpfile)
+        next
+    } else {
+        in_block=0; block_done=1
+        print "```"
+        next
+    }
+}
+
+in_usage && in_block { next }
+
+{ print }
+' "$README" > "$OUTFILE"
+
+mv "$OUTFILE" "$README"
+echo "Updated ## Usage section in $README"

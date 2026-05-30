@@ -159,7 +159,7 @@ Usage:
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]...
               [--autodelete] [--durable] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI]
-              (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange rm EXCHANGE [--uri=URI] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]...
               [--autodelete] [--durable] [--lazy] [TLSOPTIONS] [COMMON OPTIONS]
@@ -172,6 +172,7 @@ Usage:
   rabtap conn close CONNECTION [--api=APIURI] [--reason=REASON] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap --version
   rabtap (-h | --help | help) [properties]
+
 
 Arguments and options:
  EXCHANGES            comma-separated list of exchanges and optional binding keys,
@@ -274,6 +275,7 @@ Examples:
 
   # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
   # instead of specifying --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
+
 ```
 
 ### Command overview

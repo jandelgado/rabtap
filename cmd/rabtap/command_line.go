@@ -54,7 +54,7 @@ Usage:
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]...
               [--autodelete] [--durable] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI]
-              (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS]
+              (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange rm EXCHANGE [--uri=URI] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]...
               [--autodelete] [--durable] [--lazy] [TLSOPTIONS] [COMMON OPTIONS]
@@ -225,6 +225,8 @@ const (
 	QueuePurgeCmd
 	// ConnCloseCmd closes a connection
 	ConnCloseCmd
+	// VersionCmd prints version information
+	VersionCmd
 )
 
 type HelpTopic int
@@ -757,12 +759,15 @@ func formatVersion() string {
 }
 
 func parseCommandLineArgsWithSpec(spec string, cliArgs []string) (CommandLineArgs, error) {
+	// Pass "" as version so docopt never intercepts --version; we handle it in the switch below.
 	parser := docopt.Parser{SkipHelpFlags: true, HelpHandler: helpHandler}
-	args, err := parser.ParseArgs(spec, cliArgs, formatVersion())
+	args, err := parser.ParseArgs(spec, cliArgs, "")
 	if err != nil {
 		return CommandLineArgs{}, err
 	}
 	switch {
+	case args["--version"].(bool):
+		return CommandLineArgs{Cmd: VersionCmd}, nil
 	case args["tap"].(int) > 0:
 		return parseTapCmdArgs(args)
 	case args["info"].(bool):
@@ -801,9 +806,9 @@ func helpHandler(err error, _ string) {
 	if err != nil {
 		// docopt may pass a docopt.UserError with an empty text.
 		if err.Error() != "" {
-			fmt.Printf("%s\n%s\n", err, usage)
+			fmt.Fprintf(os.Stderr, "%s\n%s\n", err, usage)
 		} else {
-			fmt.Printf("%s\n", usage)
+			fmt.Fprintf(os.Stderr, "%s\n", usage)
 		}
 	} else {
 		// no error passed -> full help requested

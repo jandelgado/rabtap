@@ -716,3 +716,18 @@ func TestParseForceColort(t *testing.T) {
 	assert.False(t, args.NoColor)
 	assert.True(t, args.ForceColor)
 }
+
+func TestVersionFlagReturnsVersionCmd(t *testing.T) {
+	args, err := ParseCommandLineArgs([]string{"--version"})
+	require.NoError(t, err)
+	assert.Equal(t, VersionCmd, args.Cmd)
+}
+
+func TestCliExchangeBindCommonOptionsAreRecognized(t *testing.T) {
+	args, err := ParseCommandLineArgs([]string{
+		"exchange", "bind", "source", "to", "dest",
+		"--bindingkey", "key", "--uri", "uri", "--verbose",
+	})
+	assert.NoError(t, err)
+	assert.True(t, args.Verbose)
+}

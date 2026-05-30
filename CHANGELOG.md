@@ -3,6 +3,7 @@
 ## v1.45.0 (2026-05-30)
 
 - help text simplified for better readability
+- docker base image updated
 
 ## v1.44.1 (2025-03-16)
 
@@ -297,4 +298,3 @@
 ### Changed
 
 - minor changes to output of `info` command (i.e. some values are now quoted)
-

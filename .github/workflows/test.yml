@@ -46,7 +46,7 @@ jobs:
           problem-matchers: true
           args: --output.sarif.path linter-results.sarif
       - name: Upload SARIF to Code Scanning
-        uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a  # v4.37.1
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81  # v4.37.3
         with:
           sarif_file: ./linter-results.sarif
   test:
@@ -71,7 +71,7 @@ jobs:
       - name: Run tests
         run: make test
       - name: Coveralls
-        uses: coverallsapp/github-action@v2.3.6
+        uses: coverallsapp/github-action@v2.3.8
         with:
           github-token: ${{ secrets.github_token }}
           file: coverage.out

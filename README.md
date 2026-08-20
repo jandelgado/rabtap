@@ -11,76 +11,76 @@ and exchanges, inspect broker.
 
 <!-- vim-markdown-toc GFM -->
 
-* [Features](#features)
-* [Screenshots](#screenshots)
-  * [Show broker topology](#show-broker-topology)
-  * [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
-  * [Tap messages](#tap-messages)
-* [Installation](#installation)
-  * [Docker image](#docker-image)
-  * [Pre-compiled binaries](#pre-compiled-binaries)
-  * [Arch Linux](#arch-linux)
-  * [Installation from source](#installation-from-source)
-* [Usage](#usage)
-  * [Command overview](#command-overview)
-  * [Broker URI specification](#broker-uri-specification)
-    * [Authentication](#authentication)
-  * [Environment variables](#environment-variables)
-    * [Default RabbitMQ broker](#default-rabbitmq-broker)
-    * [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
-    * [Default RabbitMQ TLS config](#default-rabbitmq-tls-config)
-    * [Colored output](#colored-output)
-  * [Command reference and examples](#command-reference-and-examples)
-    * [Broker info](#broker-info)
-    * [Wire-tapping messages](#wire-tapping-messages)
-      * [Tap all messages published or delivered (RabbitMQ FireHose)](#tap-all-messages-published-or-delivered-rabbitmq-firehose)
-        * [Replaying messages from the FireHose exchange](#replaying-messages-from-the-firehose-exchange)
-      * [Connect to multiple brokers](#connect-to-multiple-brokers)
-      * [Message recorder](#message-recorder)
-    * [Subscribe messages](#subscribe-messages)
-    * [Publish messages](#publish-messages)
-    * [Poor mans shovel](#poor-mans-shovel)
-    * [Close connection](#close-connection)
-    * [Exchange commands](#exchange-commands)
-    * [Queue commands](#queue-commands)
-  * [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
-  * [JSON message format](#json-message-format)
-  * [Filtering output](#filtering-output)
-    * [Filtering expressions](#filtering-expressions)
-      * [Evaluation context](#evaluation-context)
-      * [Examples](#examples)
-    * [Type reference](#type-reference)
-      * [Exchange type](#exchange-type)
-      * [Queue type](#queue-type)
-      * [Binding type](#binding-type)
-      * [Connection type](#connection-type)
-      * [Channel type](#channel-type)
-      * [Message type](#message-type)
-* [Build from source](#build-from-source)
-  * [Download and build using go install](#download-and-build-using-go-install)
-  * [Build using Makefile and tests](#build-using-makefile-and-tests)
-  * [Experimental WASM/wasip1 port](#experimental-wasmwasip1-port)
-* [Test data generator](#test-data-generator)
-* [Contributing](#contributing)
-* [Author](#author)
-* [Copyright and license](#copyright-and-license)
+- [Features](#features)
+- [Screenshots](#screenshots)
+  - [Show broker topology](#show-broker-topology)
+  - [Visualize broker topology with graphviz](#visualize-broker-topology-with-graphviz)
+  - [Tap messages](#tap-messages)
+- [Installation](#installation)
+  - [Docker image](#docker-image)
+  - [Pre-compiled binaries](#pre-compiled-binaries)
+  - [Arch Linux](#arch-linux)
+  - [Installation from source](#installation-from-source)
+- [Usage](#usage)
+  - [Command overview](#command-overview)
+  - [Broker URI specification](#broker-uri-specification)
+    - [Authentication](#authentication)
+  - [Environment variables](#environment-variables)
+    - [Default RabbitMQ broker](#default-rabbitmq-broker)
+    - [Default RabbitMQ management API endpoint](#default-rabbitmq-management-api-endpoint)
+    - [Default RabbitMQ TLS config](#default-rabbitmq-tls-config)
+    - [Colored output](#colored-output)
+  - [Command reference and examples](#command-reference-and-examples)
+    - [Broker info](#broker-info)
+    - [Wire-tapping messages](#wire-tapping-messages)
+      - [Tap all messages published or delivered (RabbitMQ FireHose)](#tap-all-messages-published-or-delivered-rabbitmq-firehose)
+        - [Replaying messages from the FireHose exchange](#replaying-messages-from-the-firehose-exchange)
+      - [Connect to multiple brokers](#connect-to-multiple-brokers)
+      - [Message recorder](#message-recorder)
+    - [Subscribe messages](#subscribe-messages)
+    - [Publish messages](#publish-messages)
+    - [Poor mans shovel](#poor-mans-shovel)
+    - [Close connection](#close-connection)
+    - [Exchange commands](#exchange-commands)
+    - [Queue commands](#queue-commands)
+  - [Format specification for tap and sub command](#format-specification-for-tap-and-sub-command)
+  - [JSON message format](#json-message-format)
+  - [Filtering output](#filtering-output)
+    - [Filtering expressions](#filtering-expressions)
+      - [Evaluation context](#evaluation-context)
+      - [Examples](#examples)
+    - [Type reference](#type-reference)
+      - [Exchange type](#exchange-type)
+      - [Queue type](#queue-type)
+      - [Binding type](#binding-type)
+      - [Connection type](#connection-type)
+      - [Channel type](#channel-type)
+      - [Message type](#message-type)
+- [Build from source](#build-from-source)
+  - [Download and build using go install](#download-and-build-using-go-install)
+  - [Build using Makefile and tests](#build-using-makefile-and-tests)
+  - [Experimental WASM/wasip1 port](#experimental-wasmwasip1-port)
+- [Test data generator](#test-data-generator)
+- [Contributing](#contributing)
+- [Author](#author)
+- [Copyright and license](#copyright-and-license)
 
 <!-- vim-markdown-toc -->
 
 ## Features
 
-* tap to messages being sent to exchanges using RabbitMQ
+- tap to messages being sent to exchanges using RabbitMQ
   exchange-to-exchange bindings without affecting actual message delivery (aka _tapping_)
-* display broker related information using the
+- display broker related information using the
   [RabbitMQ REST management API](https://rawcdn.githack.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_14/priv/www/api/index.html)
-* save messages and meta data for later analysis and replay
-* publish messages to exchanges
-* consume messages from queues and streams (subscribe)
-* filter output using flexible expressions
-* supports TLS
-* no runtime dependencies (statically linked golang single file binary)
-* simple to use command line tool
-* runs on Linux, Windows, Mac and wherever you can compile go
+- save messages and meta data for later analysis and replay
+- publish messages to exchanges
+- consume messages from queues and streams (subscribe)
+- filter output using flexible expressions
+- supports TLS
+- no runtime dependencies (statically linked golang single file binary)
+- simple to use command line tool
+- runs on Linux, Windows, Mac and wherever you can compile go
 
 ## Screenshots
 
@@ -157,12 +157,12 @@ Usage:
               [--routingkey=KEY | (--header=KV)...] [ (--property=KV)... ] [--confirms]
               [--mandatory] [--delay=DURATION | --speed=FACTOR] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]...
-              [--autodelete] [--durable] [TLSOPTIONS] [COMMON OPTIONS]
+              [--autodelete] [--transient] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI]
               (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange rm EXCHANGE [--uri=URI] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]...
-              [--autodelete] [--durable] [--lazy] [TLSOPTIONS] [COMMON OPTIONS]
+              [--autodelete] [--transient] [--lazy] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap queue bind QUEUE to EXCHANGE [--uri=URI]
               (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS] [COMMON OPTIONS]
   rabtap queue unbind QUEUE from EXCHANGE [--uri=URI]
@@ -197,7 +197,6 @@ Arguments and options:
  --consumers          include consumers and connections in output of info command
  --delay=DURATION     Time to wait between sending messages during publish. If not set,
                       then messages will be delayed as recorded.
- -d, --durable        create a durable exchange/queue
  --exchange=EXCHANGE  optional exchange to publish to. If omitted, exchange will be taken
                       from message being published (see JSON message format)
  --filter=EXPR        Predicate for sub, tap, info command to filter the output [default: true]
@@ -235,6 +234,7 @@ Arguments and options:
  --speed=FACTOR       Speed factor to use during publish [default: 1.0]
  --stats              include statistics in output of info command
  -t, --type=TYPE      type of exchange [default: fanout]
+ --transient          create a transient exchange/queue (default is durable)
  --uri=URI            connect to given AQMP broker. If omitted, the environment variable
                       RABTAP_AMQPURI will be used
  --version            show version information and exit
@@ -275,22 +275,21 @@ Examples:
 
   # use RABTAP_TLS_CERTFILE | RABTAP_TLS_KEYFILE | RABTAP_TLS_CAFILE environments variables
   # instead of specifying --tls-cert-file=CERTFILE --tls-key-file=KEYFILE --tls-ca-file=CAFILE
-
 ```
 
 ### Command overview
 
 Rabtap understands the following commands:
 
-* `tap` - taps to an exchange and receives messages sent to the exchange,
-   without affecting actual message delivery (using an exchange-to-exchange
-   binding).
-* `sub` - subscribes to a queue and consumes from the queue
-* `pub` - publish messages to an exchange, optionally with the timing as recorded
-* `info` - show broker related info (exchanges, queues, bindings, stats).
-* `queue` - create,bind,unbind,remove or purge queues
-* `exchange` - create or remove exchanges
-* `conn` - close connections
+- `tap` - taps to an exchange and receives messages sent to the exchange,
+  without affecting actual message delivery (using an exchange-to-exchange
+  binding).
+- `sub` - subscribes to a queue and consumes from the queue
+- `pub` - publish messages to an exchange, optionally with the timing as recorded
+- `info` - show broker related info (exchanges, queues, bindings, stats).
+- `queue` - create,bind,unbind,remove or purge queues
+- `exchange` - create or remove exchanges
+- `conn` - close connections
 
 See the below for detailed information.
 
@@ -301,9 +300,10 @@ specification](https://www.rabbitmq.com/uri-spec.html) as implemented by the
 [go RabbitMQ client library](https://github.com/streadway/amqp).
 
 Examples:
-* `amqp://guest:guest@localhost:5672/`
-* `amqps://guest:guest@my-broker.dev:5671/`
-* `amqps://guest:guest@my-broker.dev:5671/vhost`
+
+- `amqp://guest:guest@localhost:5672/`
+- `amqps://guest:guest@my-broker.dev:5671/`
+- `amqps://guest:guest@my-broker.dev:5671/vhost`
 
 Note that according to [RFC3986](https://tools.ietf.org/html/rfc3986) it might be
 necessary to escape certain characters like e.g. `?` (%3F) or `#` (%23) as otherwise
@@ -326,7 +326,7 @@ Use environment variables to specify standard values for broker and api endpoint
 
 In cases where the URI argument is optional, e.g. `rabtap tap [-uri
 URI] exchange ...`, the URI of the RabbitMQ broker can be set with the
-environment variable `RABTAP_AMQPURI`.  Example:
+environment variable `RABTAP_AMQPURI`. Example:
 
 ```console
 $ export RABTAP_AMQPURI=amqp://guest:guest@localhost:5672/
@@ -371,9 +371,9 @@ $ echo "Hello" | rabtap pub --exchange amq.topic --routingkey "key"
 
 Output is colored, when writing to a terminal. This behaviour can be changed:
 
-* set environment variable `NO_COLOR` to disable color output (or set
+- set environment variable `NO_COLOR` to disable color output (or set
   `--no-color` option)
-* set `--color` option to force colored output
+- set `--color` option to force colored output
 
 ### Command reference and examples
 
@@ -408,18 +408,18 @@ The `--filter` option allows to filter output. See
 
 Examples (assume that `RABTAP_APIURI` environment variable is set):
 
-* `rabtap info --consumers` - shows virtual hosts exchanges, queues and
+- `rabtap info --consumers` - shows virtual hosts exchanges, queues and
   consumers of given broker in a tree view (see [screenshot](#screenshots)).
-* `rabtap info --mode=byConnection` - shows virtual hosts, connections,
+- `rabtap info --mode=byConnection` - shows virtual hosts, connections,
   consumers and queues of given broker in an tree view.
-* `rabtap info --format=dot | dot -T svg > broker.svg` - renders broker info
+- `rabtap info --format=dot | dot -T svg > broker.svg` - renders broker info
   into `dot` format and uses graphviz to render a SVG file for final
   visualization.
 
 #### Wire-tapping messages
 
 The `tap` command allows to tap to exchanges and transparently receive the messages
-sent to the exchanges.  The general form of the tap command is either
+sent to the exchanges. The general form of the tap command is either
 
 ```text
 rabtap tap EXCHANGES [--uri=URI] [--saveto=DIR] [--format=FORMAT]  [--limit=NUM]
@@ -462,11 +462,11 @@ description of the `--delay` option for the format of the `DURATION` parameter.
 
 Examples for binding keys used in `tap` command:
 
-* `#` on  an exchange of type `topic` will make the tap receive all messages
+- `#` on an exchange of type `topic` will make the tap receive all messages
   on the exchange.
-* a valid queue name for an exchange of type `direct` binds exactly to messages
+- a valid queue name for an exchange of type `direct` binds exactly to messages
   destined for this queue
-* an empty binding key for exchanges of type `fanout` or type `headers` will
+- an empty binding key for exchanges of type `fanout` or type `headers` will
   receive all messages published to these exchanges
 
 Note: on exchanges of type `headers` the binding key is currently ignored and
@@ -476,14 +476,14 @@ The following examples assume that the `RABTAP_AMQPURI` environment variable is
 set, otherwise you have to pass the additional `--uri URI` parameter to the
 commands below.
 
-* `$ rabtap tap my-topic-exchange:#`
-* `$ rabtap tap my-fanout-exchange:`
-* `$ rabtap tap my-headers-exchange:`
-* `$ rabtap tap my-direct-exchange:binding-key`
+- `$ rabtap tap my-topic-exchange:#`
+- `$ rabtap tap my-fanout-exchange:`
+- `$ rabtap tap my-headers-exchange:`
+- `$ rabtap tap my-direct-exchange:binding-key`
 
 The following example connects to multiple exchanges:
 
-* `$ rabtap tap my-fanout-exchange:,my-topic-exchange:#,my-other-exchange:binding-key`
+- `$ rabtap tap my-fanout-exchange:,my-topic-exchange:#,my-other-exchange:binding-key`
 
 ##### Tap all messages published or delivered (RabbitMQ FireHose)
 
@@ -496,7 +496,7 @@ $ rabbitmqctl trace_on
 ```
 
 Afterwards, every message published or delivered will be CC'd to the topic
-exhange `amq.rabbitmq.trace`.  The messages can now be tapped with rabtap:
+exhange `amq.rabbitmq.trace`. The messages can now be tapped with rabtap:
 
 ```text
 $ rabtap --uri amqp://guest:guest@localhost:5672/ tap amq.rabbitmq.trace:published.#
@@ -535,10 +535,10 @@ supports saving of messages in two formats: raw body and metadata in separate
 files or [JSON message format](#json-message-format) with embedded metadata and
 message the body base64 encode. Examples:
 
-* `$ rabtap tap amq.topic:# --saveto /tmp` - saves messages as pair of
+- `$ rabtap tap amq.topic:# --saveto /tmp` - saves messages as pair of
   files consisting of raw message body and JSON meta data file to `/tmp`
   directory.
-* `$ rabtap tap amq.topic:# --saveto /tmp --format json` - saves messages as
+- `$ rabtap tap amq.topic:# --saveto /tmp --format json` - saves messages as
   JSON files to `/tmp` directory.
 
 Files are created with file name `rabtap-`+`<Unix-Nano-Timestamp>`+ `.` +
@@ -572,28 +572,28 @@ when no new messages were received in the given time period. Look for the
 description of the `--delay` option for the format of the `DURATION` parameter.
 
 Refer to the `tap` command for a description of the `--filter=EXPR`,
-`--limit=NUM`, `--saveto=DIR` and `--format=FORMAT`  options.
+`--limit=NUM`, `--saveto=DIR` and `--format=FORMAT` options.
 
 Examples:
 
-* `rabtap sub somequeue --format=json` - will consume messages from queue
+- `rabtap sub somequeue --format=json` - will consume messages from queue
   `somequeue` and print out messages in JSON format. The Example assumes that
   `RABTAP_AMQPURI` environment variable is set, as the `--uri=AMQPURI`
   parameter is omitted
-* `rabtap sub somequeue --limit=1 --reject --requeue` - consume one message
+- `rabtap sub somequeue --limit=1 --reject --requeue` - consume one message
   from the queue `somequeue`, then exit, and let the broker requeue the message
-* `rabtap sub mystream --offset=first` - read all messages from the stream
+- `rabtap sub mystream --offset=first` - read all messages from the stream
   `mystream`
-* `rabtap sub mystream --offset=50` - read messages from stream `mystream`
+- `rabtap sub mystream --offset=50` - read messages from stream `mystream`
   starting with the 50th message
-* `rabtap sub mystream --offset=10m` - read messages from stream `mystream`
+- `rabtap sub mystream --offset=10m` - read messages from stream `mystream`
   which are aged 10 minutes or less
-* `rabtap sub somequeue --idle-timeout=5s` - read messages from queue `somequeue`
+- `rabtap sub somequeue --idle-timeout=5s` - read messages from queue `somequeue`
   and exit when there is no new message received for 5 seconds
 
 #### Publish messages
 
-The `pub` command is used to publish messages to an exchange.  The general
+The `pub` command is used to publish messages to an exchange. The general
 form of the `pub` command is:
 
 ```text
@@ -605,7 +605,7 @@ rabtap pub  [--uri=URI] [SOURCE] [--exchange=EXCHANGE] [--format=FORMAT]
 
 The `SOURCE` parameter specifies the messages to be published. These are either
 read from a file, or from a directory which contains previously recorded
-messages (e.g. using the `--saveto` option of the `tap` command).  If `SOURCE`
+messages (e.g. using the `--saveto` option of the `tap` command). If `SOURCE`
 is omitted, `stdin` is used.
 
 Message routing is either specified with a routing key and the `--routingkey`
@@ -656,29 +656,29 @@ UserId          - user id, validated if set
 
 Examples:
 
-* `echo hello | rabtap pub --exchange amq.fanout` - publish "hello" to
+- `echo hello | rabtap pub --exchange amq.fanout` - publish "hello" to
   exchange amqp.fanout
-* `echo "hello" | rabtap pub --exchange amq.header --header KEY=VAL --header X=Y` -
+- `echo "hello" | rabtap pub --exchange amq.header --header KEY=VAL --header X=Y` -
   publish `hello` to exchange `amq.header` and set given message headers
-* `rabtap pub messages.json --format=json`  - messages are read from file
+- `rabtap pub messages.json --format=json` - messages are read from file
   `messages.json` in [rabtap JSON format](#json-message-format). Target
-  exchange and routing keys are read from the messages meta data.  The
+  exchange and routing keys are read from the messages meta data. The
   `messages.json` file can contain multiple JSON documents as it is treated as
-  a JSON stream.  Rabtap will honor the `XRabtapReceived` timestamps of the
+  a JSON stream. Rabtap will honor the `XRabtapReceived` timestamps of the
   messages and by default will delay the messages as they were recorded. This
   behaviour can be overridden by the `--delay` and `--speed` options
-* `rabtap pub --exchange amq.direct -r myKey --format=json messages.json --delay=0s` - as
+- `rabtap pub --exchange amq.direct -r myKey --format=json messages.json --delay=0s` - as
   before, but publish messages always to exchange `amq.direct` with routing key
   `myKey` and without any delays
-* `rabtap pub --exchange amq.direct -r myKey --format=raw somedir --delay=0s` - as
+- `rabtap pub --exchange amq.direct -r myKey --format=raw somedir --delay=0s` - as
   before, but assuming that `somedir` is a directory, the messages are read
   from message files previously recorded to this directory and replayed in the
   order they were recorded
-* `echo hello | rabtap pub --exchange amq.fanout --property Expiration=1000` -
-   publish `hello` to exchange `amq.fanout` and set the message expiration to 1000ms.
-* `echo hello | gzip | rabtap pub --exchange amq.fanout --property ContentEncoding=gzip` -
-   publish gzip compressed `hello` to exchange `amq.fanout` and set the `ContentEncoding`
-   message property accordingly.
+- `echo hello | rabtap pub --exchange amq.fanout --property Expiration=1000` -
+  publish `hello` to exchange `amq.fanout` and set the message expiration to 1000ms.
+- `echo hello | gzip | rabtap pub --exchange amq.fanout --property ContentEncoding=gzip` -
+  publish gzip compressed `hello` to exchange `amq.fanout` and set the `ContentEncoding`
+  message property accordingly.
 
 #### Poor mans shovel
 
@@ -782,12 +782,12 @@ The `create` commands allows to specify additional arguments to be passed to
 RabbitMQ using the `--args=key=value` syntax. This allows for example to specify
 the queue type or mode:
 
-* `rabtap queue create quorum_queue --args=x-queue-type=quorum --durable` -
+- `rabtap queue create quorum_queue --args=x-queue-type=quorum` -
   create a quorum queue named `quorum_queue`. The same can be achieved by using
   the `--queue-type` option, which is an alias for setting the arg `x-queue-type`:
-  `rabtap queue create quorum --queue-type=quorum --durable`
-* `rabtap queue create mystream --queue-type=stream --durable` - create a stream
-* `rabtap queue create lazy_queue --lazy` - create a classic queue in lazy
+  `rabtap queue create quorum --queue-type=quorum`
+- `rabtap queue create mystream --queue-type=stream` - create a stream
+- `rabtap queue create lazy_queue --lazy` - create a classic queue in lazy
   mode that is named `lazy_queue`. `--lazy` is an alias for setting the arg
   `x-queue-mode`
 
@@ -795,22 +795,22 @@ the queue type or mode:
 
 The `--format=FORMAT` option controls the format of the `tap` and `sub`
 commands when writing messages to the console and optionally to the filesystem
-(i.e.  when `--saveto=DIR` is set). The `FORMAT` parameter has the following
+(i.e. when `--saveto=DIR` is set). The `FORMAT` parameter has the following
 effect on the output:
 
 | `FORMAT`        | Format on console                            | Format of saved messages (`--saveto DIR`)    |
-|-----------------|----------------------------------------------|----------------------------------------------|
+| --------------- | -------------------------------------------- | -------------------------------------------- |
 | `raw` (default) | Pretty-printed metadata + raw Message body   | Metadata as JSON-File + Body as-is           |
 | `json`          | Pretty-printed JSON wiht base64 encoded body | Pretty-printed JSON with base64 encoded body |
 | `json-nopp`     | Single line JSON wiht base64 encoded body    | Pretty-printed JSON with base64 encoded body |
 
 Notes:
 
-* the `--json` option is now deprecated. Use `--format=json` instead
-* `nopp` stands for `no pretty-print`
-* When the message body is output on the console in `raw` format, Rabtap takes the
- `ContentEncoding` property into account and decompresses the body if necessary.
- Currently supported encodings are gzip, deflate, zstd, and bzip2.
+- the `--json` option is now deprecated. Use `--format=json` instead
+- `nopp` stands for `no pretty-print`
+- When the message body is output on the console in `raw` format, Rabtap takes the
+  `ContentEncoding` property into account and decompresses the body if necessary.
+  Currently supported encodings are gzip, deflate, zstd, and bzip2.
 
 ### JSON message format
 
@@ -863,7 +863,7 @@ information.
 > Note: prior to version 1.40, rabtap used
 > [govaluate](https://github.com/Knetic/govaluate) to evaluate expressions.
 > With the switch to [Expr](https://expr-lang.org/), the syntax has changed in
-> some aspects (e.g. `=~` vs `matches`  in regular expression matches). Consult
+> some aspects (e.g. `=~` vs `matches` in regular expression matches). Consult
 > the documentation for details.
 
 ##### Evaluation context
@@ -875,51 +875,51 @@ command, the following context is set:
 When using `rabtap --info --mode=byExchange` (which is the default), the
 following variables are bound:
 
-* the current exchange is bound to the variable [r.exchange](#exchange-type)
-* the current queue is bound to the variable [r.queue](#queue-type)
-* the current binding is bound to the variable [r.binding](#binding-type)
+- the current exchange is bound to the variable [r.exchange](#exchange-type)
+- the current queue is bound to the variable [r.queue](#queue-type)
+- the current binding is bound to the variable [r.binding](#binding-type)
 
 When using `rabtap --info --mode=byConnection` , the following variables are bound:
 
-* the current connection is bound to the variable [r.connection](#connection-type)
-* the current channel is bound to the variable [r.connection](#channel-type)
+- the current connection is bound to the variable [r.connection](#connection-type)
+- the current channel is bound to the variable [r.connection](#channel-type)
 
 In the `sub` and `tap` commands, the following context is set:
 
-* the current received message is bound to the variable [r.msg](#message-type),
+- the current received message is bound to the variable [r.msg](#message-type),
   which allows access to the message-metadata and the body
-* the current count of messages received that passed the filter is bound to
- `r.count`
-* Helper functions are provided to access the message body:
-  * the `r.toStr` function converts a byte buffer into a string, e.g. `let
-  b=toJSON(r.toStr(r.msg.Body))`
-  * the `r.gunzip` function decompresses the given byte buffer, e.g. `let
-  b=toJSON(r.toStr(r.gunzip(r.msg.Body)))`, allowing to inspect a compressed body
-  * the `r.body` function returns the message body, decompressing if necessary (i.e.
+- the current count of messages received that passed the filter is bound to
+  `r.count`
+- Helper functions are provided to access the message body:
+  - the `r.toStr` function converts a byte buffer into a string, e.g. `let
+b=toJSON(r.toStr(r.msg.Body))`
+  - the `r.gunzip` function decompresses the given byte buffer, e.g. `let
+b=toJSON(r.toStr(r.gunzip(r.msg.Body)))`, allowing to inspect a compressed body
+  - the `r.body` function returns the message body, decompressing if necessary (i.e.
     if `ContentType` is `gzip`), e.g.
     `let b=toJSON(r.toStr(r.body(r.msg))`
 
 ##### Examples
 
 The examples assume that the `RABTAP_APIURI` environment variable points to the
-broker to be used, e.g.  `http://guest:guest@localhost:15672/api`).
+broker to be used, e.g. `http://guest:guest@localhost:15672/api`).
 
-* `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty` - print
+- `rabtap info --filter "exchange.Name == 'amq.direct'" --omit-empty` - print
   only queues bound to exchange `amq.direct` and skip all empty exchanges.
-* `rabtap info --filter "queue.Name matches '.*test.*'" --omit-empty` - print all
+- `rabtap info --filter "queue.Name matches '.*test.*'" --omit-empty` - print all
   queues with `test` in their name
-* `rabtap info --filter "queue.Name matches '.*test.*' && exchange.Type == 'topic'" --omit-empty` - like
+- `rabtap info --filter "queue.Name matches '.*test.*' && exchange.Type == 'topic'" --omit-empty` - like
   before, but consider only exchanges of type `topic`.
-* `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print
+- `rabtap info --filter "queue.Consumers > 0" --omit --stats --consumers` - print
   all queues with at least one consumer
-* `rabtap info --mode=byConnection --filter="r.channel.PrefetchCount > 1` - list
+- `rabtap info --mode=byConnection --filter="r.channel.PrefetchCount > 1` - list
   all connection with channel that have a prefetch-count > 1
-* `rabtap info --mode=byConnection --filter="r.connection.PeerCertSubject matches '.*CN=guest.*'"` -
+- `rabtap info --mode=byConnection --filter="r.connection.PeerCertSubject matches '.*CN=guest.*'"` -
   list all connection that were authenticated using mTLS and which certificates
   subject contains `CN=guest`
-* `rabtap sub JDQ --filter="r.msg.RoutingKey == 'test'"` - print only messages that
+- `rabtap sub JDQ --filter="r.msg.RoutingKey == 'test'"` - print only messages that
   were sent with the routing key `test`
-* `rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.gunzip(r.msg.Body))); b.Name == 'JAN'"` -
+- `rabtap sub JDQ --filter="let b=fromJSON(r.toStr(r.gunzip(r.msg.Body))); b.Name == 'JAN'"` -
   print only messages that have `.Name == "JAN"` in their gzipped payload,
   interpreted as `JSON`
 
@@ -954,6 +954,7 @@ type Exchange struct {
     }
 }
 ```
+
 </details>
 
 ##### Queue type
@@ -1022,6 +1023,7 @@ type Queue struct {
     Memory    int
 }
 ```
+
 </details>
 
 ##### Binding type
@@ -1039,6 +1041,7 @@ type Binding struct {
     PropertiesKey string
 }
 ```
+
 </details>
 
 ##### Connection type
@@ -1267,8 +1270,8 @@ $ make
 
 In order to run all tests (`make test`) an instance of RabbitMQ is expected to
 run on localhost. Easiest way to start one is running `make run-broker`, which
-will start a RabbitMQ docker container (i.e.  `docker run -ti --rm -p 5672:5672
--p 15672:15672 rabbitmq:3-management`). Another target, `short-tests`  runs
+will start a RabbitMQ docker container (i.e. `docker run -ti --rm -p 5672:5672
+-p 15672:15672 rabbitmq:3-management`). Another target, `short-tests` runs
 only unit-tests that down reach out to RabbitMQ.
 
 ### Experimental WASM/wasip1 port
@@ -1314,9 +1317,9 @@ See [my blog](https://jandelgado.github.io/blog/posts/rabtap-wasm) for details.
 
 Limitations:
 
-* environment variables like `RABTAP_AMQPURI` not supported, must specify
+- environment variables like `RABTAP_AMQPURI` not supported, must specify
   all options on the command line
-* depending on the runtime, colors must explicitly set or disabled using
+- depending on the runtime, colors must explicitly set or disabled using
   `--color` and `--no-color`, since terminal detection not working.
 
 ## Test data generator
@@ -1326,13 +1329,13 @@ included in the `cmd/testgen` directory.
 
 ## Contributing
 
-* fork this repository
-* create your feature branch
-* add code
-* add tests and make sure test coverage does not fall (`make test`)
-* add [documentation](README.md)
-* commit changes
-* submit a PR
+- fork this repository
+- create your feature branch
+- add code
+- add tests and make sure test coverage does not fall (`make test`)
+- add [documentation](README.md)
+- commit changes
+- submit a PR
 
 ## Author
 

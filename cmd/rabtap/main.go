@@ -289,14 +289,29 @@ func main() {
 	rabtapMain(os.Stdout)
 }
 
+// formatCommandLineError returns the message to print to stderr for a
+// command line parsing error, or "" if no message should be printed. When
+// no command line arguments are given at all, docopt already prints the
+// usage/help text itself, so printing an additional generic error message
+// on top would be redundant and confusing.
+func formatCommandLineError(cliArgs []string, err error) string {
+	if len(cliArgs) == 0 {
+		return ""
+	}
+	msg := err.Error()
+	if msg == "" {
+		msg = "invalid command or arguments"
+	}
+	return fmt.Sprintf("Error parsing command line: %s\n", msg)
+}
+
 func rabtapMain(out *os.File) {
-	args, err := ParseCommandLineArgs(os.Args[1:])
+	cliArgs := os.Args[1:]
+	args, err := ParseCommandLineArgs(cliArgs)
 	if err != nil {
-		msg := err.Error()
-		if msg == "" {
-			msg = "invalid command or arguments"
+		if msg := formatCommandLineError(cliArgs, err); msg != "" {
+			fmt.Fprint(os.Stderr, msg)
 		}
-		fmt.Fprintf(os.Stderr, "Error parsing command line: %s\n", msg)
 		os.Exit(1)
 	}
 

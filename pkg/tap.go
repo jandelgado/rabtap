@@ -9,8 +9,8 @@ import (
 	"crypto/tls"
 	"log/slog"
 	"net/url"
+	"uuid"
 
-	uuid "github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -104,7 +104,7 @@ func (s *AmqpTap) setupTapsForExchanges(
 func (s *AmqpTap) setupTap(session Session,
 	exchangeConfig ExchangeConfiguration,
 ) (string, string, error) {
-	id := uuid.Must(uuid.NewRandom()).String()
+	id := uuid.New().String()
 	tapExchange := getTapExchangeNameForExchange(exchangeConfig.Exchange, id[:12])
 	tapQueue := getTapQueueNameForExchange(exchangeConfig.Exchange, id[:12])
 

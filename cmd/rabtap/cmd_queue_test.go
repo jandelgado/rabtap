@@ -39,15 +39,13 @@ func findQueueByName(apiURL *url.URL, vhost, name string) (*rabtap.RabbitQueue, 
 	return nil, fmt.Errorf("queue not found")
 }
 
-func TestIntegrationCmdQueueCreatePurgeiBindUnbindQueue(t *testing.T) {
+func TestIntegrationCmdQueueCreatePurgeBindUnbindQueue(t *testing.T) {
 	// integration tests queue creation, bind to exchange, purge,
 	// unbdind from exchange via calls through the main method
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	const testMessage = "SubHello"
 	const testQueue = "purge-queue-test"
-	const testKey = testQueue
 	const testExchange = "amq.direct"
 
 	amqpURL := testcommon.IntegrationURIFromEnv().String()

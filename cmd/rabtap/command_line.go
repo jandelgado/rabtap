@@ -52,12 +52,12 @@ Usage:
               [--routingkey=KEY | (--header=KV)...] [ (--property=KV)... ] [--confirms]
               [--mandatory] [--delay=DURATION | --speed=FACTOR] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange create EXCHANGE [--uri=URI] [--type=TYPE] [--args=KV]...
-              [--autodelete] [--durable] [TLSOPTIONS] [COMMON OPTIONS]
+              [--autodelete] [--transient] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange bind EXCHANGE to DESTEXCHANGE [--uri=URI]
               (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS] [COMMON OPTIONS]
   rabtap exchange rm EXCHANGE [--uri=URI] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap queue create QUEUE [--uri=URI] [--queue-type=TYPE] [--args=KV]...
-              [--autodelete] [--durable] [--lazy] [TLSOPTIONS] [COMMON OPTIONS]
+              [--autodelete] [--transient] [--lazy] [TLSOPTIONS] [COMMON OPTIONS]
   rabtap queue bind QUEUE to EXCHANGE [--uri=URI]
               (--bindingkey=KEY | (--header=KV)... (--all|--any)) [TLSOPTIONS] [COMMON OPTIONS]
   rabtap queue unbind QUEUE from EXCHANGE [--uri=URI]
@@ -92,7 +92,6 @@ Arguments and options:
  --consumers          include consumers and connections in output of info command
  --delay=DURATION     Time to wait between sending messages during publish. If not set,
                       then messages will be delayed as recorded.
- -d, --durable        create a durable exchange/queue
  --exchange=EXCHANGE  optional exchange to publish to. If omitted, exchange will be taken
                       from message being published (see JSON message format)
  --filter=EXPR        Predicate for sub, tap, info command to filter the output [default: true]
@@ -130,6 +129,7 @@ Arguments and options:
  --speed=FACTOR       Speed factor to use during publish [default: 1.0]
  --stats              include statistics in output of info command
  -t, --type=TYPE      type of exchange [default: fanout]
+ --transient          create a transient exchange/queue (default is durable)
  --uri=URI            connect to given AQMP broker. If omitted, the environment variable
                       RABTAP_AMQPURI will be used
  --version            show version information and exit
@@ -318,7 +318,7 @@ type CommandLineArgs struct {
 	ShowDefaultExchange bool              // info: show default exchange
 	Filter              string            // sub/tap/info: optional filter predicate
 	Format              string            // output format, depends on command
-	Durable             bool              // queue create, exchange create
+	Transient           bool              // queue create, exchange create
 	Autodelete          bool              // queue create, exchange create
 	Args                map[string]string // optional additional arguments for pub, tap, queue
 	SaveDir             *string           // save: optional directory to stores files to
@@ -550,7 +550,7 @@ func parseQueueCmdArgs(args map[string]interface{}) (CommandLineArgs, error) {
 	switch {
 	case args["create"].(bool):
 		result.Cmd = QueueCreateCmd
-		result.Durable = args["--durable"].(bool)
+		result.Transient = args["--transient"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)
 		result.Args, err = parseKVListOption("--args", args)
 		if err != nil {
@@ -605,7 +605,7 @@ func parseExchangeCmdArgs(args map[string]interface{}) (CommandLineArgs, error) 
 	case args["create"].(bool):
 		result.ExchangeType = args["--type"].(string)
 		result.Cmd = ExchangeCreateCmd
-		result.Durable = args["--durable"].(bool)
+		result.Transient = args["--transient"].(bool)
 		result.Autodelete = args["--autodelete"].(bool)
 		result.Args, err = parseKVListOption("--args", args)
 		if err != nil {

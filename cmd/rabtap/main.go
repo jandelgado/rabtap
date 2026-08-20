@@ -231,10 +231,12 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 		return startCmdTap(ctx, args, tlsConfig, out, logger)
 	case ExchangeCreateCmd:
 		return cmdExchangeCreate(CmdExchangeCreateArg{
-			amqpURL:  args.AMQPURL,
-			exchange: args.ExchangeName, exchangeType: args.ExchangeType,
-			durable: args.Durable, autodelete: args.Autodelete,
-			tlsConfig: tlsConfig, args: args.Args,
+			amqpURL:      args.AMQPURL,
+			exchange:     args.ExchangeName,
+			exchangeType: args.ExchangeType,
+			durable:      !args.Transient,
+			autodelete:   args.Autodelete,
+			tlsConfig:    tlsConfig, args: args.Args,
 		}, logger)
 	case ExchangeRemoveCmd:
 		return cmdExchangeRemove(args.AMQPURL, args.ExchangeName, tlsConfig, logger)
@@ -248,10 +250,12 @@ func dispatchCmd(ctx context.Context, args CommandLineArgs, tlsConfig *tls.Confi
 		}, logger)
 	case QueueCreateCmd:
 		return cmdQueueCreate(CmdQueueCreateArg{
-			amqpURL: args.AMQPURL,
-			queue:   args.QueueName, durable: args.Durable,
-			autodelete: args.Autodelete, tlsConfig: tlsConfig,
-			args: args.Args,
+			amqpURL:    args.AMQPURL,
+			queue:      args.QueueName,
+			durable:    !args.Transient,
+			autodelete: args.Autodelete,
+			tlsConfig:  tlsConfig,
+			args:       args.Args,
 		}, logger)
 	case QueueRemoveCmd:
 		return cmdQueueRemove(args.AMQPURL, args.QueueName, tlsConfig, logger)

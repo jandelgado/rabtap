@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -53,7 +54,9 @@ func NewRabbitHTTPClient(url *url.URL, tlsConfig *tls.Config) *RabbitHTTPClient 
 		MaxIdleConnsPerHost: 10,
 		MaxConnsPerHost:     10,
 		DisableCompression:  false,
-		Dial:                Dialer,
+		DialContext: func(_ context.Context, network, addr string) (net.Conn, error) {
+			return Dialer(network, addr)
+		},
 	}
 	client := &http.Client{Transport: tr, Timeout: httpTimeout()}
 	return &RabbitHTTPClient{url, client}
@@ -77,7 +80,7 @@ func (s *RabbitHTTPClient) getResource(ctx context.Context, request httpRequest)
 	if resp.StatusCode != 200 {
 		return r, errors.New(resp.Status)
 	}
-	defer func() {_ = resp.Body.Close()}()
+	defer func() { _ = resp.Body.Close() }()
 	err = json.NewDecoder(resp.Body).Decode(r)
 	return r, err
 }
@@ -97,7 +100,7 @@ func (s *RabbitHTTPClient) delResource(ctx context.Context, path string) error {
 	if resp.StatusCode != 200 && resp.StatusCode != 204 {
 		return errors.New(resp.Status)
 	}
-	defer func() {_ = resp.Body.Close()}()
+	defer func() { _ = resp.Body.Close() }()
 	return nil
 }
 

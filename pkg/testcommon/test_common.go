@@ -13,9 +13,9 @@ import (
 	"net/url"
 	"os"
 	"testing"
+	"uuid"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,9 +69,19 @@ func IntegrationURIFromEnv() *url.URL {
 	return URL
 }
 
+type IntegrationTestSetup struct {
+	Conn        *amqp.Connection
+	Chan        *amqp.Channel
+	NumQueues   uint
+	queuePrefix string
+}
+
 // IntegrationQueueName returns the name of the ith test queue
-func IntegrationQueueName(i int) string {
-	return fmt.Sprintf("queue-%d", i)
+func (s IntegrationTestSetup) QueueName(i uint) string {
+	if i >= s.NumQueues {
+		panic("queue index out of range")
+	}
+	return fmt.Sprintf("%s-%d", s.queuePrefix, i)
 }
 
 // IntegrationTestConnection creates connection to rabbitmq broker and sets up
@@ -81,17 +91,23 @@ func IntegrationQueueName(i int) string {
 // parameter addRoutingHeader is true, then the queue will be bound using an
 // additional routing header ("x-match":"any", "header1":"test0" for first
 // queue etc; this feature is needed by the headers test).
-func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
-	numQueues int, addRoutingHeader bool,
-) (*amqp.Connection, *amqp.Channel) {
+func IntegrationTestConnection(exchangeName, exchangeType string,
+	numQueues uint, addRoutingHeader bool,
+) (IntegrationTestSetup, error) {
 	conn, err := amqp.Dial(IntegrationURIFromEnv().String())
-	require.Nil(t, err)
+	if err != nil {
+		return IntegrationTestSetup{}, fmt.Errorf("connect: %w", err)
+	}
 	ch, err := conn.Channel()
-	require.Nil(t, err)
+	if err != nil {
+		return IntegrationTestSetup{}, fmt.Errorf("create channel: %w", err)
+	}
+	setup := IntegrationTestSetup{conn, ch, numQueues, uuid.New().String()}
 
 	if exchangeName == "" {
-		return conn, ch
+		return setup, nil
 	}
+
 	// create test exchanges and queues
 	err = ch.ExchangeDeclare(
 		exchangeName,
@@ -101,17 +117,21 @@ func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
 		false, // internal
 		false, // wait for response
 		nil)
-	require.Nil(t, err)
+	if err != nil {
+		return setup, fmt.Errorf("create exchange: %w", err)
+	}
 
-	for i := 0; i < numQueues; i++ {
+	for i := uint(0); i < numQueues; i++ {
 		queue, err := ch.QueueDeclare(
-			IntegrationQueueName(i), // name of the queue
-			false,                   // non durable
-			false,                   // delete when unused
-			true,                    // exclusive
-			false,                   // wait for response
-			nil)                     // arguments
-		require.Nil(t, err)
+			setup.QueueName(i), // name of the queue
+			false,              // non durable
+			false,              // delete when unused
+			true,               // exclusive
+			false,              // wait for response
+			nil)                // arguments
+		if err != nil {
+			return setup, fmt.Errorf("create queue: %w", err)
+		}
 
 		// set routing header if requested (used by headers testcase)
 		headers := amqp.Table{}
@@ -129,9 +149,11 @@ func IntegrationTestConnection(t *testing.T, exchangeName, exchangeType string,
 			false,        // wait
 			headers,
 		)
-		assert.Nil(t, err)
+		if err != nil {
+			return setup, fmt.Errorf("bind queue: %w", err)
+		}
 	}
-	return conn, ch
+	return setup, nil
 }
 
 // PublishTestMessages publishes the given number of test messages the

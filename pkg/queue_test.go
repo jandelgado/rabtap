@@ -11,11 +11,14 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/url"
 	"testing"
+	"uuid"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 )
@@ -41,23 +44,24 @@ func findBinding(queue, exchange, key string, bindings []RabbitBinding) int {
 }
 
 func TestIntegrationAmqpPurgeQueue(t *testing.T) {
-	const queueTestName = "purgetestqueue"
+	queueTestName := fmt.Sprintf("purgetest-%s", uuid.New().String())
 	const exchangeTestName = "" // default exchange
 
 	// TODO empty queue before test in case it exisits
 
 	// create queue
-	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
-	session := Session{conn, ch}
-	defer conn.Close()
-	err := CreateQueue(session, queueTestName, false, false, false, nil)
-	assert.Nil(t, err)
+	setup, err := testcommon.IntegrationTestConnection("", "", 0, false)
+	require.NoError(t, err)
+	session := Session{setup.Conn, setup.Chan}
+	defer func() { _ = setup.Conn.Close() }()
+	err = CreateQueue(session, queueTestName, true /*durable*/, true /*ad*/, false /*excl*/, nil)
+	require.NoError(t, err)
 
 	// publish & purge 10 messages
 	const numMessages = 10
-	testcommon.PublishTestMessages(t, ch, numMessages, exchangeTestName, queueTestName, nil)
+	testcommon.PublishTestMessages(t, setup.Chan, numMessages, exchangeTestName, queueTestName, nil)
 	num, err := PurgeQueue(session, queueTestName)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, numMessages, num)
 	// TODO additionally verifiy that queue is empty
 
@@ -67,49 +71,45 @@ func TestIntegrationAmqpPurgeQueue(t *testing.T) {
 func TestIntegrationAmqpQueueCreateBindUnbindAndRemove(t *testing.T) {
 	// since in order to remove and unbind a  queue we must create it first, we
 	// tests these functions together in one test case.
-
-	const queueTestName = "testqueue"
+	queueTestName := fmt.Sprintf("bind-unbind-test-%s", uuid.New().String())
 	const exchangeTestName = "amq.direct"
 	const keyTestName = "key"
 
-	url, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
+	url, err := url.Parse(testcommon.IntegrationAPIURIFromEnv())
+	require.NoError(t, err)
 	client := NewRabbitHTTPClient(url, &tls.Config{})
 
-	// make sure queue does not exist before creation
-	queues, err := client.Queues(context.TODO())
-	assert.Nil(t, err)
-	assert.Equal(t, -1, findQueue(queueTestName, queues))
-
 	// create queue
-	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
-	session := Session{conn, ch}
-	defer conn.Close()
-	err = CreateQueue(session, queueTestName, false, false, false, nil)
-	assert.Nil(t, err)
+	setup, err := testcommon.IntegrationTestConnection("", "", 0, false)
+	require.NoError(t, err)
+	session := Session{setup.Conn, setup.Chan}
+	defer func() { _ = setup.Conn.Close() }()
+	err = CreateQueue(session, queueTestName, true /*durable*/, true /*ad*/, false /*excl*/, nil)
+	require.NoError(t, err)
 
 	// check if queue was created
-	queues, err = client.Queues(context.TODO())
-	assert.Nil(t, err)
+	queues, err := client.Queues(context.TODO())
+	require.NoError(t, err)
 	assert.NotEqual(t, -1, findQueue(queueTestName, queues))
 
 	// bind queue to exchange
 	err = BindQueueToExchange(session, queueTestName, keyTestName, exchangeTestName, amqp.Table{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	bindings, err := client.Bindings(context.TODO())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotEqual(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// unbind queue from exchange
 	err = UnbindQueueFromExchange(session, queueTestName, keyTestName, exchangeTestName, amqp.Table{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	bindings, err = client.Bindings(context.TODO())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, -1, findBinding(queueTestName, exchangeTestName, keyTestName, bindings))
 
 	// finally remove queue
 	err = RemoveQueue(session, queueTestName, false, false)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	queues, err = client.Queues(context.TODO())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, -1, findQueue(queueTestName, queues))
 }

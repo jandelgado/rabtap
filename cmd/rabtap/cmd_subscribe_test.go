@@ -74,11 +74,14 @@ func TestCmdSub(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// create and bind queue
-	cmdQueueCreate(CmdQueueCreateArg{
-		amqpURL: amqpURL,
-		queue:   testQueue, tlsConfig: tlsConfig,
+	err := cmdQueueCreate(CmdQueueCreateArg{
+		amqpURL:   amqpURL,
+		queue:     testQueue,
+		durable:   true,
+		tlsConfig: tlsConfig,
 	}, logger)
-	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig, logger)
+	require.NoError(t, err)
+	defer func() { _ = cmdQueueRemove(amqpURL, testQueue, tlsConfig, logger) }()
 
 	// subscribe to testQueue
 	go func() {
@@ -99,7 +102,7 @@ func TestCmdSub(t *testing.T) {
 	messageCount := 0
 
 	// TODO test without cmdPublish
-	err := cmdPublish(
+	err = cmdPublish(
 		ctx,
 		CmdPublishArg{
 			amqpURL:    amqpURL,
@@ -134,7 +137,6 @@ func TestCmdSub(t *testing.T) {
 func TestCmdSubIntegration(t *testing.T) {
 	logger := slog.New(slog.DiscardHandler)
 	// given
-	const testMessage = "SubHello"
 	const testQueue = "sub-queue-test"
 	testKey := testQueue
 	testExchange := "" // default exchange
@@ -142,14 +144,18 @@ func TestCmdSubIntegration(t *testing.T) {
 	tlsConfig := &tls.Config{}
 	amqpURL := testcommon.IntegrationURIFromEnv()
 
-	cmdQueueCreate(CmdQueueCreateArg{
-		amqpURL: amqpURL,
-		queue:   testQueue, tlsConfig: tlsConfig,
+	err := cmdQueueCreate(CmdQueueCreateArg{
+		amqpURL:   amqpURL,
+		queue:     testQueue,
+		durable:   true,
+		tlsConfig: tlsConfig,
 	}, logger)
-	defer cmdQueueRemove(amqpURL, testQueue, tlsConfig, logger)
+	require.NoError(t, err)
+	defer func() { _ = cmdQueueRemove(amqpURL, testQueue, tlsConfig, logger) }()
 
-	_, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
-	err := ch.Publish(
+	setup, err := testcommon.IntegrationTestConnection("", "", 0, false)
+	require.NoError(t, err)
+	err = setup.Chan.Publish(
 		testExchange,
 		testKey,
 		false, // mandatory

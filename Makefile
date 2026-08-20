@@ -1,6 +1,11 @@
 # rabtap makefile
 SHELL:=/bin/bash
 
+# single source of truth for the golangci-lint version - keep in sync with
+# the "version:" input in .github/workflows/test.yml
+GOLANGCI_LINT_VERSION=v2.13.1
+GOLANGCI_LINT=$(shell go env GOPATH)/bin/golangci-lint
+
 SOURCE=$(shell find . -name "*go" -a -not -path "./vendor/*" -not -path "./cmd/testgen/*" )
 INFO_VERSION=$(shell git describe --tags)
 INFO_COMMIT=$(shell git rev-parse --short HEAD)
@@ -20,8 +25,12 @@ wasm-build: phony
 tags: $(SOURCE)
 	@gotags -f tags $(SOURCE)
 
-lint: phony
-	golangci-lint run
+lint-install: phony
+	@$(GOLANGCI_LINT) --version 2>/dev/null | grep -q " version $(GOLANGCI_LINT_VERSION:v%=%) " || \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+lint: lint-install
+	$(GOLANGCI_LINT) run --build-tags "integration"
 
 short-test:  phony
 	go test -v $(TESTOPTS) -race  github.com/jandelgado/rabtap/cmd/rabtap
@@ -42,7 +51,7 @@ test: test-app test-lib
 toxiproxy-setup: phony
 	$(TOXICMD) c amqp --listen :55672 --upstream rabbitmq:5672 || true
 
-# call with e.g. 
+# call with e.g.
 # make toxiproxy-cmd         -- show help
 # make TOXIARGS="toggle amqp"  -- toggle amqp proxy
 toxiproxy-cmd: phony

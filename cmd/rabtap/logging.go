@@ -20,5 +20,5 @@ func initLogging(f *os.File, verbose bool, colored bool) *slog.Logger {
 	} else {
 		opts.Level = slog.LevelWarn
 	}
-	return slog.New(tint.NewHandler(os.Stderr, &opts))
+	return slog.New(tint.NewTextHandler(os.Stderr, &opts))
 }

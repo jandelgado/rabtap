@@ -17,6 +17,7 @@ import (
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -24,9 +25,10 @@ const (
 )
 
 func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
-	// creates exchange "direct-exchange" and queues "queue-0" and "queue-1"
-	conn, ch := testcommon.IntegrationTestConnection(t, "direct-exchange", "direct", 2, false)
-	defer conn.Close()
+	// creates exchange "direct-exchange" and 2 queues
+	setup, err := testcommon.IntegrationTestConnection("direct-exchange", "direct", 2, false)
+	require.NoError(t, err)
+	defer func() { _ = setup.Conn.Close() }()
 
 	logger := slog.New(slog.DiscardHandler)
 	mandatory := true
@@ -36,11 +38,11 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 	errorChannel := make(PublishErrorChannel)
 	ctx := context.Background()
 
-	go publisher.EstablishConnection(ctx, publishChannel, errorChannel)
+	go func() { _ = publisher.EstablishConnection(ctx, publishChannel, errorChannel) }()
 
 	// AmqpPublish now has started a go-routine which handles
 	// connection to broker and expects messages on the publishChannel
-	key := "queue-1"
+	key := setup.QueueName(1)
 	for i := 0; i < numPublishingMessages; i++ {
 		routing := NewRouting("direct-exchange", key, amqp.Table{})
 		publishChannel <- &PublishMessage{
@@ -50,7 +52,7 @@ func TestIntegrationAmqpPublishDirectExchange(t *testing.T) {
 	}
 
 	doneChan := make(chan int)
-	testcommon.VerifyTestMessageOnQueue(t, ch, "consumer", numPublishingMessages, key, doneChan)
+	testcommon.VerifyTestMessageOnQueue(t, setup.Chan, "consumer", numPublishingMessages, key, doneChan)
 	numReceivedOriginal := <-doneChan
 	assert.Equal(t, numPublishingMessages, numReceivedOriginal)
 }

@@ -5,11 +5,13 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+	"uuid"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
@@ -142,18 +144,19 @@ func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 
 	tmpfile, err := os.CreateTemp("", "rabtap")
 	require.Nil(t, err)
-	defer os.Remove(tmpfile.Name())
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 	_, err = tmpfile.Write([]byte("hello"))
 	require.Nil(t, err)
 
-	conn, ch := testcommon.IntegrationTestConnection(t, "exchange", "topic", 1, false)
-	defer conn.Close()
+	setup, err := testcommon.IntegrationTestConnection("exchange", "topic", 1, false)
+	require.NoError(t, err)
+	defer func() { _ = setup.Conn.Close() }()
 
-	queueName := testcommon.IntegrationQueueName(0)
+	queueName := setup.QueueName(0)
 	routingKey := queueName
 
-	deliveries, err := ch.Consume(
+	deliveries, err := setup.Chan.Consume(
 		queueName,
 		"test-consumer",
 		false, // noAck
@@ -162,7 +165,7 @@ func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 		false, // noWait
 		nil,   // arguments
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// execution: run publish command through call of main(), the actual
 	// message is in tmpfile.Name()
@@ -189,10 +192,12 @@ func TestCmdPublishARawFileWithExchangeAndRoutingKey(t *testing.T) {
 }
 
 func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
-	conn, ch := testcommon.IntegrationTestConnection(t, "myexchange", "topic", 1, false)
-	defer conn.Close()
+	exchangeName := fmt.Sprintf("myexchange-%s", uuid.New().String())
+	setup, err := testcommon.IntegrationTestConnection(exchangeName, "topic", 1, false)
+	require.NoError(t, err)
+	defer func() { _ = setup.Conn.Close() }()
 
-	queueName := testcommon.IntegrationQueueName(0)
+	queueName := setup.QueueName(0)
 	routingKey := queueName
 
 	// in the integrative test we send a stream of 2 messages.
@@ -215,13 +220,13 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 	  "AppID": "rabtap.testgen",
 	  "DeliveryTag": 63,
 	  "Redelivered": false,
-	  "Exchange": "myexchange",
+	  "Exchange": "` + exchangeName + `",
 	  "RoutingKey": "` + routingKey + `",
 	  "Body": "aGVsbG8=",
 	  "XRabtapReceivedTimestamp": "2017-10-28T23:45:33+02:00"
     }
 	{
-	  "Exchange": "myexchange",
+	  "Exchange": "` + exchangeName + `",
 	  "RoutingKey": "` + routingKey + `",
       "Body": "c2Vjb25kCg==",
 	  "XRabtapReceivedTimestamp": "2017-10-28T23:45:34+02:00"
@@ -233,12 +238,12 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 
 	tmpfile, err := os.CreateTemp("", "rabtap")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 	_, err = tmpfile.Write([]byte(testmessages))
 	require.NoError(t, err)
 
-	deliveries, err := ch.Consume(
+	deliveries, err := setup.Chan.Consume(
 		queueName,
 		"test-consumer",
 		false, // noAck
@@ -273,11 +278,11 @@ func TestCmdPublishAJSONFileWithIncludedRoutingKeyAndExchange(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, "myexchange", message[0].Exchange)
+	assert.Equal(t, exchangeName, message[0].Exchange)
 	assert.Equal(t, routingKey, message[0].RoutingKey)
 	assert.Equal(t, "hello", string(message[0].Body))
 
-	assert.Equal(t, "myexchange", message[1].Exchange)
+	assert.Equal(t, exchangeName, message[1].Exchange)
 	assert.Equal(t, routingKey, message[1].RoutingKey)
 	assert.Equal(t, "second\n", string(message[1].Body))
 }
@@ -286,24 +291,26 @@ func TestCmdPublishFilesFromDirectory(t *testing.T) {
 	// publish message stored in a directory as separate files (json-metadata
 	// and raw message file)
 
-	conn, ch := testcommon.IntegrationTestConnection(t, "myexchange", "topic", 1, false)
-	defer conn.Close()
+	exchangeName := fmt.Sprintf("myexchange-%s", uuid.New().String())
+	setup, err := testcommon.IntegrationTestConnection(exchangeName, "topic", 1, false)
+	require.NoError(t, err)
+	defer func() { _ = setup.Conn.Close() }()
 
-	queueName := testcommon.IntegrationQueueName(0)
+	queueName := setup.QueueName(0)
 	routingKey := queueName
 
-	msg := `{ "Exchange": "myexchange", "RoutingKey": "` + routingKey + `", "Body": "ixxx" }`
+	msg := `{ "Exchange": "` + exchangeName + `", "RoutingKey": "` + routingKey + `", "Body": "ixxx" }`
 
 	dir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	err = os.WriteFile(filepath.Join(dir, "rabtap-1.json"), []byte(msg), 0o666)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(dir, "rabtap-1.dat"), []byte("Hello123"), 0o666)
 	require.NoError(t, err)
 
-	deliveries, err := ch.Consume(
+	deliveries, err := setup.Chan.Consume(
 		queueName,
 		"test-consumer",
 		false, // noAck
@@ -338,7 +345,7 @@ func TestCmdPublishFilesFromDirectory(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, "myexchange", message[0].Exchange)
+	assert.Equal(t, exchangeName, message[0].Exchange)
 	assert.Equal(t, routingKey, message[0].RoutingKey)
 	assert.Equal(t, "Hello123", string(message[0].Body))
 }

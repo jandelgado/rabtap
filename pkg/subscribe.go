@@ -10,13 +10,15 @@ import (
 	"log/slog"
 	"net/url"
 	"time"
+	"uuid"
 
-	uuid "github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const PrefetchCount = 1
-const PrefetchSize = 0
+const (
+	PrefetchCount = 1
+	PrefetchSize  = 0
+)
 
 // AmqpSubscriberConfig stores configuration of the subscriber
 type AmqpSubscriberConfig struct {
@@ -62,7 +64,8 @@ func NewAmqpSubscriber(config AmqpSubscriberConfig, url *url.URL, tlsConfig *tls
 	return &AmqpSubscriber{
 		config:     config,
 		connection: NewAmqpConnector(url, tlsConfig, logger),
-		logger:     logger}
+		logger:     logger,
+	}
 }
 
 // TapMessage objects are passed through a tapChannel from tap to client
@@ -89,15 +92,16 @@ func (s *AmqpSubscriber) EstablishSubscription(
 	ctx context.Context,
 	queueName string,
 	tapCh TapChannel,
-	errCh SubscribeErrorChannel) error {
+	errCh SubscribeErrorChannel,
+) error {
 	return s.connection.Connect(ctx, s.createWorkerFunc(queueName, tapCh, errCh))
 }
 
 func (s *AmqpSubscriber) createWorkerFunc(
 	queueName string,
 	outCh TapChannel,
-	errOutCh SubscribeErrorChannel) AmqpWorkerFunc {
-
+	errOutCh SubscribeErrorChannel,
+) AmqpWorkerFunc {
 	return func(ctx context.Context, session Session) (ReconnectAction, error) {
 		ch, err := s.consumeMessages(session, queueName)
 		if err != nil {
@@ -112,8 +116,8 @@ func (s *AmqpSubscriber) createWorkerFunc(
 }
 
 func (s *AmqpSubscriber) consumeMessages(session Session,
-	queueName string) (<-chan amqp.Delivery, error) {
-
+	queueName string,
+) (<-chan amqp.Delivery, error) {
 	err := session.Qos(PrefetchCount, PrefetchSize, false)
 	if err != nil {
 		return nil, err
@@ -121,7 +125,7 @@ func (s *AmqpSubscriber) consumeMessages(session Session,
 
 	return session.Consume(
 		queueName,
-		"__rabtap-consumer-"+uuid.Must(uuid.NewRandom()).String()[:8], // TODO param
+		"__rabtap-consumer-"+uuid.New().String()[:8], // TODO param
 		false, // no auto-ack
 		s.config.Exclusive,
 		false, // no-local - unsupported

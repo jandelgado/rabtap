@@ -6,12 +6,16 @@ package rabtap
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/jandelgado/rabtap/pkg/testcommon"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSubscribeReceivesMessages(t *testing.T) {
@@ -19,18 +23,21 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 
 	// establish sending exchange.
 	messagesPerTest := 5
-	conn, ch := testcommon.IntegrationTestConnection(t, "subtest-direct-exchange", "direct", 0, false)
-	session := Session{conn, ch}
-	defer conn.Close()
+	setup, err := testcommon.IntegrationTestConnection("subtest-direct-exchange", "direct", 0, false)
+	require.NoError(t, err)
+	session := Session{setup.Conn, setup.Chan}
+	defer func() { _ = setup.Conn.Close() }()
 
-	queueName := "queue"
+	queueName := fmt.Sprintf("sub-test-%s", uuid.New().String())
 	keyName := queueName // since using direct exchange
 
 	// we need to create the queue non-exclusive, since exclusive queues are
 	// bound to the connection which created them (other connections get
 	// error RESOURCE_LOCKED (405)).
-	CreateQueue(session, queueName, false /*durable*/, true /*ad*/, false /*excl*/, nil)
-	BindQueueToExchange(session, queueName, keyName, "subtest-direct-exchange", amqp.Table{})
+	err = CreateQueue(session, queueName, true /*durable*/, true /*ad*/, false /*excl*/, nil)
+	require.NoError(t, err)
+	err = BindQueueToExchange(session, queueName, keyName, "subtest-direct-exchange", amqp.Table{})
+	assert.NoError(t, err)
 
 	finishChan := make(chan int)
 
@@ -41,7 +48,7 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 	resultErrChannel := make(SubscribeErrorChannel)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go subscriber.EstablishSubscription(ctx, queueName, resultChannel, resultErrChannel)
+	go func() { _ = subscriber.EstablishSubscription(ctx, queueName, resultChannel, resultErrChannel) }()
 
 	go func() {
 		numReceived := 0
@@ -54,7 +61,7 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 				finishChan <- numReceived
 				return
 			case message := <-resultChannel:
-				message.AmqpMessage.Ack(false)
+				_ = message.AmqpMessage.Ack(false)
 				if message.AmqpMessage != nil {
 					if string(message.AmqpMessage.Body) == "Hello" {
 						numReceived++
@@ -67,7 +74,7 @@ func TestSubscribeReceivesMessages(t *testing.T) {
 	time.Sleep(TapReadyDelay)
 
 	// when: inject messages into exchange.
-	testcommon.PublishTestMessages(t, ch, messagesPerTest, "subtest-direct-exchange", queueName, nil)
+	testcommon.PublishTestMessages(t, setup.Chan, messagesPerTest, "subtest-direct-exchange", queueName, nil)
 
 	// then
 	requireIntFromChan(t, finishChan, messagesPerTest)

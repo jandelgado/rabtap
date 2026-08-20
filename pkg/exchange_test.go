@@ -40,27 +40,28 @@ func TestIntegrationAmqpExchangeCreateRemove(t *testing.T) {
 
 	// make sure exchange does not exist before creation
 	exchanges, err := client.Exchanges(context.TODO())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, -1, findExchange(testName, exchanges))
 
 	// create exchange
-	conn, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
-	session := Session{conn, ch}
-	defer conn.Close()
+	setup, err := testcommon.IntegrationTestConnection("", "", 0, false)
+	assert.NoError(t, err)
+	session := Session{setup.Conn, setup.Chan}
+	defer func() { _ = setup.Conn.Close() }()
 	err = CreateExchange(session, testName, "topic", false, false, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// check if exchange was created
 	exchanges, err = client.Exchanges(context.TODO())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotEqual(t, -1, findExchange(testName, exchanges))
 
 	// finally remove exchange
 	err = RemoveExchange(session, testName, false)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// check if exchange was deleted
 	exchanges, err = client.Exchanges(context.TODO())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, -1, findExchange(testName, exchanges))
 }

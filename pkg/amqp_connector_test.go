@@ -44,17 +44,13 @@ func TestIntegrationWorkerInteraction(t *testing.T) {
 	resultChan := make(chan int, 1)
 
 	worker := func(ctx context.Context, session Session) (ReconnectAction, error) {
-		for {
-			select {
-			case <-ctx.Done():
-				resultChan <- 1337
-				return doNotReconnect, nil
-			}
-		}
+		<-ctx.Done()
+		resultChan <- 1337
+		return doNotReconnect, nil
 	}
 
 	conn := NewAmqpConnector(testcommon.IntegrationURIFromEnv(), &tls.Config{}, logger)
-	go conn.Connect(ctx, worker)
+	go func() { _ = conn.Connect(ctx, worker) }()
 
 	time.Sleep(time.Second * 2) // wait for connection to be established
 

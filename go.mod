@@ -1,29 +1,23 @@
 module github.com/jandelgado/rabtap
 
-go 1.25.0
+go 1.27.0
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
-	github.com/fatih/color v1.19.0
-	github.com/google/uuid v1.6.0
-	github.com/mattn/go-colorable v0.1.15
-	github.com/rabbitmq/amqp091-go v1.11.0
-	github.com/stretchr/testify v1.11.1
-	golang.org/x/net v0.55.0
-	golang.org/x/sync v0.20.0
-)
-
-require (
 	github.com/expr-lang/expr v1.17.8
-	github.com/klauspost/compress v1.18.6
-	github.com/lmittmann/tint v1.1.3
-	github.com/mattn/go-isatty v0.0.22
+	github.com/fatih/color v1.19.0
+	github.com/klauspost/compress v1.19.2
+	github.com/lmittmann/tint v1.2.0
+	github.com/mattn/go-colorable v0.1.15
+	github.com/mattn/go-isatty v0.0.24
+	github.com/rabbitmq/amqp091-go v1.14.0
 	github.com/stealthrocket/net v0.2.1
+	github.com/stretchr/testify v1.12.1
+	golang.org/x/net v0.58.0
+	golang.org/x/sync v0.22.0
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )

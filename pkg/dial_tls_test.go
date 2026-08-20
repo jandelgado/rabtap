@@ -22,7 +22,7 @@ func TestDialTLSConnectsToNonTLSEndpoint(t *testing.T) {
 	u, _ := url.Parse("amqp://guest:password@localhost:5672")
 	conn, err := DialTLS(u, &tls.Config{})
 	assert.NoError(t, err)
-	conn.Close()
+	_ = conn.Close()
 }
 
 func TestDialTLSConnectsToTLSEndpoint(t *testing.T) {
@@ -75,6 +75,6 @@ func TestDialTLSConnectsToTLSEndpoint(t *testing.T) {
 		// then
 		assert.Equal(t, tc.err, err)
 
-		conn.Close()
+		_ = conn.Close()
 	}
 }

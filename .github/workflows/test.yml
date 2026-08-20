@@ -5,7 +5,8 @@ on:
   pull_request:
     branches: [master]
 env:
-  GO_LANG_CI_LINT_VERSION: latest
+  # keep in sync with GOLANGCI_LINT_VERSION in Makefile
+  GO_LANG_CI_LINT_VERSION: v2.13.0
 name: run tests
 jobs:
   check-dependencies:

@@ -22,8 +22,9 @@ import (
 func TestCmdTap(t *testing.T) {
 	logger := slog.New(slog.DiscardHandler)
 	// given
-	conn, ch := testcommon.IntegrationTestConnection(t, "int-test-exchange", "topic", 1, false)
-	defer conn.Close()
+	setup, err := testcommon.IntegrationTestConnection("int-test-exchange", "topic", 1, false)
+	require.NoError(t, err)
+	defer func() { _ = setup.Conn.Close() }()
 
 	// receiveFunc must receive messages passed through tapMessageChannel
 	received := make(chan struct{})
@@ -67,7 +68,7 @@ func TestCmdTap(t *testing.T) {
 	}()
 
 	time.Sleep(time.Second * 1)
-	err := ch.Publish(
+	err = setup.Chan.Publish(
 		"int-test-exchange",
 		"my-routing-key",
 		false, // mandatory
@@ -90,7 +91,6 @@ func TestCmdTap(t *testing.T) {
 }
 
 func TestCmdTapIntegration(t *testing.T) {
-	const testMessage = "TapHello"
 	const testQueue = "tap-queue-test"
 	testKey := testQueue
 	testExchange := "amq.topic"
@@ -98,8 +98,9 @@ func TestCmdTapIntegration(t *testing.T) {
 	// message must be published, after rabtap tap command is started
 	go func() {
 		time.Sleep(3 * time.Second)
-		_, ch := testcommon.IntegrationTestConnection(t, "", "", 0, false)
-		err := ch.Publish(
+		setup, err := testcommon.IntegrationTestConnection("", "", 0, false)
+		require.NoError(t, err)
+		err = setup.Chan.Publish(
 			testExchange,
 			testKey,
 			false, // mandatory

@@ -110,7 +110,8 @@ func TestSessionNewChannelReturnsNewChannel(t *testing.T) {
 
 	assert.NotNil(t, session.Channel)
 	chanOld := session.Channel
-	session.NewChannel()
+	err := session.NewChannel()
+	assert.NoError(t, err)
 	assert.NotNil(t, session.Channel)
 	assert.NotEqual(t, chanOld, session.Channel)
 }

@@ -50,7 +50,8 @@ func TestCmdCloseConnection(t *testing.T) {
 	require.Nil(t, err)
 
 	// start the test connection to be terminated
-	conn, _ := testcommon.IntegrationTestConnection(t, "", "", 0, false)
+	setup, err := testcommon.IntegrationTestConnection("", "", 0, false)
+	require.NoError(t, err)
 
 	// it takes a few seconds for the new connection to show up in the REST API
 	time.Sleep(time.Second * 5)
@@ -61,7 +62,7 @@ func TestCmdCloseConnection(t *testing.T) {
 	// we add a notification callback and expect the cb to be called
 	// when we close the connection via the API
 	errorChan := make(chan *amqp.Error)
-	conn.NotifyClose(errorChan)
+	setup.Conn.NotifyClose(errorChan)
 
 	connToClose := findClosedConnName(connsBefore, connsAfter)
 	require.NotEqual(t, "", connToClose)

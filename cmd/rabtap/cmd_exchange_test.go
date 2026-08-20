@@ -42,7 +42,7 @@ func TestIntegrationCmdExchangeCreateRemoveExchange(t *testing.T) {
 	apiURL, _ := url.Parse(testcommon.IntegrationAPIURIFromEnv())
 
 	_, err := findExchangeByName(apiURL, "/", testExchange)
-	assert.Error(t, fmt.Errorf("exchange not found"))
+	assert.Error(t, err)
 
 	os.Args = []string{"rabtap", "exchange", "create", testExchange, "--uri", amqpURL.String()}
 	main()
@@ -57,5 +57,5 @@ func TestIntegrationCmdExchangeCreateRemoveExchange(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	_, err = findExchangeByName(apiURL, "/", testExchange)
-	assert.Error(t, fmt.Errorf("exchange not found"))
+	assert.Error(t, err)
 }

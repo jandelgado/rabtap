@@ -520,7 +520,7 @@ func TestCliCreateQueue(t *testing.T) {
 	assert.Equal(t, "name", args.QueueName)
 	assertEqualURL(t, "uri", args.AMQPURL)
 	assert.Equal(t, map[string]string{"x": "y", "x-queue-type": "classic"}, args.Args)
-	assert.False(t, args.Durable)
+	assert.False(t, args.Transient)
 	assert.False(t, args.Autodelete)
 }
 
@@ -528,7 +528,7 @@ func TestCliCreateQueueAllOptsSet(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{
 			"queue", "create", "name", "--uri=uri",
-			"--durable", "--autodelete", "--lazy", "--queue-type=quorum",
+			"--transient", "--autodelete", "--lazy", "--queue-type=quorum",
 		})
 
 	assert.NoError(t, err)
@@ -536,7 +536,7 @@ func TestCliCreateQueueAllOptsSet(t *testing.T) {
 	assert.Equal(t, "name", args.QueueName)
 	assertEqualURL(t, "uri", args.AMQPURL)
 	assert.Equal(t, map[string]string{"x-queue-type": "quorum", "x-queue-mode": "lazy"}, args.Args)
-	assert.True(t, args.Durable)
+	assert.True(t, args.Transient)
 	assert.True(t, args.Autodelete)
 }
 
@@ -620,7 +620,7 @@ func TestCliCreateExchange(t *testing.T) {
 	assert.Equal(t, ExchangeCreateCmd, args.Cmd)
 	assert.Equal(t, "name", args.ExchangeName)
 	assert.Equal(t, "topic", args.ExchangeType)
-	assert.False(t, args.Durable)
+	assert.False(t, args.Transient)
 	assert.False(t, args.Autodelete)
 	assert.Equal(t, map[string]string{"x": "y"}, args.Args)
 	assertEqualURL(t, "uri", args.AMQPURL)
@@ -647,12 +647,12 @@ func TestCliCreateDurableAutodeleteExchange(t *testing.T) {
 	args, err := ParseCommandLineArgs(
 		[]string{
 			"exchange", "create", "name", "--type", "topic",
-			"--uri", "uri", "--durable", "--autodelete",
+			"--uri", "uri", "--autodelete",
 		})
 
 	assert.Nil(t, err)
 	assert.Equal(t, ExchangeCreateCmd, args.Cmd)
-	assert.True(t, args.Durable)
+	assert.False(t, args.Transient)
 	assert.True(t, args.Autodelete)
 	assertEqualURL(t, "uri", args.AMQPURL)
 }
